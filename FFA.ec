@@ -26,6 +26,7 @@ clone import BN as BN.
 op B = Word.modulus. 
 import Word.
 
+
 (* summation from 0..nlimbs  *)
 op sigma f = bigi predT f 0 nlimbs.
 

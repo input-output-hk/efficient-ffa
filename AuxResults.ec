@@ -7,6 +7,25 @@ require import BitEncoding StdBigop Bigalg.
 
 
 
+
+(* lemma zzz (a b q : int) : 0 < q => 0 < a => 0 < b => a <= b => a %/ q <=  b %/ q. *)
+(*     smt(@Int). *)
+
+(* lemma zzz (a b q : int) : 0 < q => 0 < a => 0 < b => a %/ q <=  (a - b)%/ q. *)
+
+(*     timeout 10. smt. *)
+
+
+lemma nosmt mul_weaken6 (b a c : int) : 0 < b => a * b <= c * b => a <= c.
+smt().
+qed.    
+
+    
+lemma nosmt wekenq a q : a = 0 => a %% q = 0.
+move => h. rewrite h.
+smt(@Int).
+qed.
+
 lemma nosmt add_weaken1 (a b c d : int) : a <= c => b <= d => a + b <= c + d.
 smt().
 qed.    
@@ -101,6 +120,11 @@ lemma nosmt ltr_plusc (a b c : int) : a + c <= b + c <=> a <= b.
 smt().
 qed.    
 
+
+lemma nosmt ltr_plusc2 (a b c : int) : c + a <= c + b <=> a <= b.
+smt().
+qed.  
+
 lemma nosmt neg_neg (a  : int) : - - a = a.
 smt().
 qed.    
@@ -182,6 +206,10 @@ lemma nosmt muldiv (k q : int) : 0 < q => k = (k * q) %/ q.
     smt(@Int).
 qed.    
 
+lemma eqmodP0:
+ forall (m a : int), a %% m = 0 <=> exists (c : int), a = c * m.
+admitted.
+
     
 lemma nosmt bounds x (k: int) q a b :
   0 < q =>
@@ -195,6 +223,13 @@ have -> : k = (k * q) %/ q. apply muldiv => //.
 apply leq_div2r => /#.
 qed.
 
+
+lemma nosmt bounds2 (q a b : int) :
+  0 < q =>
+  a <= b => 
+  a  %/ q <= b %/ q.
+smt().
+qed.    
 
 lemma nosmt big_mod m F  : forall nlimbs, (bigi predT F 0 nlimbs) %% m 
   = (bigi predT  (fun x => (F x) %% m) 0 nlimbs) %% m.
@@ -213,6 +248,92 @@ rewrite - modzDmr.
 auto.
 qed.  
   
+
+lemma compl1 (a q : int) : 0 < q => q %| a => a %/ q * q = a.
+smt(@Int).    
+qed.
+
+
+lemma compl2 (a b : int) : - a <= b => 0 <= b + a .
+smt(@Int).    
+qed.
+
+lemma compl3 (a b q : int) : 0 < q =>  a <= b => ((a %/ q) * q) <= b.
+smt(@Int).    
+qed.
+
+
+lemma compl4 (a b q : int) : 0 < q =>  - a <=  - ((a %/ q) * q) .
+smt(@Int).    
+qed.
+
+
+lemma divz_eqP (m d n : int) :
+  0 < d => m %/ d = n <=> n * d <= m < (n + 1) * d.
+proof. smt(@IntDiv).
+qed.
+
+
+
+require import IntDiv.
+lemma floor_div1 a b : 0 < b => a %/ b = floor (a%r / b%r).
+move => qp.
+apply (divz_eqP     a b (floor (a%r / b%r)) qp).
+progress. 
+have h1 : (floor (a%r / b%r))%r <= a%r / b%r.
+smt (floor_bound).
+progress. 
+have h2 : (a%r / b%r) * b%r <= a%r. smt().
+have z : (floor (a%r / b%r))%r <= a%r  / b%r.     smt.
+have : (floor (a%r / b%r))%r * b%r <= a%r. 
+    smt.
+smt.    
+have h1 : a%r < (floor (a%r / b%r) + 1)%r * b%r.
+smt (floor_bound).
+progress. 
+have h2 : a%r < ((a%r / b%r) + 1%r) * b%r. smt().
+smt().
+qed.
+
+
+
+lemma miguels (a x q : int) : 0 < q => q %| x => - a <= x  => - a %/ q * q <= x.
+progress.
+have : exists k, x = k * q.
+apply eqmodP0.   apply  H0. elim. move => k.
+move => h.
+rewrite h.
+   have p1 : (-a)%r <= x%r. smt(@Real).
+   have p2 : (-a)%r / q%r <= x%r / q%r. smt(@Real).
+   have p3 : ceil ((-a)%r / q%r) <= ceil (x%r / q%r). smt(@Real).
+   have p4 : ceil ((-a)%r / q%r) <= ceil (k%r). smt(@Real).
+   have p5 : ceil ((-a)%r / q%r) <= k. smt(@Real).
+   have p6 : - floor (a%r / q%r) <= k. smt(@Real).
+   have p7 : - a %/ q <= k. rewrite floor_div1. auto. auto.
+   have p8 : (- a %/ q) * q <= k * q. smt().
+   have p9 : (- a %/ q) * q = - (a %/ q * q).
+   smt.  
+smt().
+qed.
+
+
+
+
+ 
+    (* search (<=) (%|). *)
+(* lemma miguels_lemma (a b q : int) :  0 < a => 0 < b => 0 < q => q %| b => a %/ q <= b %/ q => a <= b. *)
+(* proof. timeout 20. smt.     *)
+(* qed. *)
+
+lemma nosmt ltemul (a b q : int)  :  0 < q => 
+  a * q <= b * q  => a <= b.
+proof. progress. smt().
+qed.
+
+lemma nosmt muldivaux (a k q : int)  :  0 < q =>
+  a  = k * q  => k = a %/ q.
+proof.   smt (eqz_div @Int). qed.
+
 
 lemma nosmt min_eq (a b : int)  :  
   a - b = 0 <=> a = b.
@@ -253,4 +374,10 @@ rewrite - modzDm.
 rewrite modzBm.            
 rewrite modzDm.
 auto.
+qed.    
+
+
+lemma nosmt min_min2 (a b c m : int) : (a - b - c) %% m = (a %% m - b %% m - c %% m) %% m.
+rewrite -     modzBmr2.
+smt( min_min).
 qed.    
