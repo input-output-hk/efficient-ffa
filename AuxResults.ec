@@ -5,21 +5,20 @@ require import BitEncoding StdBigop Bigalg.
 (*---*) import Bigint BIA.
 
 
+(* Chinese Reminder Theorem  *)
+op LCM (M : int -> int) (size : int) : int.
 
+axiom nosmt LCM_pos M n :  0 <= LCM M n.
 
-
-(* lemma zzz (a b q : int) : 0 < q => 0 < a => 0 < b => a <= b => a %/ q <=  b %/ q. *)
-(*     smt(@Int). *)
-
-(* lemma zzz (a b q : int) : 0 < q => 0 < a => 0 < b => a %/ q <=  (a - b)%/ q. *)
-
-(*     timeout 10. smt. *)
+axiom nosmt chinese_reminder_theorem x M size : 
+   (forall i, 0 <= i < size => x %% M i = 0)
+    <=>
+    x %% LCM M size = 0.
 
 
 lemma nosmt mul_weaken6 (b a c : int) : 0 < b => a * b <= c * b => a <= c.
 smt().
 qed.    
-
     
 lemma nosmt wekenq a q : a = 0 => a %% q = 0.
 move => h. rewrite h.
@@ -179,9 +178,6 @@ proof. smt(@Int). qed.
 lemma nosmt eq_mod (a b q : int)  :  
   a = b => a %% q = b %% q.
 proof. smt(). qed.
-
-  
-
 
 lemma nosmt qqq x m :  0 <= x < m => x %% m = 0 => x = 0.
 smt(@Int).
@@ -381,3 +377,30 @@ lemma nosmt min_min2 (a b c m : int) : (a - b - c) %% m = (a %% m - b %% m - c %
 rewrite -     modzBmr2.
 smt( min_min).
 qed.    
+
+
+
+lemma nosmt popop (a b : int) : - (a - b) = b - a.
+smt().
+qed.
+
+
+lemma nosmt popop2 (a b c : int) : a + (b - c) = (a + b) - c.
+smt().
+qed.
+
+
+lemma nosmt popop3 (a b c d : int) : a <= c => b <= d => a + b <= c + d.
+smt().
+qed.
+
+
+lemma nosmt popop4 (a b c : int) : a + b - c = a + (b - c).
+smt().
+qed.
+
+
+lemma nosmt popop5 (c a b : int) : a <= c => a - b <= c - b.
+smt().
+qed.
+

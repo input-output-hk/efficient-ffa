@@ -5,63 +5,38 @@ require import BitEncoding StdBigop Bigalg.
 
 require import JUtils JBigNum.
 
-require import FFA AuxResults. 
+require import FFA FFA_soundness AuxResults. 
 
 
 import BN.
 import Word.
 
-lemma nosmt popop (a b : int) : - (a - b) = b - a.
-smt().
-qed.
-
-
-lemma nosmt popop2 (a b c : int) : a + (b - c) = (a + b) - c.
-smt().
-qed.
-
-
-lemma nosmt popop3 (a b c d : int) : a <= c => b <= d => a + b <= c + d.
-smt().
-qed.
-
-
-lemma nosmt popop4 (a b c : int) : a + b - c = a + (b - c).
-smt().
-qed.
-
-
-lemma nosmt popop5 (c a b : int) : a <= c => a - b <= c - b.
-smt().
-qed.
-
-
 lemma nosmt multiplication_completeness (M : int -> int) 
-    (M_size p q t1 t2 : int) (x y z : Word.t A.t) : 
+    (M_size p t1 t2 : int) (x y z : Word.t A.t) : 
 
     (forall i,  0 < M i)
 
     => 0 < q
  
-    => (K_max q) - (K_min q) < 2 ^ t1
+    => K_max - K_min < 2 ^ t1
         
     => (forall i, 0 <= i < M_size =>
-          (L_max q (M i)) - (L_min q (M i) (2 ^ t1)) 
+          (L_max (M i)) - (L_min (M i) (2 ^ t1)) 
            < (2 ^ t2))
 
     => (forall i, 0 <= i < M_size => 
-         (-p) < AuxLB q (M i) (K_min q) 
-                  (L_min q (M i) (2 ^ t1)) 
+         (-p) < AuxLB (M i) (K_min) 
+                  (L_min (M i) (2 ^ t1)) 
                   (2 ^ t1) 
                   (2 ^ t2))
 
    => (forall i, 0 <= i < M_size => 
-        AuxUB q (M i) 
-                (K_min q) 
-                (L_min q (M i) (2 ^ t1)) < p)
+        AuxUB (M i) 
+                (K_min) 
+                (L_min (M i) (2 ^ t1)) < p)
       
   => (B - 1) * (sigma (fun (i : int) => 
-       (B ^ i %% q))) + (2 ^ t1 + K_min q) * q
+       (B ^ i %% q))) + (2 ^ t1 + K_min) * q
        < LCM (fun i => if i = M_size then p else M i) 
              (M_size + 1)
 
@@ -69,7 +44,7 @@ lemma nosmt multiplication_completeness (M : int -> int)
   => (B - 1) ^ 2 *              
         (sigma (fun (i : int) => 
           sigma (fun (j : int) => 
-            (B ^ (i + j) %% q)))) - ((K_min q) * q)
+            (B ^ (i + j) %% q)))) - ((K_min) * q)
         < LCM (fun i => if i = M_size then p else M i) 
               (M_size + 1)
 
@@ -78,18 +53,18 @@ lemma nosmt multiplication_completeness (M : int -> int)
     (* k and V are existential, depend on x y z *)
   => 0 < q 
   => exists k,
-     0 <= U k q < 2 ^ t1
-    /\ (NativeLHS q (K_min q) (U k q) x y z) %% p = 0
+     0 <= U k < 2 ^ t1
+    /\ (NativeLHS (K_min) (U k) x y z) %% p = 0
 
   
     /\ forall i, 0 <= i < M_size => exists V, 
        (0 <= V < 2 ^ t2)
-    /\ ((AuxLHS q
+    /\ ((AuxLHS
              (M i)
              V
-             (K_min q)
-             (L_min q (M i) (2 ^ t1))
-             (U k q)
+             (K_min)
+             (L_min (M i) (2 ^ t1))
+             (U k)
              x y z) %% p = 0).
 
 proof.
@@ -154,7 +129,7 @@ have : exists k, (sigma
 apply  eqmodP0.  apply h.
 elim. move => k kprop.    
 exists k.
-have ukq_bounds : (0 <= U k q && U k q < 2 ^ t1).
+have ukq_bounds : (0 <= U k && U k < 2 ^ t1).
 split.
  rewrite /U.
 have -> : k = (sigma
@@ -192,7 +167,7 @@ progress.
 
 rewrite /U.
 
-have : k <= K_max q. rewrite /K_max.
+have : k <= K_max. rewrite /K_max.
  have -> : k = (sigma
          (fun (i : int) =>
             sigma
@@ -224,7 +199,7 @@ have Mimodeq :
             (fun (j : int) =>
                to_uint x.[i0] * to_uint y.[j] * (B ^ (i0 + j) %% q %% M i))) -
      sigma (fun (i0 : int) => to_uint z.[i0] * (B ^ i0 %% q %% M i)) -
-     U k q * (q %% M i) - K_min q * q %% M i) %% M i = 0.
+     U k * (q %% M i) - K_min * q %% M i) %% M i = 0.
 
 have <- : (sigma
        (fun (i0 : int) =>
@@ -232,16 +207,16 @@ have <- : (sigma
             (fun (j : int) =>
                to_uint x.[i0] * to_uint y.[j] * (B ^ (i0 + j) %% q))) -
      sigma (fun (i0 : int) => to_uint z.[i0] * (B ^ i0 %% q)) -
-     U k q * q - K_min q * q) %% M i = (sigma
+     U k * q - K_min * q) %% M i = (sigma
        (fun (i0 : int) =>
           sigma
             (fun (j : int) =>
                to_uint x.[i0] * to_uint y.[j] * (B ^ (i0 + j) %% q %% M i))) -
      sigma (fun (i0 : int) => to_uint z.[i0] * (B ^ i0 %% q %% M i)) -
-     U k q * (q %% M i) - K_min q * q %% M i) %% M i
+     U k * (q %% M i) - K_min * q %% M i) %% M i
    .
 rewrite min_min2.
-  have ->: U k q * q %% M i = U k q * (q %% M i) %% M i. by rewrite - modzMmr.
+  have ->: U k * q %% M i = U k * (q %% M i) %% M i. by rewrite - modzMmr.
   have ->: (sigma
     (fun (i0 : int) =>
        sigma
@@ -304,11 +279,11 @@ have : exists V, (sigma
                     to_uint x.[i0] * to_uint y.[j] *
                     (B ^ (i0 + j) %% q %% M i))) -
           sigma (fun (i0 : int) => to_uint z.[i0] * (B ^ i0 %% q %% M i)) -
-          U k q * (q %% M i) - K_min q * q %% M i) = V * M i.
+          U k * (q %% M i) - K_min * q %% M i) = V * M i.
 apply  eqmodP0. assumption.
 elim. move => V.
 move => Vp.
-exists (V - L_min q (M i) (2 ^ t1)).
+exists (V - L_min (M i) (2 ^ t1)).
 split.
 split.
 
@@ -323,11 +298,11 @@ apply dvdzP. exists V. auto.
 rewrite /L_min.
 have ->: (- (-1) *
    (((B - 1) * sigma (fun (i0 : int) => B ^ i0 %% q %% M i) +
-     2 ^ t1 * (q %% M i) + K_min q * q %% M i) %/
+     2 ^ t1 * (q %% M i) + K_min * q %% M i) %/
     M i))
           = (
    (((B - 1) * sigma (fun (i0 : int) => B ^ i0 %% q %% M i) +
-     2 ^ t1 * (q %% M i) + K_min q * q %% M i) %/
+     2 ^ t1 * (q %% M i) + K_min * q %% M i) %/
     M i)). smt().
 
 apply compl2.
@@ -340,8 +315,8 @@ rewrite lhsub2.
 
 simplify.
 have -> : (B - 1) * sigma (fun (i0 : int) => B ^ i0 %% q %% M i) + 2 ^ t1 * (q %% M i) +
-K_min q * q %% M i
-  = K_min q * q %% M i + ((B - 1) * sigma (fun (i0 : int) => B ^ i0 %% q %% M i) + 2 ^ t1 * (q %% M i)). smt().
+K_min * q %% M i
+  = K_min * q %% M i + ((B - 1) * sigma (fun (i0 : int) => B ^ i0 %% q %% M i) + 2 ^ t1 * (q %% M i)). smt().
 
 
 
@@ -378,7 +353,7 @@ smt(@Word).
 
  move => vlowrbound.
 
-have : V - L_min q (M i) (2 ^ t1) <= L_max q (M i) - L_min q (M i) (2 ^ t1).
+have : V - L_min (M i) (2 ^ t1) <= L_max (M i) - L_min (M i) (2 ^ t1).
  apply popop5.
 rewrite (muldivaux _ _ _ _ Vp). smt().
 rewrite /L_max.  
@@ -405,11 +380,11 @@ apply kk.
 apply ler_pmul; smt(@Word). 
   
 
-have : L_max q (M i) - L_min q (M i) (2 ^ t1) < 2 ^ t2. apply H4. apply iprop.
+have : L_max (M i) - L_min (M i) (2 ^ t1) < 2 ^ t2. apply H4. apply iprop.
 
   smt().
 
-have ->: (V - L_min q (M i) (2 ^ t1) + L_min q (M i) (2 ^ t1))
+have ->: (V - L_min  (M i) (2 ^ t1) + L_min (M i) (2 ^ t1))
    = V. smt().
 rewrite Vp.
 smt(@Int).
