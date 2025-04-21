@@ -1,0 +1,463 @@
+
+require import AllCore IntDiv CoreMap List.
+
+require import AllCore Int IntDiv List StdOrder Bool.
+require import BitEncoding StdBigop Bigalg.
+(*---*) import Ring.IntID IntOrder BS2Int.
+(*---*) import Bigint BIA.
+
+
+
+type R.                         (* quotient of points by unique repr, and subset of points on the curve *)
+type F.
+type bits = bool list.
+
+op xof : R -> F.
+op yof : R -> F.
+
+op idR : R.
+op ( +++ ) (a b : R) : R.
+op ( *** ) (n : int) (x : R) : R.  (* = iterop n ( +++ ) x idR. *)
+op [-] (a : R) : R.
+
+op ( %%% ) (a b : R) : R.
+
+axiom same_res (a b : R) : 
+  a <> idR => 
+  b <> idR => 
+  xof a <> xof b =>
+  a %%% b = a +++ b.
+ 
+
+op Rdistr : R distr.
+
+axiom op_assoc (a b c : R) :  (a +++ b) +++ c = a +++ (b +++ c).
+axiom op_comm (a b : R) :  a +++ b = b +++ a.
+
+axiom op_id (x : R) :  x +++ idR = x.
+axiom op_id' (x : R) : idR +++ x = x.
+
+axiom op_inv (a : R) :  a +++ -a = idR. 
+
+axiom qiqq (i b : int) b0 :  (i + b) *** b0 = i *** b0 +++ b *** b0.
+axiom muldistR1 (a : R) : 1 *** a = a.
+axiom muldistR0 (a : R) : 0 *** a = idR. 
+axiom iteriZH : forall z, z *** idR = idR.
+axiom muldistR   : forall (a : int), forall (b c : R),   a *** (b +++ c) = a *** b +++ a *** c.
+    
+op T : int.
+op l : int.
+op w : int.
+axiom w_pos : 0 < w.
+axiom l_pos : 0 < l.
+axiom T_pos : 0 < T.
+
+
+
+module MultiScalarMul = {
+
+  proc helper(acc : int, table : int -> int-> int, ic : int, P : int -> int, s : int -> int -> int, U : int) = {
+      var jc, aux, vahe;
+    
+      jc <- 1;
+      vahe <- acc;
+      while (jc < l + 1) {
+        aux <- table jc (s jc ic);
+        vahe <- vahe + aux;
+
+        jc <- jc + 1;
+      }
+      return vahe;
+  }
+
+  proc helperR(acc : R, table : int -> int-> R, ic : int, s : int -> int -> int) = {
+      var jc, aux, vahe;
+
+      aux <- witness;
+      jc <- 0;
+      vahe <- acc;
+      while (jc < l) {
+        aux <- table jc (s jc ic);
+        vahe <- vahe +++ aux;
+
+        jc <- jc + 1;
+      }
+      return vahe;
+  }
+
+  
+  proc doubleWtimes(p : R, w : int) = {
+      var cnt;
+      cnt <- 0;
+      while (cnt < w) {
+        p <- p +++ p;
+        cnt <- cnt + 1;
+      }
+      return p;
+  }
+
+
+  proc multiScalarMulR(P : int -> R, s : int -> int -> int, U : R) = {
+    var u, v, acc, aux, result : R;
+    var table : int -> int -> R;
+    var ic, jc, cnt : int;
+
+    v     <- (2 ^ w - 1) *** U;
+    table <- fun (j i : int) => (i *** (P j)) +++ - v;
+    acc   <- l *** U;
+
+    ic <- 0;
+    while (ic < T) {
+      acc <@ doubleWtimes(acc,w);
+      acc <@ helperR(acc, table, ic, s);
+      ic <- ic + 1;
+    }
+    
+    result <- acc +++ (- (l *** U));
+    return result;
+  }
+
+
+
+  proc helperI(acc : R, table : int -> int-> R, ic : int, s : int -> int -> int) = {
+      var jc, aux, vahe, flag;
+    
+      aux <- witness;
+      flag <- true;
+      jc <- 0;
+      vahe <- acc;
+      while (jc < l) {
+        aux <- table jc (s jc ic);
+        flag <- flag && (xof vahe) <> (xof aux);
+        flag <- flag && (vahe <> idR);
+        vahe <- (vahe %%% aux);
+
+        jc <- jc + 1;
+      }
+      return (flag, vahe);
+  }
+
+
+
+  proc multiScalarMulI(P : int -> R, s : int -> int -> int, U : R) = {
+    var u, v, acc, aux, result : R;
+    var table : int -> int -> R;
+    var ic, jc, cnt : int;
+    var flag, flagaux : bool;
+
+    flag  <- true;
+    flagaux <- true;
+    v     <- (2 ^ w - 1) *** U;
+    table <- fun (j i : int) => (i *** (P j)) +++ - v;
+    acc   <- l *** U;
+
+    ic <- 0;
+    while (ic < T) {
+      acc <@ doubleWtimes(acc,w);
+      (flagaux, acc) <@ helperI(acc, table, ic, s);
+      flag <- flag && flagaux;
+      ic <- ic + 1;
+    }
+    
+    result <- acc +++ (- (l *** U));
+    return (flag, result);
+  }
+
+}.
+
+
+
+op multiScalarMulR  (s : int -> int -> int) (P : int -> R) 
+  : R
+ = iteri T 
+     (fun i acc1 => acc1 +++ 
+       iteri l
+         (fun j acc2 => 
+          acc2 +++ (2 ^ (w * (T - 1 - i)) * s j i) *** (P j)) idR
+        ) idR.
+
+
+
+
+lemma helpereqs argacc argtable argic args  : 
+ equiv [ MultiScalarMul.helperR ~ MultiScalarMul.helperI  : 
+  arg{2} = (argacc, argtable, argic, args) /\ ={acc,table,ic,s}
+     ==>  res{2}.`1 => (res{1} = res{2}.`2)].
+proc.
+while (={jc,acc,table,aux,s,ic} /\ (flag{2} => ={vahe})).
+ wp. skip. progress.
+   have -> : vahe{1} = vahe{2}. smt().
+rewrite same_res. 
+  smt().
+  admit. 
+  smt().
+  smt().
+wp. skip. progress. 
+qed.
+
+(* 
+1/ compute table externally
+2/ get U outside in a primitive way
+3/ ?
+
+
+
+
+*)
+
+lemma multieqs argP args argU  : 
+ equiv [ MultiScalarMul.multiScalarMulR ~ MultiScalarMul.multiScalarMulI : 
+  arg{2} = (argP, args, argU) /\ ={P,s,U}
+     ==>  res{2}.`1 => (res{1} = res{2}.`2)].
+proc.
+wp.
+while ((flag{2} => ={table,acc,U,s}) /\ (flag{2} => flagaux{2}) /\ ={ic}  ).
+wp.   
+inline MultiScalarMul.helperR.
+inline MultiScalarMul.helperI.
+wp.   
+while ((flag{2} /\ flag0{2} => ={vahe, acc0,table0,aux0,s0,ic0}) /\ ={jc0}).
+ wp. skip. progress.
+   have -> : vahe{1} = vahe{2}. smt().
+rewrite same_res. 
+  smt().
+  admit. 
+  smt().
+  smt().
+     smt().
+     smt().
+     smt().
+     smt().
+     smt().
+wp. 
+inline MultiScalarMul.doubleWtimes.
+wp.
+   while ((flag{2} => ={p}) /\ ={w,cnt0}). wp. skip. progress.
+   smt(). wp. skip. progress. 
+smt(). smt(). smt(). smt(). smt(). smt().
+   smt(). smt().  smt().
+wp. skip. progress.
+have -> :     acc_L = acc_R. smt(). auto.
+qed.
+
+   
+lemma helper_specR argcc argT argic args  : 
+ hoare [ MultiScalarMul.helperR : arg = (argcc, argT, argic,  args) 
+     ==>  res = argcc +++  iteri l (fun j acc => acc +++ argT j (args j argic)) idR ].
+proc.
+while (0 <= jc 
+ /\ jc <= l 
+ /\ (acc, table, ic,  s) = (argcc, argT, argic, args) 
+ /\ vahe = acc +++   iteri jc (fun j acc => acc +++ argT j (args j argic)) idR).
+wp. skip. progress. smt(). smt(). rewrite iteriS. smt().
+   simplify.
+smt(op_assoc).
+   wp. skip. progress. smt(l_pos). 
+rewrite iteri0. auto.
+smt(op_id).
+smt().
+qed.   
+
+
+lemma nosmt addass (a b c : int) : a + (b + c) = (a + b) + c.    by smt(). qed.
+lemma nosmt muldist (a b c : int) : a * (b + c) = a * b + a * c. by smt(). qed.
+lemma nosmt eqsym ['a] (a b : 'a) : a = b => b = a.              by smt(). qed.
+
+
+
+lemma kik  (a b c d : R) :  a +++ b +++ (c +++ d) = a +++ c +++ (b +++ d). 
+ by smt(op_assoc op_comm). qed.
+
+     
+lemma qiq : forall a, 0 <= a => forall (c : int), forall (b : R),
+   a *** b +++ c *** b = (a + c) *** b.
+apply natind. progress. smt.
+progress. rewrite qiqq. auto.
+have ->: (n + 1 + c) = ((n + c) + 1). smt().
+rewrite qiqq. 
+rewrite - H0. smt().    
+smt(op_comm op_assoc).
+qed.    
+
+
+
+
+lemma iteriZ : forall (n : int), 0 <= n =>  forall (z : int) (f : int -> R), z *** (iteri n (fun i acc => acc +++ f i) idR)
+     = iteri n (fun i acc => acc +++ z *** (f i)) idR.
+apply intind.     
+progress. rewrite iteri0. auto. rewrite iteri0. auto. 
+apply iteriZH.
+progress.
+rewrite iteriS. auto.
+rewrite iteriS. auto.
+simplify.
+rewrite - H0.     
+apply muldistR. 
+qed.
+     
+lemma iteriZZ :  forall (n : int), 0 <= n => forall (z : R)  (f : int -> R),
+   (iteri n (fun i acc => acc +++ f i +++ z) idR)
+     = (iteri n (fun i acc => acc +++ f i) idR)
+        +++ (iteri n (fun i acc => acc +++ z) idR).
+apply intind. progress. rewrite iteri0. auto.
+rewrite iteri0. auto. rewrite iteri0. auto. rewrite op_id. auto.
+progress.
+rewrite iteriS. auto.
+rewrite iteriS. auto.
+rewrite iteriS. auto.
+simplify.
+rewrite H0. simplify.
+smt (op_assoc op_comm).
+qed.     
+
+
+
+lemma iteriZZZ  : forall (n : int), 0 <= n => forall (z : R),
+  (iteri n (fun i acc => acc +++ z) idR)
+     = n *** z.
+apply intind. progress. rewrite iteri0. auto. rewrite muldistR0. auto.
+progress.
+rewrite iteriS. auto. simplify.
+rewrite H0.
+rewrite qiqq. smt.
+qed.     
+
+
+ 
+    
+ 
+lemma nosmt mulsc : forall (a : int), 0 <= a => forall b r,  a *** (b *** r) = (a * b) *** r.
+apply intind.
+    progress.
+rewrite muldistR0. rewrite muldistR0. auto.
+progress.
+    rewrite qiqq. auto.
+have ->: (i + 1) * b = i * b + b. smt().
+rewrite H0.    
+rewrite qiqq. smt.
+qed.    
+
+lemma doublewtimes_spec argP argw :
+ hoare [ MultiScalarMul.doubleWtimes : arg = (argP, argw) /\
+   0 <= argw  ==>  res = (2 ^ argw) *** argP  ].
+proc. 
+   while (cnt <= w /\ 0 <= argw /\ 0 <= cnt /\ p = (2 ^ cnt) *** argP).
+   wp.
+   skip. progress. smt(). smt().
+   rewrite qiq. smt.
+   have ->: (2 ^ cnt{hr} + 2 ^ cnt{hr}) = (2 * 2 ^ cnt{hr} ).
+   smt(@Int).
+   congr.
+   rewrite exprS. auto. auto.
+   wp. skip. progress. smt.
+   smt(@Int).
+qed.
+
+
+lemma multiscalarR_spec argP args argU : 
+ hoare [ MultiScalarMul.multiScalarMulR : 
+  arg = (argP, args, argU) 
+     ==>  res = (multiScalarMulR  args argP)  ].
+proc. wp.   
+while (0 <= ic 
+ /\ (2 ^ w - 1) *** U = v 
+ /\ table = (fun (j i : int) =>  (i *** (P j)) +++ - v) 
+ /\ ic <= T  
+ /\ acc = ((iteri ic
+            (fun i acc1 => acc1 +++
+              (iteri l
+                 (fun j acc2 => acc2 +++ (2 ^ (w * (ic - 1 - i)) * s j i) *** (P j)) idR) 
+                 ) idR)) +++ l *** U).
+wp. 
+ecall (helper_specR acc table ic s). simplify.
+wp.
+ecall (doublewtimes_spec acc w). skip. progress. smt(w_pos).
+smt(). smt().
+   rewrite muldistR. 
+rewrite iteriZ.           smt(). 
+simplify.
+have -> : iteri ic{hr}
+  (fun (i : int) (acc0 : R) =>
+     acc0 +++
+     2 ^ w ***
+     iteri l
+       (fun (j : int) (acc2 : R) =>
+          acc2 +++ 2 ^ (w * (ic{hr} - 1 - i)) * s{hr} j i *** P{hr} j) idR)
+  idR
+     = iteri ic{hr}
+  (fun (i : int) (acc0 : R) =>
+     acc0 +++
+     
+     iteri l
+       (fun (j : int) (acc2 : R) =>
+          acc2 +++ 2 ^ (w * (ic{hr}  - i )) * s{hr} j i *** P{hr} j) idR)
+  idR.
+apply eq_iteri. 
+
+progress.
+
+rewrite iteriZ. smt(l_pos). congr.
+     apply eq_iteri. move => j acc.
+     progress. congr.
+      have ->: 2 ^ w *** (2 ^ (w * (ic{hr} - 1 - i)) * s{hr} j i *** P{hr} j)
+                = 2 ^ w * 2 ^ (w * (ic{hr} - 1 - i)) * s{hr} j i *** P{hr} j .
+  rewrite mulsc. smt. smt().                
+        rewrite - exprD_nneg. smt(w_pos). smt(w_pos). smt().
+
+pose v := (2 ^ w - 1) *** U{hr}.
+ 
+have -> : iteri l
+  (fun (j : int) (acc0 : R) => acc0 +++ (s{hr} j ic{hr} *** P{hr} j +++ -v))
+  idR = iteri l
+  (fun (j : int) (acc0 : R) => acc0 +++ (s{hr} j ic{hr} *** P{hr} j)) idR +++ 
+     iteri l (fun (j : int) (acc0 : R) => acc0 +++ -v) idR.
+rewrite - iteriZZ. simplify. 
+smt(l_pos). apply eq_iteri.  progress. smt.
+simplify.  
+rewrite  iteriZZZ.            
+
+simplify. smt(l_pos).
+rewrite kik .
+   
+have ->: (2 ^ w *** (l *** U{hr}) +++ l *** -v) = l *** U{hr}.
+    rewrite /v.
+  rewrite  mulsc. smt.
+  have ->: - (2 ^ w - 1) *** U{hr} = (- (2 ^ w - 1)) *** U{hr}. admit.
+  rewrite (mulsc ). smt(l_pos).
+  rewrite qiq. smt.
+ smt(@Int).
+  
+
+rewrite iteriS. 
+
+smt(). simplify. 
+
+have ->: 2 ^ 0 = 1. smt(@Int).
+smt().     
+wp. skip. progress. smt(T_pos). 
+   
+rewrite iteri0. auto. smt.
+rewrite /multiScalarMulInt.
+have -> : ic0 = T. smt().
+simplify.
+
+  have ->: iteri T
+  (fun (i : int) (acc1 : R) =>
+     acc1 +++
+     iteri l
+       (fun (j : int) (acc2 : R) =>
+          acc2 +++ 2 ^ (w * (T - 1 - i)) * s{hr} j i *** P{hr} j) idR) idR +++
+l *** U{hr} +++ - l *** U{hr}
+       = iteri T
+  (fun (i : int) (acc1 : R) =>
+     acc1 +++
+     iteri l
+       (fun (j : int) (acc2 : R) =>
+          acc2 +++ 2 ^ (w * (T - 1 - i)) * s{hr} j i *** P{hr} j) idR) idR +++
+  (l *** U{hr} +++ - l *** U{hr} ).
+smt(op_assoc).
+rewrite op_inv.
+  rewrite op_id.
+  rewrite /multiScalarMulR.
+auto.
+qed.
