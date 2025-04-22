@@ -8,45 +8,58 @@ require import BitEncoding StdBigop Bigalg.
 
 
 (* unique representation of points on the curve *)
-type R.                         
+type R.                  
+       
+(* identity element  *)
+op idR : R. 
+op ( +++ ) (a b : R) : R.
+(* iteration of +++ n times (= iterop n ( +++ ) x idR.)  *)
+op ( *** ) (n : int) (x : R) : R.  
+(* inverse *)
+op [-] (a : R) : R.
+(* coincides with +++ under some conditions  *)
+op ( %%% ) (a b : R) : R.
+
 (* non-unique representation of points (not nec. on the curve) *)
 type F.
 
 op xof : R -> F.
 op yof : R -> F.
 
-op idR : R.
-op ( +++ ) (a b : R) : R.
-op ( *** ) (n : int) (x : R) : R.  (* = iterop n ( +++ ) x idR. *)
-op [-] (a : R) : R.
+axiom same_res (a b : R) :  a <> idR => b <> idR => xof a <> xof b 
+  => a %%% b = a +++ b.
 
-op ( %%% ) (a b : R) : R.
-
-axiom same_res (a b : R) : 
-  a <> idR => 
-  b <> idR => 
-  xof a <> xof b =>
-  a %%% b = a +++ b.
- 
-
-op Rdistr : R distr.
-
-axiom op_assoc (a b c : R) :  (a +++ b) +++ c = a +++ (b +++ c).
-axiom op_comm (a b : R) :  a +++ b = b +++ a.
-
+(* op properties  *)
+axiom op_assoc (a b c : R) : (a +++ b) +++ c = a +++ (b +++ c).
+axiom op_comm (a b : R) : a +++ b = b +++ a.
 axiom op_id (x : R) :  x +++ idR = x.
 axiom op_id' (x : R) : idR +++ x = x.
-
 axiom op_inv (a : R) :  a +++ -a = idR. 
 
-axiom qiqq (i b : int) b0 :  (i + b) *** b0 = i *** b0 +++ b *** b0.
-axiom qiqq2 (i b : int) b0 :  (i * b) *** b0 = i *** (b *** b0).
-axiom qiqq3 (i : int) b0 :  (- i) *** b0 = - (i *** b0).
-axiom muldistR1 (a : R) : 1 *** a = a.
-axiom muldistR0 (a : R) : 0 *** a = idR. 
-axiom iteriZH : forall z, z *** idR = idR.
-axiom muldistR   : forall (a : int), forall (b c : R),   a *** (b +++ c) = a *** b +++ a *** c.
+(* op iteration properties  *)
+axiom one_mul (a : R) : 1 *** a = a.
+axiom zero_mul (a : R) : 0 *** a = idR. 
+axiom nplus_dist (i b : int) b0 :  (i + b) *** b0 = i *** b0 +++ b *** b0.
+axiom nmul_mul (i b : int) b0 :  (i * b) *** b0 = i *** (b *** b0).
+axiom neg_mul (i : int) b0 :  (- i) *** b0 = - (i *** b0).
+axiom mul_idr : forall z, z *** idR = idR.
+axiom mul_plus_distr   : forall (a : int), forall (b c : R),   
+ a *** (b +++ c) = a *** b +++ a *** c.
 
+
+(* params  *)
+op T : int.
+op l : int.
+op w : int.
+
+(* params are positive  *)
+axiom w_pos : 0 < w.
+axiom l_pos : 0 < l.
+axiom T_pos : 0 < T.
+
+op onCurve : F -> bool.
+op idF     : F -> bool.
+op embed   : F -> R.
 
 
 lemma nosmt addass (a b c : int) : a + (b + c) = (a + b) + c.    by smt(). qed.
@@ -55,33 +68,24 @@ lemma nosmt eqsym ['a] (a b : 'a) : a = b => b = a.              by smt(). qed.
 
 lemma kik  (a b c d : R) :  a +++ b +++ (c +++ d) = a +++ c +++ (b +++ d). 
  by smt(op_assoc op_comm). qed.
-     
+
+    
 lemma qiq : forall a, 0 <= a => forall (c : int), forall (b : R),
    a *** b +++ c *** b = (a + c) *** b.
 apply natind. progress. smt.
-progress. rewrite qiqq. auto.
+progress. rewrite nplus_dist. auto.
 have ->: (n + 1 + c) = ((n + c) + 1). smt().
-rewrite qiqq. 
+rewrite nplus_dist. 
 rewrite - H0. smt().    
 smt(op_comm op_assoc).
 qed.    
 
     
-op T : int.
-op l : int.
-op w : int.
-
-op onCurve : F -> bool.
-op idF     : F -> bool.
-op embed   : F -> R.
-
-axiom w_pos : 0 < w.
-axiom l_pos : 0 < l.
-axiom T_pos : 0 < T.
 
 module type OutCalls = {
   proc getU() : F
   proc getT(P : int -> R, v : R) : int -> int -> R
+  proc getPT(P : int -> R, v : R) : bool * (int -> int -> R)
 }.
 
 module MultiScalarMul(O : OutCalls) = {
@@ -179,7 +183,8 @@ module MultiScalarMul(O : OutCalls) = {
     flag  <- true;
     flagaux <- true;
     v     <- (2 ^ w - 1) *** U;
-    table <@ O.getT(P, v);
+    (flagaux, table) <@ O.getPT(P, v);
+    flag <- flag && flagaux;
     acc   <- l *** U;
 
     ic <- 0;
@@ -229,10 +234,21 @@ op multiScalarMulR  (s : int -> int -> int) (P : int -> R)
 section.
 
 declare module O <: OutCalls.
+declare module O_Partial <: OutCalls.
 
 declare axiom tableP parg varg : hoare [ O.getT : arg = (parg,varg)
    ==> res = (fun (j i : int) =>  (i *** (parg j)) +++ - varg)  ].
+
+declare axiom tablePT parg varg : hoare [ O.getPT : arg = (parg,varg)
+   ==> res.`1 => (res.`2 = (fun (j i : int) =>  (i *** (parg j)) +++ - varg)  /\ (forall i j, res.`2 i j <> idR) )   ].
+ 
 declare axiom getT_lossless : islossless O.getT.
+
+declare axiom tableP_ph parg varg : phoare [ O.getT : arg = (parg,varg)
+   ==> res = (fun (j i : int) =>  (i *** (parg j)) +++ - varg)  ] = 1%r.
+
+declare axiom tablePT_ph parg varg : phoare [ O.getPT : arg = (parg,varg)
+   ==> res.`1 => (res.`2 = (fun (j i : int) =>  (i *** (parg j)) +++ - varg)  /\ (forall i j, res.`2 i j <> idR) )   ] = 1%r.
 
 
 lemma helpereqs argacc argtable argic args  : 
@@ -298,13 +314,13 @@ lemma iteriZ : forall (n : int), 0 <= n =>  forall (z : int) (f : int -> R), z *
      = iteri n (fun i acc => acc +++ z *** (f i)) idR.
 apply intind.     
 progress. rewrite iteri0. auto. rewrite iteri0. auto. 
-apply iteriZH.
+apply mul_idr.
 progress.
 rewrite iteriS. auto.
 rewrite iteriS. auto.
 simplify.
 rewrite - H0.     
-apply muldistR. 
+apply mul_plus_distr. 
 qed.
      
 lemma iteriZZ :  forall (n : int), 0 <= n => forall (z : R)  (f : int -> R),
@@ -326,11 +342,11 @@ qed.
 lemma iteriZZZ  : forall (n : int), 0 <= n => forall (z : R),
   (iteri n (fun i acc => acc +++ z) idR)
      = n *** z.
-apply intind. progress. rewrite iteri0. auto. rewrite muldistR0. auto.
+apply intind. progress. rewrite iteri0. auto. rewrite zero_mul. auto.
 progress.
 rewrite iteriS. auto. simplify.
 rewrite H0.
-rewrite qiqq. smt.
+rewrite nplus_dist. smt.
 qed.     
 
 
@@ -340,12 +356,12 @@ qed.
 lemma nosmt mulsc : forall (a : int), 0 <= a => forall b r,  a *** (b *** r) = (a * b) *** r.
 apply intind.
     progress.
-rewrite muldistR0. rewrite muldistR0. auto.
+rewrite zero_mul. rewrite zero_mul. auto.
 progress.
-    rewrite qiqq. auto.
+    rewrite nplus_dist. auto.
 have ->: (i + 1) * b = i * b + b. smt().
 rewrite H0.    
-rewrite qiqq. smt.
+rewrite nplus_dist. smt.
 qed.    
 
 
@@ -394,7 +410,7 @@ ecall (helper_specR acc table ic s). simplify.
 wp.
 ecall (doublewtimes_spec acc w). skip. progress. smt(w_pos).
 smt(). smt().
-   rewrite muldistR.
+   rewrite mul_plus_distr.
 rewrite iteriZ.           smt().
 simplify.
 have -> : iteri ic{hr}
@@ -437,8 +453,8 @@ have ->: (2 ^ w *** (l *** U{hr}) +++ l *** -v) = l *** U{hr}.
     rewrite /v.
   rewrite  mulsc. smt.
   have -> : l *** - (2 ^ w - 1) *** U{hr}
-    = (l * - (2 ^ w - 1)) *** U{hr}. rewrite  qiqq2.  rewrite qiqq3. auto.
-   rewrite - qiqq. congr. smt().
+    = (l * - (2 ^ w - 1)) *** U{hr}. rewrite  nmul_mul.  rewrite neg_mul. auto.
+   rewrite - nplus_dist. congr. smt().
 
 rewrite iteriS.
 smt(). simplify.
@@ -501,19 +517,20 @@ lemma multieqs argP args argU  :
      ==>  res{2}.`1 => (res{1} = res{2}.`2)].
 proc.
 wp.
-while ((flag{2} => ={table,acc,U,s}) /\ (flag{2} => flagaux{2}) /\ ={ic}  ).
+while ((flag{2} => ={table,acc,U,s} /\ (forall i j, table{2} i j <> idR)) /\ (flag{2} => flagaux{2}) /\ ={ic}  ).
 wp.
 inline MultiScalarMul(O).helperR.
 inline MultiScalarMul(O).helperI.
 wp.
-while ((flag{2} /\ flag0{2} => ={vahe, acc0,table0,aux0,s0,ic0}) /\ ={jc0}).
+while ((flag{2} /\ flag0{2} => ={vahe, acc0,table0,aux0,s0,ic0} /\ (forall i j, table0{2} i j <> idR)) /\ ={jc0}).
  wp. skip. progress.
    have -> : vahe{1} = vahe{2}. smt().
 rewrite same_res.
   smt().
-  admit.
   smt().
   smt().
+  smt().
+     smt().
      smt().
      smt().
      smt().
@@ -525,8 +542,13 @@ wp.
    while ((flag{2} => ={p}) /\ ={w,cnt0}). wp. skip. progress.
    smt(). wp. skip. progress.
 smt(). smt(). smt(). smt(). smt(). smt().
-   smt(). smt().  smt().
-wp. call (_:true). wp. skip. progress.
+   smt(). smt().  smt(). smt(). smt().
+wp. 
+
+ecall {1} (tableP_ph P{1} v{1} ).
+ecall {2} (tablePT_ph P{2} v{2}).    
+
+wp. skip. progress. smt(). smt().
 have -> :     acc_L = acc_R. smt(). auto.
 qed.
 
@@ -575,3 +597,5 @@ sp. if.
 wp. skip.
 smt().
 qed.   
+
+end section.
