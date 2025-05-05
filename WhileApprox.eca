@@ -1,0 +1,58 @@
+
+require import AllCore IntDiv CoreMap List Real.
+
+
+type pin_t.
+type rand_t.
+
+module type Comp = {
+  proc run (i : int, pin : pin_t, rand : rand_t) : bool
+}.
+
+
+
+op u_distr : rand_t distr.
+
+module LoopedComp(C : Comp) = {
+  proc main (pin : pin_t, n: int) : bool = {
+     var i : int;
+     var flag, flagaux: bool;
+     var u : rand_t;
+
+     flag <- true;
+     flagaux <- true;
+     i <- 0;
+     u <$ u_distr;
+     while(i < n) {
+        flagaux <@ C.run(i, pin, u); 
+        flag <- flagaux && flag;
+        i <- i + 1;
+     }
+
+     return flag;
+  }
+
+  proc single (i : int, pin : pin_t) : bool = {
+    var flag : bool;
+    var u : rand_t;
+
+    u <$ u_distr;
+    flag <@ C.run(i, pin, u);
+
+    return flag;
+  }
+}.
+
+section.
+
+declare module C <: Comp.
+
+declare op p : real. 
+
+declare axiom C_prop : phoare [ LoopedComp(C).single : true ==> !res ] <= p.
+
+lemma looped_comp_ub (narg : int) : phoare[LoopedComp(C).main : n = narg  ==> !res ] 
+ <=  (narg%r * p).
+admitted.
+
+end section.
