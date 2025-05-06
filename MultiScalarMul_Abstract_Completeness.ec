@@ -9,9 +9,25 @@ require import BitEncoding StdBigop Bigalg.
 
 require import MultiScalarMul_Abstract.
 
+
+op predicate (x : R) (r : R) = xof x <> xof r.
+
+op helperI_pure (l : int) (argT : int -> int -> R)
+  (args : int -> int -> int) (argic : int) (argcc : R) 
+    = (iteri l (fun j (acc : bool * R) 
+        => (acc.`1 /\ predicate acc.`2 (argT j (args j argic)) , acc.`2 %%% argT j (args j argic))) (true, argcc)).
+
+op u_check (r : R) : bool.
+op table_check (l w : int) (P : int -> R) (r : R) : bool.
+
+  
+op multiScalarMulII_pure (T l : int) (argT : int -> int -> R)
+  (args : int -> int -> int) (argu : R) (argw : int)
+    = (iteri T (fun i (acc : bool * R) 
+        => let r = helperI_pure l argT args i ((2 ^ argw) *** acc.`2) in (acc.`1 /\ r.`1, r.`2)) (true, argu)).
+
+
 module NestedLoops = {
-
-
 
   proc doubleWtimes(p : R, w : int) = {
       var cnt;
@@ -33,14 +49,15 @@ module NestedLoops = {
       vahe <- acc;
       while (jc < l) {
         aux <- table jc (s jc ic);
-        flag <- flag && (xof vahe) <> (xof aux);
-        flag <- flag && (vahe <> idR);
+        flag <- flag /\ predicate vahe aux;
         vahe <- (vahe %%% aux);
 
         jc <- jc + 1;
       }
       return (flag, vahe);
   }
+
+
 
 
   proc multiScalarMulII(P : int -> R, s : int -> int -> int, U : R, table : int -> int -> R ) = {
@@ -69,38 +86,36 @@ module NestedLoops = {
     var result, table;
 
     u_cand <$ r_distr;
-    table  <- perfect_table_pure P ((2 ^ w - 1) *** u_cand) ; 
+
+    flag   <- u_check u_cand;
+
+    flag   <- flag /\ table_check l w P u_cand;
+    table  <- perfect_table_pure P ((2 ^ w - 1) *** u_cand); 
+   
     result <@ multiScalarMulII(P, s, u_cand, table);
-    return result;
+    return (flag /\ result.`1, result.`2);
   }
 
 
   proc multiScalarMul_Completeness_I_fun(P : int -> R, s : int -> int -> int) = {
-    var u_cand : R;
-    var flag : bool;
-    var result, table;
+    var u_cand, flag, result, table;
 
     u_cand <$ r_distr;
-    table  <- perfect_table_pure P ((2 ^ w - 1) *** u_cand) ; 
-    result <- multiScalarMulII_pure T l table s (l *** u_cand) w;
-    return result;
+
+   (* check u *)
+   flag   <- u_check u_cand;
+
+   (* check table  *)
+   flag   <- flag /\ table_check l w P u_cand;
+   table  <- perfect_table_pure P ((2 ^ w - 1) *** u_cand); 
+
+   (* do the computation  *)
+   result <- multiScalarMulII_pure T l table s (l *** u_cand) w;
+
+   return (flag /\ result.`1, result.`2);
   }
 
 }.
-
-op predicate (x : R) (r : R) = xof x <> xof r && x <> idR.
-
-op helperI_pure (l : int) (argT : int -> int -> R)
-  (args : int -> int -> int) (argic : int) (argcc : R) 
-    = (iteri l (fun j (acc : bool * R) 
-        => (acc.`1 /\ predicate acc.`2 (argT j (args j argic)) , acc.`2 %%% argT j              (args j argic))) (true, argcc)).
-
-  
-op multiScalarMulII_pure (T l : int) (argT : int -> int -> R)
-  (args : int -> int -> int) (argu : R) (argw : int)
-    = (iteri T (fun i (acc : bool * R) 
-        => let r = helperI_pure l argT args i ((2 ^ argw) *** acc.`2) in (acc.`1 /\ r.`1, r.`2)) (true, argu)).
-
 
 lemma helperI_specR_ph argcc argT argic args  :
  phoare [ NestedLoops.helperI : arg = (argcc, argT, argic,  args)
@@ -120,7 +135,6 @@ pose xxx := (iteri jc{hr}
         (acc0.`1 /\
          xof acc0.`2 <> xof (table{hr} j (s{hr} j ic{hr})) && acc0.`2 <> idR,
          acc0.`2 %%% table{hr} j (s{hr} j ic{hr}))) (true, acc{hr})).
-
 pose yyy := (iteri jc{hr}
        (fun (j : int) (acc0 : R) => acc0 %%% table{hr} j (s{hr} j ic{hr}))
        acc{hr}).     smt().
@@ -218,61 +232,91 @@ lemma compl_I_equiv :
          NestedLoops.multiScalarMul_Completeness_I 
      : ={arg} ==> ={res} ].
 proc.
-seq 2 2 : (#pre /\ ={u_cand, table}). wp. rnd. skip. progress.
+seq 4 4 : (#pre /\ ={flag, u_cand, table}). wp. rnd. skip. progress.
 exists* P{2}, s{2}, u_cand{2}, table{2}. elim*. move => PV sV u_candV tableV.  
 call {2} (multm_spec_ph PV sV (u_candV) tableV).
 wp. skip. progress.
 qed.
 
 
-op p : real.
-print mu.
- 
-(* mu r_distr *)
-(*  (fun (r : R) => (f r i acc).`1) <= p *)
+op p1, p2, p3 : real.
+
+axiom p1_prop x y z : mu r_distr
+  (fun (r : R) =>
+     x = xof (y +++ - z *** r)) <= p1.
+
+axiom p2_prop : mu r_distr (fun (x : R) => ! u_check x) <= p2.
 
 
 axiom iteri_ub ['a 'b] (g : 'a -> 'b) (f : 'a -> int -> 'b -> (bool * 'b)) (a_distr : 'a distr) (N : int) (p : real)  :
 
   (forall i acc, mu a_distr
-    (fun (r : 'a) => (f r i acc).`1) <= p)
+    (fun (r : 'a) => !(f r i acc).`1) <= p)
 
   => 
   mu a_distr 
    (fun (x : 'a) => 
-      (iteri N (fun j (acc : bool * 'b) 
+      !(iteri N (fun j (acc : bool * 'b) 
         => 
-   let r = f x j acc.`2 in(acc.`1 /\ r.`1, r.`2)) (true,  g x)).`1  ) <= N%r * p.
+   let r = f x j acc.`2 in(acc.`1 /\ r.`1, r.`2)) (true,  g x)).`1 ) <= N%r * p.
 
+
+lemma mu_split distr P Q :
+    mu distr (fun (x : 'a) => ! (P x /\ Q x)) = 
+     mu distr (fun (x : 'a) =>  (!P x \/ !Q x)).
+smt(). qed.    
+
+
+lemma mu_or_leq distr P Q :
+     mu distr (fun (x : 'a) =>  (P x \/ Q x))
+     <= mu distr P   
+       + mu distr Q.
+rewrite Distr.mu_or.
+smt(@Distr).
+qed.    
+
+
+lemma mu_split_q distr P Q p :
+     mu distr P + mu distr Q <= p =>
+     mu distr (fun (x : 'a) =>  (P x \/ Q x)) <= p.
+apply RealOrder.ler_trans. apply mu_or_leq.
+qed.    
+
+
+lemma kkkk (a b c d : real) : a <= c => b <= d => a + b <= c + d.
+smt().
+qed.    
 
 
 lemma completeness_I argP args :
   phoare [ NestedLoops.multiScalarMul_Completeness_I_fun :
-      arg = (argP , args) ==> res.`1 ] <= (T%r * (l%r * p)).
+      arg = (argP , args) ==> !res.`1 ] <= (p2 + p3 + (T%r * (l%r * p1))).
 proc.
 wp. rnd. skip. progress. 
 rewrite /multiScalarMulII_pure.
-
-
 pose f := fun a i b => 
   (helperI_pure l (perfect_table_pure P{hr} ((2 ^ w - 1) *** a))
-                s{hr} i (2 ^ w *** b)).
-
-
-apply  (iteri_ub (fun (x : R) => l *** x) f  r_distr T   ).  
-
- move => i acc.
+    s{hr} i (2 ^ w *** b)).
+simplify.
+rewrite mu_split. simplify.
+apply mu_split_q.
+rewrite mu_split. simplify.
+apply kkkk.
+apply mu_split_q.  
+apply kkkk.
+apply p2_prop. admit.
+apply (iteri_ub (fun (x : R) => l *** x) f  r_distr T).  
+move => i acc.
 rewrite /f. rewrite /helperI_pure.   
-
 pose h := fun  a j b
     =>  ((predicate b
                (perfect_table_pure P{hr} ((2 ^ w - 1) *** a) j (s{hr} j i)))
-        ,   
-   b %%%
-            perfect_table_pure P{hr} ((2 ^ w - 1) *** a) j (s{hr} j i)  ).
-
-apply  (iteri_ub (fun (x : R) => 2 ^ w *** acc) h  r_distr l  p).  
+        , b %%% perfect_table_pure P{hr} ((2 ^ w - 1) *** a) j (s{hr} j i)).
+apply  (iteri_ub (fun (x : R) => 2 ^ w *** acc) h r_distr l p1).  
 progress.
 rewrite /h. simplify.           
 rewrite /perfect_table_pure. simplify.
 rewrite /predicate.            
+simplify.
+apply p1_prop.
+qed.           
