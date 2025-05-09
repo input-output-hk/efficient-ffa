@@ -17,8 +17,8 @@ op helperI_pure (l : int) (argT : int -> int -> R)
     = (iteri l (fun j (acc : bool * R) 
         => (acc.`1 /\ predicate acc.`2 (argT j (args j argic)) , acc.`2 %%% argT j (args j argic))) (true, argcc)).
 
-op u_check (r : R) : bool.
-op table_check (l w : int) (P : int -> R) (r : R) : bool.
+op u_check (r : Point) : bool.
+op table_check (P : int -> R) (r : R) : bool.
 
   
 op multiScalarMulII_pure (T l : int) (argT : int -> int -> R)
@@ -27,9 +27,37 @@ op multiScalarMulII_pure (T l : int) (argT : int -> int -> R)
         => let r = helperI_pure l argT args i ((2 ^ argw) *** acc.`2) in (acc.`1 /\ r.`1, r.`2)) (true, argu)).
 
 
-module NestedLoops = {
 
-  proc doubleWtimes(p : R, w : int) = {
+module type UCompute = {
+  proc run() : Point
+}.
+
+
+module type TCompute = {
+  proc run(P : int -> R, u_cand : R) : (bool * (int -> int -> R))
+}.
+
+op point_distr : Point distr.
+
+module UniformU : UCompute = {
+   proc run() = {
+     var u_cand;
+     u_cand <$ point_distr;
+     return u_cand;
+   }
+}.
+
+module PerfectTable : TCompute = {
+   proc run(P : int -> R, u_cand : R)  = {
+     var flag, table;
+     flag   <- table_check P u_cand;
+     table  <- perfect_table_pure P ((2 ^ w - 1) *** u_cand);
+     return (flag, table);
+   }
+}.
+
+module SimpleComp = {
+  proc multiScalarMul_Iter11(p : R, w : int) = {
       var cnt;
       cnt <- 0;
       while (cnt < w) {
@@ -40,7 +68,7 @@ module NestedLoops = {
   }
 
 
-  proc helperI(acc : R, table : int -> int-> R, ic : int, s : int -> int -> int) =    {
+  proc multiScalarMul_Iter12(acc : R, table : int -> int-> R, ic : int, s : int -> int -> int) =    {
       var jc, aux, vahe, flag;
     
       aux <- witness;
@@ -59,8 +87,7 @@ module NestedLoops = {
 
 
 
-
-  proc multiScalarMulII(P : int -> R, s : int -> int -> int, U : R, table : int -> int -> R ) = {
+  proc multiScalarMul_Iter1(P : int -> R, s : int -> int -> int, U : R, table : int -> int -> R ) = {
     var acc, aux, result : R;
 
     var ic, jc, cnt : int;
@@ -71,59 +98,75 @@ module NestedLoops = {
     acc     <- l *** U;
     ic      <- 0;
     while (ic < T) {
-      acc <@ doubleWtimes(acc,w);
-      (flagaux, acc) <@ helperI(acc, table, ic, s);
+      acc <@ multiScalarMul_Iter11(acc,w);
+
+      (flagaux, acc) <@ multiScalarMul_Iter12(acc, table, ic, s);
       flag <- flag && flagaux;
       ic <- ic + 1;
     }    
     return (flag, acc);
   }
 
-
-  proc multiScalarMul_Completeness_I(P : int -> R, s : int -> int -> int) = {
-    var u_cand : R;
-    var flag : bool;
-    var result, table;
-
-    u_cand <$ r_distr;
-
-    flag   <- u_check u_cand;
-
-    flag   <- flag /\ table_check l w P u_cand;
-    table  <- perfect_table_pure P ((2 ^ w - 1) *** u_cand); 
-   
-    result <@ multiScalarMulII(P, s, u_cand, table);
-    return (flag /\ result.`1, result.`2);
-  }
-
-
-  proc multiScalarMul_Completeness_I_fun(P : int -> R, s : int -> int -> int) = {
+  proc multiScalarMul_Fun(P : int -> R, s : int -> int -> int) = {
     var u_cand, flag, result, table;
 
-    u_cand <$ r_distr;
+    u_cand <$ point_distr;
 
    (* check u *)
    flag   <- u_check u_cand;
 
    (* check table  *)
-   flag   <- flag /\ table_check l w P u_cand;
-   table  <- perfect_table_pure P ((2 ^ w - 1) *** u_cand); 
+   flag   <- flag /\ table_check P (embed u_cand);
+   table  <- perfect_table_pure  P ((2 ^ w - 1) *** (embed u_cand));
 
    (* do the computation  *)
-   result <- multiScalarMulII_pure T l table s (l *** u_cand) w;
+   result <- multiScalarMulII_pure T l table s (l *** (embed u_cand)) w;
 
-   return (flag /\ result.`1, result.`2);
+   return (flag /\ result.`1, result.`2 +++ (- (l *** (embed u_cand))));
   }
+
 
 }.
 
-lemma helperI_specR_ph argcc argT argic args  :
- phoare [ NestedLoops.helperI : arg = (argcc, argT, argic,  args)
+module NestedLoops(T : TCompute, U : UCompute) = {
+
+  proc multiScalarMul(P : int -> R, s : int -> int -> int) = {
+    var u_cand : Point;
+    var flag, flagaux : bool;
+    var result, table;
+
+    (* choose a point (uniformly for completeness, adversarially for soundness *)
+    u_cand <@ U.run(); 
+    (* perform the checks on U  *)
+    flag   <- u_check u_cand;
+
+    (* try to compute the Table or fail  *)
+    (flagaux, table) <@ T.run(P, embed u_cand);
+    flag <- flagaux /\ flag;
+  
+    (* double and add loops  *)
+    result <@ SimpleComp.multiScalarMul_Iter1(P, s, embed u_cand, table);
+
+    return (flag /\ result.`1, result.`2 +++ (- (l *** embed u_cand)));
+  }
+
+
+
+}.
+
+
+lemma multiScalarMul_Iter12_specR_ph argcc argT argic args  :
+ phoare [ SimpleComp.multiScalarMul_Iter12 : arg = (argcc, argT, argic,  args)
      ==>  res = helperI_pure l argT args argic argcc ] = 1%r.
 proc.
 while (0 <= jc 
  /\ jc <= l 
- /\ flag = (iteri jc (fun j (acc : bool * R) => (acc.`1 /\ predicate acc.`2 (argT j (args j argic)) , acc.`2 %%% argT j (args j argic))) (true, argcc)).`1
+ /\ flag = (iteri 
+                  jc 
+                  (fun j (acc : bool * R) => 
+                     (acc.`1 /\ predicate acc.`2 (argT j (args j argic)) , 
+                      acc.`2 %%% argT j (args j argic))) 
+                  (true, argcc)).`1
  /\ (acc, table, ic,  s) = (argcc, argT, argic, args) 
  /\ vahe =  (iteri jc (fun j (acc : bool * R) => (acc.`1 /\ predicate acc.`2 (argT j (args j argic)) , acc.`2 %%% argT j (args j argic))) (true, argcc)).`2) (l - jc).
 move => z.
@@ -149,15 +192,15 @@ smt().
 qed.  
 
 
-
-lemma helperI_specR_h argcc argT argic args  :
- hoare [ NestedLoops.helperI : arg = (argcc, argT, argic,  args)
+lemma multiScalarMul_Iter12_specR_h argcc argT argic args  :
+ hoare [ SimpleComp.multiScalarMul_Iter12 : arg = (argcc, argT, argic,  args)
      ==>  res = helperI_pure l argT args argic argcc ].
-conseq (helperI_specR_ph argcc argT argic args).
+conseq (multiScalarMul_Iter12_specR_ph argcc argT argic args).
 qed.   
 
+
 lemma doublewtimes_spec_ph argP argw :
- phoare [ NestedLoops.doubleWtimes : arg = (argP, argw) /\
+ phoare [ SimpleComp.multiScalarMul_Iter11 : arg = (argP, argw) /\
    0 <= argw  ==>  res = (2 ^ argw) *** argP  ] = 1%r.
 proc. 
    while (cnt <= w /\ 0 <= argw /\ 0 <= cnt /\ p = (2 ^ cnt) *** argP) (w - cnt).
@@ -176,14 +219,14 @@ qed.
 
 
 lemma doublewtimes_spec argP argw :
- hoare [ NestedLoops.doubleWtimes : arg = (argP, argw) /\
+ hoare [ SimpleComp.multiScalarMul_Iter11 : arg = (argP, argw) /\
    0 <= argw  ==>  res = (2 ^ argw) *** argP  ].
 conseq (doublewtimes_spec_ph argP argw).   
 qed.   
 
 
 lemma multm_spec_h argP args argU argtable :
- hoare [ NestedLoops.multiScalarMulII : arg = (argP, args, argU, argtable)   
+ hoare [ SimpleComp.multiScalarMul_Iter1 : arg = (argP, args, argU, argtable)   
   ==>  res = multiScalarMulII_pure T l argtable args (l *** argU) w   ] .
 proc. 
 while (
@@ -193,7 +236,7 @@ while (
   /\ (flag , acc) = multiScalarMulII_pure ic l argtable args (l *** argU) w
  ) .
 wp.
-ecall (helperI_specR_h acc argtable ic args).
+ecall (multiScalarMul_Iter12_specR_h acc argtable ic args).
 ecall (doublewtimes_spec acc w). 
 skip.
 progress. smt(w_pos).
@@ -210,15 +253,15 @@ rewrite - H2.
 qed. 
 
 lemma multm_spec_ph argP args argU argtable :
- phoare [ NestedLoops.multiScalarMulII : arg = (argP, args, argU, argtable)   
-  ==>  res = multiScalarMulII_pure T l argtable args (l *** argU) w   ]  = 1%r.
+ phoare [ SimpleComp.multiScalarMul_Iter1 : arg = (argP, args, argU, argtable)   
+  ==>  res = multiScalarMulII_pure T l argtable args (l *** argU) w ]  = 1%r.
 phoare split ! 1%r 0%r. auto.
    proc. wp.
 while (table = argtable /\ s = args) (T - ic). progress.
 wp.
 exists* acc, table, ic, s.
 elim*. move => accV tableV icV sV.
-call (helperI_specR_ph (2 ^ w *** accV) argtable icV args).
+call (multiScalarMul_Iter12_specR_ph (2 ^ w *** accV) argtable icV args).
 call (doublewtimes_spec_ph accV MultiScalarMul_Abstract.w).
 skip.  progress. smt(w_pos).  smt().
 wp. progress.
@@ -227,14 +270,43 @@ apply multm_spec_h.
 qed.
 
 
+section.
+
+declare module T <: TCompute.
+
+declare axiom T_prop Parg uarg : phoare  [ T.run : arg = (Parg, uarg) ==> (res.`1 => res.`2 = perfect_table_pure Parg ((2 ^ w - 1) *** uarg)) /\ res.`1 = table_check Parg uarg ] = 1%r.
+
+
 lemma compl_I_equiv : 
- equiv [ NestedLoops.multiScalarMul_Completeness_I_fun ~
-         NestedLoops.multiScalarMul_Completeness_I 
+ equiv [ SimpleComp.multiScalarMul_Fun ~
+         NestedLoops(T, UniformU).multiScalarMul
+     : ={arg} ==> res{1}.`1 = res{2}.`1 ].
+proc.
+seq 4 4 : (#pre /\ ={u_cand} /\ (flag{1} => ={table}) /\ ={flag}). 
+inline UniformU.run. wp.
+ecall {2} (T_prop P{2} ((embed u_cand{2}))).
+wp. 
+   
+rnd. skip. progress. smt(). smt().
+exists* P{2}, s{2}, u_cand{2}, table{2}. elim*. move => PV sV u_candV tableV.  
+wp. 
+call {2} (multm_spec_ph PV sV (embed u_candV) tableV).
+wp. skip. progress. smt().
+qed.
+
+end section.
+
+
+lemma compl_I_equiv : 
+ equiv [ SimpleComp.multiScalarMul_Fun ~
+         SimpleComp.multiScalarMul
      : ={arg} ==> ={res} ].
 proc.
-seq 4 4 : (#pre /\ ={flag, u_cand, table}). wp. rnd. skip. progress.
+seq 4 4 : (#pre /\ ={flag, u_cand, table}). 
+inline PerfectTable.run UniformU.run.
+wp. rnd. skip. progress. smt().
 exists* P{2}, s{2}, u_cand{2}, table{2}. elim*. move => PV sV u_candV tableV.  
-call {2} (multm_spec_ph PV sV (u_candV) tableV).
+call {2} (multm_spec_ph PV sV (embed u_candV) tableV).
 wp. skip. progress.
 qed.
 
@@ -245,7 +317,7 @@ axiom p1_prop x y z : mu r_distr
   (fun (r : R) =>
      x = xof (y +++ - z *** r)) <= p1.
 
-axiom p2_prop : mu r_distr (fun (x : R) => ! u_check x) <= p2.
+axiom p2_prop : mu point_distr (fun (x : Point) => ! u_check x) <= p2.
 
 
 axiom iteri_ub ['a 'b] (g : 'a -> 'b) (f : 'a -> int -> 'b -> (bool * 'b)) (a_distr : 'a distr) (N : int) (p : real)  :
@@ -289,13 +361,13 @@ qed.
 
 
 lemma completeness_I argP args :
-  phoare [ NestedLoops.multiScalarMul_Completeness_I_fun :
+  phoare [ SimpleComp.multiScalarMul_Fun :
       arg = (argP , args) ==> !res.`1 ] <= (p2 + p3 + (T%r * (l%r * p1))).
 proc.
 wp. rnd. skip. progress. 
 rewrite /multiScalarMulII_pure.
 pose f := fun a i b => 
-  (helperI_pure l (perfect_table_pure P{hr} ((2 ^ w - 1) *** a))
+  (helperI_pure l (perfect_table_pure P{hr} ((2 ^ w - 1) *** embed a))
     s{hr} i (2 ^ w *** b)).
 simplify.
 rewrite mu_split. simplify.
@@ -305,18 +377,18 @@ apply kkkk.
 apply mu_split_q.  
 apply kkkk.
 apply p2_prop. admit.
-apply (iteri_ub (fun (x : R) => l *** x) f  r_distr T).  
+apply (iteri_ub (fun (x : Point) => l *** embed x) f  point_distr T).  
 move => i acc.
 rewrite /f. rewrite /helperI_pure.   
 pose h := fun  a j b
     =>  ((predicate b
-               (perfect_table_pure P{hr} ((2 ^ w - 1) *** a) j (s{hr} j i)))
-        , b %%% perfect_table_pure P{hr} ((2 ^ w - 1) *** a) j (s{hr} j i)).
-apply  (iteri_ub (fun (x : R) => 2 ^ w *** acc) h r_distr l p1).  
+               (perfect_table_pure P{hr} ((2 ^ w - 1) *** embed a) j (s{hr} j i)))
+        , b %%% perfect_table_pure P{hr} ((2 ^ w - 1) *** embed a) j (s{hr} j i)).
+apply  (iteri_ub (fun (x : Point) => 2 ^ w *** acc) h point_distr l p1).  
 progress.
 rewrite /h. simplify.           
 rewrite /perfect_table_pure. simplify.
 rewrite /predicate.            
 simplify.
-apply p1_prop.
+admit.
 qed.           
