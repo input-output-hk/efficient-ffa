@@ -9,6 +9,8 @@ require import BitEncoding StdBigop Bigalg.
 
 require import MultiScalarMul_Abstract.
 
+  (* add group order premise n < p *)
+axiom funny_one n b :  exists (x : R), n *** x = b.
 
 op predicate (x : R) (r : R) = xof x <> xof r.
 
@@ -17,7 +19,7 @@ op helperI_pure (l : int) (argT : int -> int -> R)
     = (iteri l (fun j (acc : bool * R) 
         => (acc.`1 /\ predicate acc.`2 (argT j (args j argic)) , acc.`2 %%% argT j (args j argic))) (true, argcc)).
 
-op u_check (r : Point) : bool.
+op u_check (r : R) : bool.
 op table_check (P : int -> R) (r : R) : bool.
 
   
@@ -29,7 +31,7 @@ op multiScalarMulII_pure (T l : int) (argT : int -> int -> R)
 
 
 module type UCompute = {
-  proc run() : Point
+  proc run() : R
 }.
 
 
@@ -42,7 +44,7 @@ op point_distr : Point distr.
 module UniformU : UCompute = {
    proc run() = {
      var u_cand;
-     u_cand <$ point_distr;
+     u_cand <$ r_distr;
      return u_cand;
    }
 }.
@@ -110,19 +112,19 @@ module SimpleComp = {
   proc multiScalarMul_Fun(P : int -> R, s : int -> int -> int) = {
     var u_cand, flag, result, table;
 
-    u_cand <$ point_distr;
+    u_cand <$ r_distr;
 
    (* check u *)
    flag   <- u_check u_cand;
 
    (* check table  *)
-   flag   <- flag /\ table_check P (embed u_cand);
-   table  <- perfect_table_pure  P ((2 ^ w - 1) *** (embed u_cand));
+   flag   <- flag /\ table_check P (u_cand);
+   table  <- perfect_table_pure  P ((2 ^ w - 1) *** ( u_cand));
 
-   (* do the computation  *)
-   result <- multiScalarMulII_pure T l table s (l *** (embed u_cand)) w;
+   (* do the double-and-add computation  *)
+   result <- multiScalarMulII_pure T l table s (l *** ( u_cand)) w;
 
-   return (flag /\ result.`1, result.`2 +++ (- (l *** (embed u_cand))));
+   return (flag /\ result.`1, result.`2 +++ (- (l *** ( u_cand))));
   }
 
 
@@ -131,7 +133,7 @@ module SimpleComp = {
 module NestedLoops(T : TCompute, U : UCompute) = {
 
   proc multiScalarMul(P : int -> R, s : int -> int -> int) = {
-    var u_cand : Point;
+    var u_cand : R;
     var flag, flagaux : bool;
     var result, table;
 
@@ -141,16 +143,15 @@ module NestedLoops(T : TCompute, U : UCompute) = {
     flag   <- u_check u_cand;
 
     (* try to compute the Table or fail  *)
-    (flagaux, table) <@ T.run(P, embed u_cand);
+    (flagaux, table) <@ T.run(P, u_cand);
     flag <- flagaux /\ flag;
   
     (* double and add loops  *)
-    result <@ SimpleComp.multiScalarMul_Iter1(P, s, embed u_cand, table);
+    result <@ SimpleComp.multiScalarMul_Iter1(P, s, u_cand, table);
 
-    return (flag /\ result.`1, result.`2 +++ (- (l *** embed u_cand)));
+    return (flag /\ result.`1, result.`2 +++ (- (l *** u_cand)));
   }
-
-
+ 
 
 }.
 
@@ -284,40 +285,42 @@ lemma compl_I_equiv :
 proc.
 seq 4 4 : (#pre /\ ={u_cand} /\ (flag{1} => ={table}) /\ ={flag}). 
 inline UniformU.run. wp.
-ecall {2} (T_prop P{2} ((embed u_cand{2}))).
+ecall {2} (T_prop P{2} ((u_cand{2}))).
 wp. 
    
 rnd. skip. progress. smt(). smt().
 exists* P{2}, s{2}, u_cand{2}, table{2}. elim*. move => PV sV u_candV tableV.  
 wp. 
-call {2} (multm_spec_ph PV sV (embed u_candV) tableV).
+call {2} (multm_spec_ph PV sV (u_candV) tableV).
 wp. skip. progress. smt().
 qed.
 
 end section.
 
 
-lemma compl_I_equiv : 
+lemma compl_I_equiv_perf : 
  equiv [ SimpleComp.multiScalarMul_Fun ~
-         SimpleComp.multiScalarMul
+         NestedLoops(PerfectTable, UniformU).multiScalarMul
      : ={arg} ==> ={res} ].
 proc.
 seq 4 4 : (#pre /\ ={flag, u_cand, table}). 
 inline PerfectTable.run UniformU.run.
 wp. rnd. skip. progress. smt().
 exists* P{2}, s{2}, u_cand{2}, table{2}. elim*. move => PV sV u_candV tableV.  
-call {2} (multm_spec_ph PV sV (embed u_candV) tableV).
+call {2} (multm_spec_ph PV sV (u_candV) tableV).
 wp. skip. progress.
 qed.
 
 
-op p1, p2, p3 : real.
+require import Distr.
 
-axiom p1_prop x y z : mu r_distr
-  (fun (r : R) =>
-     x = xof (y +++ - z *** r)) <= p1.
+op p1 : real.
+axiom p1_prop x : mu r_distr (fun r => x = xof r) <= p1.
 
-axiom p2_prop : mu point_distr (fun (x : Point) => ! u_check x) <= p2.
+op p2 : real = mu r_distr (fun (x : R) => ! u_check x).
+
+op p3 (P : ( int -> R)) :  real 
+   = mu r_distr (fun (x : R) => ! table_check P x).
 
 
 axiom iteri_ub ['a 'b] (g : 'a -> 'b) (f : 'a -> int -> 'b -> (bool * 'b)) (a_distr : 'a distr) (N : int) (p : real)  :
@@ -360,14 +363,18 @@ smt().
 qed.    
 
 
+require import Distr.
+
+
 lemma completeness_I argP args :
   phoare [ SimpleComp.multiScalarMul_Fun :
-      arg = (argP , args) ==> !res.`1 ] <= (p2 + p3 + (T%r * (l%r * p1))).
+      arg = (argP , args) ==> !res.`1 ] 
+            <= (p2 + (p3 argP) + (T%r * (l%r * p1))).
 proc.
 wp. rnd. skip. progress. 
 rewrite /multiScalarMulII_pure.
 pose f := fun a i b => 
-  (helperI_pure l (perfect_table_pure P{hr} ((2 ^ w - 1) *** embed a))
+  (helperI_pure l (perfect_table_pure P{hr} ((2 ^ w - 1) *** a))
     s{hr} i (2 ^ w *** b)).
 simplify.
 rewrite mu_split. simplify.
@@ -375,20 +382,87 @@ apply mu_split_q.
 rewrite mu_split. simplify.
 apply kkkk.
 apply mu_split_q.  
-apply kkkk.
-apply p2_prop. admit.
-apply (iteri_ub (fun (x : Point) => l *** embed x) f  point_distr T).  
+apply kkkk. auto.
+auto.
+
+apply (iteri_ub (fun (x : R) => l *** x) f  r_distr T).  
 move => i acc.
 rewrite /f. rewrite /helperI_pure.   
 pose h := fun  a j b
     =>  ((predicate b
-               (perfect_table_pure P{hr} ((2 ^ w - 1) *** embed a) j (s{hr} j i)))
-        , b %%% perfect_table_pure P{hr} ((2 ^ w - 1) *** embed a) j (s{hr} j i)).
-apply  (iteri_ub (fun (x : Point) => 2 ^ w *** acc) h point_distr l p1).  
+               (perfect_table_pure P{hr} ((2 ^ w - 1) *** a) j (s{hr} j i)))
+        , b %%% perfect_table_pure P{hr} ((2 ^ w - 1) *** a) j (s{hr} j i)).
+apply  (iteri_ub (fun (x : R) => 2 ^ w *** acc) h r_distr l p1).  
 progress.
 rewrite /h. simplify.           
 rewrite /perfect_table_pure. simplify.
 rewrite /predicate.            
 simplify.
-admit.
+
+ have -> : (fun (r : R) =>
+     xof acc0 = xof (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** r))
+     = (fun (r : F) =>
+     xof acc0 = r) \o (fun r =>  xof (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** r)) . smt().
+rewrite - dmapE. simplify.
+
+
+
+rewrite - dmap_comp.
+
+ have  ->:  ((dmap r_distr
+        (fun (x : R) => s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x)))
+   = r_distr.
+   
+    have -> : dmap r_distr (fun (x : R) => s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x) =
+       dmap r_distr ((fun (x : R) => s{hr} i0 i *** P{hr} i0 +++ x) \o (fun x => - (2 ^ w - 1) *** x)). smt ().
+rewrite - dmap_comp.
+
+   have -> : (fun (x0 : R) => - (2 ^ w - 1) *** x0)
+    = (fun (x0 : R) => - x0) \o (fun x => (2 ^ w - 1) *** x).   smt().
+     rewrite - dmap_comp.
+
+    have ->: (dmap r_distr (fun (x0 : R) => (2 ^ w - 1) *** x0))  = r_distr.
+
+    pose  funny_op := fun (a : R) => choiceb (fun (x : R) => (2 ^ w - 1) *** x = a) witness.
+      apply (dmap_bij _ _ _ funny_op).
+     admit.
+     admit.
+    progress.
+    rewrite /funny_op.
+    pose xxx := choiceb (fun (x : R) => (2 ^ w - 1) *** x = (2 ^ w - 1) *** a) witness.
+      have : (2 ^ w - 1) *** xxx = (2 ^ w - 1) *** a.
+     
+    apply (choicebP (fun (x : R) => (2 ^ w - 1) *** x = (2 ^ w - 1) *** a)). exists a. auto.
+     admit.
+    progress.
+    rewrite /funny_op. 
+    apply (choicebP (fun (x : R) => (2 ^ w - 1) *** x = b)).
+    simplify.
+    apply (funny_one (2 ^ w - 1) b).
+
+
+    
+   
+
+    have ->: (dmap r_distr (fun (x0 : R) => -x0)) = r_distr.
+    
+  apply (dmap_bij _ _ _ ((fun (x : R) => - x ))).
+    
+    progress. admit.
+    progress. admit.
+    progress. admit.
+    progress. admit.
+
+    
+
+
+  apply (dmap_bij _ _ _ ((fun (x : R) => x +++ - s{hr} i0 i *** P{hr} i0 ))).
+    progress. admit.
+    progress. admit.
+    progress. admit.
+    progress. admit.
+
+rewrite  dmapE.    
+apply p1_prop.
+
 qed.           
