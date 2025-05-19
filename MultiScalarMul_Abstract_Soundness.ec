@@ -14,7 +14,7 @@ declare module O <: OutCalls.
 declare module O_Partial <: OutCalls.
 
 declare axiom tableP parg varg : hoare [ O.getT : arg = (parg,varg)
-   ==> res = (fun (j i : int) =>  (i *** (parg j)) +++ - varg)  ].
+   ==> res = (fun (j i : int) => (i *** (parg j)) +++ - varg)  ].
 
 declare axiom tablePT parg varg : hoare [ O.getPT : arg = (parg,varg)
    ==> res.`1 => (res.`2 = (fun (j i : int) =>  (i *** (parg j)) +++ - varg)  /\ (forall i j, res.`2 i j <> idR) )   ].
@@ -36,6 +36,32 @@ lemma kik  (a b c d : R) :  a +++ b +++ (c +++ d) = a +++ c +++ (b +++ d).
  by smt(op_assoc op_comm). qed.
 
     
+
+
+lemma doublewtimes_spec_ph argP argw :
+ phoare [ MultiScalarMul(O).doubleWtimes : arg = (argP, argw) /\
+   0 <= argw  ==>  res = (2 ^ argw) *** argP  ] = 1%r.
+proc. 
+   while (cnt <= w /\ 0 <= argw /\ 0 <= cnt /\ p = (2 ^ cnt) *** argP) (w - cnt).
+move => z.    
+   wp.
+   skip. progress. smt(). smt().
+   rewrite qiq. smt.
+   have ->: (2 ^ cnt{hr} + 2 ^ cnt{hr}) = (2 * 2 ^ cnt{hr} ).
+   smt(@Int).
+   congr.
+   rewrite exprS. auto. auto.
+   smt().
+   wp. skip. progress. smt. smt().
+   smt(@Int).
+qed.
+
+
+lemma doublewtimes_spec argP argw :
+ hoare [ MultiScalarMul(O).doubleWtimes : arg = (argP, argw) /\
+   0 <= argw  ==>  res = (2 ^ argw) *** argP  ].
+conseq (doublewtimes_spec_ph argP argw).   
+qed.   
 
     
 

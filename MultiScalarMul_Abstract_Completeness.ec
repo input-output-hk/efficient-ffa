@@ -1,4 +1,3 @@
-
 require import AllCore IntDiv CoreMap List.
 
 require import AllCore Int IntDiv List StdOrder Bool.
@@ -8,19 +7,102 @@ require import BitEncoding StdBigop Bigalg.
 
 
 require import MultiScalarMul_Abstract.
+require import Distr.
 
   (* add group order premise n < p *)
 axiom funny_one n b :  exists (x : R), n *** x = b.
+axiom r_distr_full : is_full r_distr.
+axiom r_distr_uni : is_uniform r_distr.
+(* only if gcd(n,order) = 1 *)
+axiom const_mul_inj : forall n, 1 <= n => forall x y, n *** x = n *** y => x = y.
+
+
+op u_check (r : R) : bool.
+op table_check (P : int -> R) (r : R) : bool.
+
+op p1 : real.
+axiom p1_prop x : mu r_distr (fun r => x = xof r) <= p1.
+
+op p2 : real = mu r_distr (fun (x : R) => ! u_check x).
+
+op p3 (P : ( int -> R)) :  real 
+   = mu r_distr (fun (x : R) => ! table_check P x).
+
+
+
+lemma mu_split distr P Q :
+    mu distr (fun (x : 'a) => ! (P x /\ Q x)) = 
+     mu distr (fun (x : 'a) =>  (!P x \/ !Q x)).
+smt(). qed.    
+
+
+lemma mu_or_leq distr P Q :
+     mu distr (fun (x : 'a) =>  (P x \/ Q x))
+     <= mu distr P   
+       + mu distr Q.
+rewrite Distr.mu_or.
+smt(@Distr).
+qed.    
+
+require import Real.
+
+lemma mu_or_leq_param distr p q P Q:  
+     mu distr P <= p
+     => mu distr Q <= q
+     => mu distr (fun (x : 'a) =>  (P x \/ Q x)) <= p + q.
+progress.
+have z : mu distr (fun (x : 'a) => P x \/ Q x)
+    <=  mu distr P   
+       + mu distr Q.
+apply mu_or_leq.
+apply (RealOrder.ler_trans (mu distr P + mu distr Q)).      
+apply z.
+smt().
+qed.     
+
+
+lemma iteri_ub ['a 'b] (g : 'a -> 'b) (f : 'a -> int -> 'b -> (bool * 'b)) (a_distr : 'a distr) (p : real)  :
+  (forall i acc, mu a_distr
+    (fun (r : 'a) => !(f r i acc).`1) <= p)
+  => forall (N : int), 1 <= N =>
+  mu a_distr
+   (fun (x : 'a) =>
+      !(iteri N (fun j (acc : bool * 'b)
+        =>
+   let r = f x j acc.`2 in (acc.`1 /\ r.`1, r.`2)) (true,  g x)).`1 ) <= N%r * p.
+admitted.     
+
+
+
+lemma r_distr_funi : is_funiform r_distr.
+proof. apply is_full_funiform.
+apply r_distr_full.
+apply r_distr_uni.
+qed.
+
+
+lemma const_add_inj : forall (x y a : R), x +++ a = y +++ a <=> x = y.
+proof. progress.
+have q : (x +++ a) +++ - a = (y +++ a) +++ - a.
+    progress. smt (op_assoc op_comm op_id op_id' op_inv).
+    progress. smt (op_assoc op_comm op_id op_id' op_inv).
+qed.
+
+lemma neg_neg_id : forall (x : R), - - x = x.
+proof. progress.
+rewrite - (const_add_inj (- - x) x (- x)). 
+smt (op_assoc op_comm op_id op_id' op_inv).
+qed.
+
 
 op predicate (x : R) (r : R) = xof x <> xof r.
+
+
 
 op helperI_pure (l : int) (argT : int -> int -> R)
   (args : int -> int -> int) (argic : int) (argcc : R) 
     = (iteri l (fun j (acc : bool * R) 
         => (acc.`1 /\ predicate acc.`2 (argT j (args j argic)) , acc.`2 %%% argT j (args j argic))) (true, argcc)).
-
-op u_check (r : R) : bool.
-op table_check (P : int -> R) (r : R) : bool.
 
   
 op multiScalarMulII_pure (T l : int) (argT : int -> int -> R)
@@ -312,43 +394,7 @@ wp. skip. progress.
 qed.
 
 
-require import Distr.
 
-op p1 : real.
-axiom p1_prop x : mu r_distr (fun r => x = xof r) <= p1.
-
-op p2 : real = mu r_distr (fun (x : R) => ! u_check x).
-
-op p3 (P : ( int -> R)) :  real 
-   = mu r_distr (fun (x : R) => ! table_check P x).
-
-
-axiom iteri_ub ['a 'b] (g : 'a -> 'b) (f : 'a -> int -> 'b -> (bool * 'b)) (a_distr : 'a distr) (N : int) (p : real)  :
-
-  (forall i acc, mu a_distr
-    (fun (r : 'a) => !(f r i acc).`1) <= p)
-
-  => 
-  mu a_distr 
-   (fun (x : 'a) => 
-      !(iteri N (fun j (acc : bool * 'b) 
-        => 
-   let r = f x j acc.`2 in(acc.`1 /\ r.`1, r.`2)) (true,  g x)).`1 ) <= N%r * p.
-
-
-lemma mu_split distr P Q :
-    mu distr (fun (x : 'a) => ! (P x /\ Q x)) = 
-     mu distr (fun (x : 'a) =>  (!P x \/ !Q x)).
-smt(). qed.    
-
-
-lemma mu_or_leq distr P Q :
-     mu distr (fun (x : 'a) =>  (P x \/ Q x))
-     <= mu distr P   
-       + mu distr Q.
-rewrite Distr.mu_or.
-smt(@Distr).
-qed.    
 
 
 lemma mu_split_q distr P Q p :
@@ -385,14 +431,15 @@ apply mu_split_q.
 apply kkkk. auto.
 auto.
 
-apply (iteri_ub (fun (x : R) => l *** x) f  r_distr T).  
+
+apply (iteri_ub (fun (x : R) => l *** x) f  r_distr (l%r * p1) _ T _)  .  
 move => i acc.
 rewrite /f. rewrite /helperI_pure.   
 pose h := fun  a j b
     =>  ((predicate b
                (perfect_table_pure P{hr} ((2 ^ w - 1) *** a) j (s{hr} j i)))
         , b %%% perfect_table_pure P{hr} ((2 ^ w - 1) *** a) j (s{hr} j i)).
-apply  (iteri_ub (fun (x : R) => 2 ^ w *** acc) h r_distr l p1).  
+apply  (iteri_ub (fun (x : R) => 2 ^ w *** acc) h r_distr p1).  
 progress.
 rewrite /h. simplify.           
 rewrite /perfect_table_pure. simplify.
@@ -400,9 +447,9 @@ rewrite /predicate.
 simplify.
 
  have -> : (fun (r : R) =>
-     xof acc0 = xof (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** r))
+     xof (acc0) = xof (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** r))
      = (fun (r : F) =>
-     xof acc0 = r) \o (fun r =>  xof (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** r)) . smt().
+     xof (acc0 ) = r) \o (fun r =>  xof (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** r)) . smt().
 rewrite - dmapE. simplify.
 
 
@@ -425,44 +472,35 @@ rewrite - dmap_comp.
 
     pose  funny_op := fun (a : R) => choiceb (fun (x : R) => (2 ^ w - 1) *** x = a) witness.
       apply (dmap_bij _ _ _ funny_op).
-     admit.
-     admit.
+     progress. apply r_distr_full.
+     progress. apply r_distr_funi.
     progress.
     rewrite /funny_op.
     pose xxx := choiceb (fun (x : R) => (2 ^ w - 1) *** x = (2 ^ w - 1) *** a) witness.
       have : (2 ^ w - 1) *** xxx = (2 ^ w - 1) *** a.
      
-    apply (choicebP (fun (x : R) => (2 ^ w - 1) *** x = (2 ^ w - 1) *** a)). exists a. auto.
-     admit.
+    apply (choicebP (fun (x : R) => (2 ^ w - 1) *** x = (2 ^ w - 1) *** a)). exists a. auto. 
+    
     progress.
-    rewrite /funny_op. 
+    apply (const_mul_inj (2 ^ w - 1)). smt. auto.
+    rewrite /funny_op.
+    progress.
     apply (choicebP (fun (x : R) => (2 ^ w - 1) *** x = b)).
     simplify.
     apply (funny_one (2 ^ w - 1) b).
-
-
-    
-   
-
     have ->: (dmap r_distr (fun (x0 : R) => -x0)) = r_distr.
-    
-  apply (dmap_bij _ _ _ ((fun (x : R) => - x ))).
-    
-    progress. admit.
-    progress. admit.
-    progress. admit.
-    progress. admit.
-
-    
-
-
-  apply (dmap_bij _ _ _ ((fun (x : R) => x +++ - s{hr} i0 i *** P{hr} i0 ))).
-    progress. admit.
-    progress. admit.
-    progress. admit.
-    progress. admit.
-
+    apply (dmap_bij _ _ _ ((fun (x : R) => - x ))).    
+    progress. apply r_distr_full.
+    progress. apply r_distr_funi.
+    progress. apply neg_neg_id.
+    progress. apply neg_neg_id.
+    apply (dmap_bij _ _ _ ((fun (x : R) => x +++ - s{hr} i0 i *** P{hr} i0 ))).
+    progress. apply r_distr_full.
+    progress. apply r_distr_funi.
+    progress. smt (op_assoc op_comm op_id op_id' op_inv).
+    progress. smt (op_assoc op_comm op_id op_id' op_inv).
 rewrite  dmapE.    
 apply p1_prop.
-
+    smt(l_pos).
+    smt(T_pos).
 qed.           
