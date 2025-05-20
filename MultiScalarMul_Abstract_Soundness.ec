@@ -27,32 +27,7 @@ declare axiom tableP_ph parg varg : phoare [ O.getT : arg = (parg,varg)
 declare axiom tablePT_ph parg varg : phoare [ O.getPT : arg = (parg,varg)
    ==> res.`1 => (res.`2 = (fun (j i : int) =>  (i *** (parg j)) +++ - varg)  /\ (forall i j, res.`2 i j <> idR) )   ] = 1%r.
 
-
-lemma doublewtimes_spec_ph argP argw :
- phoare [ MultiScalarMul(O).doubleWtimes : arg = (argP, argw) /\
-   0 <= argw  ==>  res = (2 ^ argw) *** argP  ] = 1%r.
-proc. 
-   while (cnt <= w /\ 0 <= argw /\ 0 <= cnt /\ p = (2 ^ cnt) *** argP) (w - cnt).
-move => z.    
-   wp.
-   skip. progress. smt(). smt().
-   rewrite qiq. smt.
-   have ->: (2 ^ cnt{hr} + 2 ^ cnt{hr}) = (2 * 2 ^ cnt{hr} ).
-   smt(@Int).
-   congr.
-   rewrite exprS. auto. auto.
-   smt().
-   wp. skip. progress. smt. smt().
-   smt(@Int).
-qed.
-
-
-lemma doublewtimes_spec argP argw :
- hoare [ MultiScalarMul(O).doubleWtimes : arg = (argP, argw) /\
-   0 <= argw  ==>  res = (2 ^ argw) *** argP  ].
-conseq (doublewtimes_spec_ph argP argw).   
-qed.   
-    
+   
 
 lemma helpereqs argacc argtable argic args  : 
  equiv [ MultiScalarMul(O).helperR ~ MultiScalarMul(O).helperI : 
@@ -279,7 +254,7 @@ rewrite same_res.
      smt().
      smt().
 wp.
-inline MultiScalarMul(O).doubleWtimes.
+inline SimpleComp.doubleLoop.
 wp.
    while ((flag{2} => ={p}) /\ ={w,cnt0}). wp. skip. progress.
    smt(). wp. skip. progress.

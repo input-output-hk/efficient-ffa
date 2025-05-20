@@ -15,11 +15,7 @@ axiom funny_one n b :  exists (x : R), n *** x = b.
 (* only if gcd(n,order) = 1 *)
 axiom const_mul_inj : forall n, 1 <= n => forall x y, n *** x = n *** y => x = y.
 
-(* check the U candidate  *)
-op u_check (r : R) : bool.
 
-(* check whether the table could be computed *)
-op table_check (P : int -> R) (r : R) : bool.
 
 op p1 : real.
 axiom p1_prop x : mu r_distr (fun r => x = xof r) <= p1.
@@ -30,19 +26,8 @@ op p3 (P : ( int -> R)) :  real
    = mu r_distr (fun (x : R) => ! table_check P x).
 
 
-op predicate (x : R) (r : R) = xof x <> xof r.
 
 
-op helperI_pure (l : int) (argT : int -> int -> R)
-  (args : int -> int -> int) (argic : int) (argcc : R) 
-    = (iteri l (fun j (acc : bool * R) 
-        => (acc.`1 /\ predicate acc.`2 (argT j (args j argic)) , acc.`2 %%% argT j (args j argic))) (true, argcc)).
-
-  
-op multiScalarMulII_pure (T l : int) (argT : int -> int -> R)
-  (args : int -> int -> int) (argu : R) (argw : int)
-    = (iteri T (fun i (acc : bool * R) 
-        => let r = helperI_pure l argT args i ((2 ^ argw) *** acc.`2) in (acc.`1 /\ r.`1, r.`2)) (true, argu)).
 
 
 
@@ -65,6 +50,8 @@ module UniformU : UCompute = {
    }
 }.
 
+
+
 module PerfectTable : TCompute = {
    proc run(P : int -> R, u_cand : R)  = {
      var flag, table;
@@ -74,74 +61,6 @@ module PerfectTable : TCompute = {
    }
 }.
 
-module SimpleComp = {
-  proc doubleLoop(p : R, w : int) = {
-      var cnt;
-      cnt <- 0;
-      while (cnt < w) {
-        p <- p +++ p;
-        cnt <- cnt + 1;
-      }
-      return p;
-  }
-
-
-  proc incompleteAddLoop(acc : R, table : int -> int-> R, ic : int, s : int -> int -> int) =    {
-      var jc, aux, vahe, flag;
-    
-      aux <- witness;
-      flag <- true;
-      jc <- 0;
-      vahe <- acc;
-      while (jc < l) {
-        aux <- table jc (s jc ic);
-        flag <- flag /\ predicate vahe aux;
-        vahe <- (vahe %%% aux);
-
-        jc <- jc + 1;
-      }
-      return (flag, vahe);
-  }
-
-
-  proc multiScalarMulMain(P : int -> R, s : int -> int -> int, U : R, table : int -> int -> R ) = {
-    var acc, aux, result : R;
-
-    var ic, jc, cnt : int;
-    var flag, flagaux : bool;
-    flag    <- true;
-    flagaux <- true;
-    acc     <- l *** U;
-    ic      <- 0;
-    while (ic < T) {
-      acc <@ doubleLoop(acc,w);
-      (flagaux, acc) <@ incompleteAddLoop(acc, table, ic, s);
-      flag <- flag && flagaux;
-      ic <- ic + 1;
-    }    
-    return (flag, acc);
-  }
-
-  proc multiScalarMul_Fun(P : int -> R, s : int -> int -> int) = {
-    var u_cand, flag, result, table;
-
-    u_cand <$ r_distr;
-
-   (* check u *)
-   flag   <- u_check u_cand;
-
-   (* check table  *)
-   flag   <- flag /\ table_check P (u_cand);
-   table  <- perfect_table_pure  P ((2 ^ w - 1) *** ( u_cand));
-
-   (* do the double-and-add computation  *)
-   result <- multiScalarMulII_pure T l table s (l *** ( u_cand)) w;
-
-   return (flag /\ result.`1, result.`2 +++ (- (l *** ( u_cand))));
-  }
-
-
-}.
 
 module NestedLoops(T : TCompute, U : UCompute) = {
 
@@ -211,32 +130,6 @@ conseq (incompleteAddLoop_specR_ph argcc argT argic args).
 qed.   
 
 
-lemma doublewtimes_spec_ph argP argw :
- phoare [ SimpleComp.doubleLoop : arg = (argP, argw) /\
-   0 <= argw  ==>  res = (2 ^ argw) *** argP  ] = 1%r.
-proc. 
-   while (cnt <= w /\ 0 <= argw /\ 0 <= cnt /\ p = (2 ^ cnt) *** argP) (w - cnt).
-move => z.    
-   wp.
-   skip. progress. smt(). smt().
-   rewrite qiq. smt.
-   have ->: (2 ^ cnt{hr} + 2 ^ cnt{hr}) = (2 * 2 ^ cnt{hr} ).
-   smt(@Int).
-   congr.
-   rewrite exprS. auto. auto.
-   smt().
-   wp. skip. progress. smt. smt().
-   smt(@Int).
-qed.
-
-
-lemma doublewtimes_spec argP argw :
- hoare [ SimpleComp.doubleLoop : arg = (argP, argw) /\
-   0 <= argw  ==>  res = (2 ^ argw) *** argP  ].
-conseq (doublewtimes_spec_ph argP argw).   
-qed.   
-
-
 lemma multm_spec_h argP args argU argtable :
  hoare [ SimpleComp.multiScalarMulMain : arg = (argP, args, argU, argtable)   
   ==>  res = multiScalarMulII_pure T l argtable args (l *** argU) w   ] .
@@ -263,6 +156,7 @@ have -> : T = ic0. smt(T_pos).
 rewrite - H2.
  smt().
 qed. 
+
 
 lemma multm_spec_ph argP args argU argtable :
  phoare [ SimpleComp.multiScalarMulMain : arg = (argP, args, argU, argtable)   
@@ -343,8 +237,6 @@ apply kkkk.
 apply mu_split_q.  
 apply kkkk. auto.
 auto.
-
-
 apply (iteri_ub (fun (x : R) => l *** x) f  r_distr (l%r * p1) _ T _)  .  
 move => i acc.
 rewrite /f. rewrite /helperI_pure.   
@@ -358,31 +250,22 @@ rewrite /h. simplify.
 rewrite /perfect_table_pure. simplify.
 rewrite /predicate.            
 simplify.
-
  have -> : (fun (r : R) =>
      xof (acc0) = xof (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** r))
      = (fun (r : F) =>
      xof (acc0 ) = r) \o (fun r =>  xof (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** r)) . smt().
 rewrite - dmapE. simplify.
-
-
-
 rewrite - dmap_comp.
-
  have  ->:  ((dmap r_distr
         (fun (x : R) => s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x)))
    = r_distr.
-   
     have -> : dmap r_distr (fun (x : R) => s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x) =
        dmap r_distr ((fun (x : R) => s{hr} i0 i *** P{hr} i0 +++ x) \o (fun x => - (2 ^ w - 1) *** x)). smt ().
 rewrite - dmap_comp.
-
    have -> : (fun (x0 : R) => - (2 ^ w - 1) *** x0)
     = (fun (x0 : R) => - x0) \o (fun x => (2 ^ w - 1) *** x).   smt().
      rewrite - dmap_comp.
-
     have ->: (dmap r_distr (fun (x0 : R) => (2 ^ w - 1) *** x0))  = r_distr.
-
     pose  funny_op := fun (a : R) => choiceb (fun (x : R) => (2 ^ w - 1) *** x = a) witness.
       apply (dmap_bij _ _ _ funny_op).
      progress. apply r_distr_full.
