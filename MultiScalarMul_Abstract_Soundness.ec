@@ -41,7 +41,7 @@ proof. conseq (tablePT_ph parg varg). auto. qed.
 
 
 lemma multieqs argP args argU  :
- equiv [ SimpleComp.multiScalarMulR 
+ equiv [ SimpleComp.multiScalarMulMain_Perfect 
         ~ MultiScalarMul(O).multiScalarMulI :
   arg{2} = (argP, args, argU) /\ ={P,s,U} /\ ={glob O}
      ==>  res{2}.`1 => (res{1} = res{2}.`2)].
@@ -91,13 +91,13 @@ lemma multiscalarI_spec_ph argP args  argU :
 proof.
 bypr.
 progress.
-have ih: 1%r = Pr[SimpleComp.multiScalarMulR(P{m}, s{m}, U{m}) @ &m 
+have ih: 1%r = Pr[SimpleComp.multiScalarMulMain_Perfect(P{m}, s{m}, U{m}) @ &m 
   : res = multiScalarMulR args argP].
 byphoare (_: arg = (argP, args, argU) ==> _).
 conseq (multiscalarR_spec_ph argP args argU). smt(). auto.
 have : Pr[MultiScalarMul(O).multiScalarMulI(P{m}, s{m}, U{m}) @ &m :
    res.`1 => res.`2 = multiScalarMulR args argP] >=
-Pr[SimpleComp.multiScalarMulR(P{m}, s{m}, U{m}) @ &m :
+Pr[SimpleComp.multiScalarMulMain_Perfect(P{m}, s{m}, U{m}) @ &m :
    res = multiScalarMulR args argP].
 byequiv (_: ={glob O} /\ arg{2} = (P{m}, s{m}, U{m}) /\ arg{1} = (P{m}, s{m}, U{m}) ==> res{2}.`1 => res{2}.`2 = res{1} ).
 proc*.

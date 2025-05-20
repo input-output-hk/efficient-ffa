@@ -85,7 +85,11 @@ op multiScalarMulII_pure (T l : int) (argT : int -> int -> R)
 
 
 
+
+
+
 module SimpleComp = {
+
   proc doubleLoop(p : R, w : int) = {
       var cnt;
       cnt <- 0;
@@ -95,7 +99,6 @@ module SimpleComp = {
       }
       return p;
   }
-
 
   proc completeAddLoop(acc : R, table : int -> int-> R, ic : int, s : int -> int -> int) = {
       var jc, aux, vahe;
@@ -110,28 +113,6 @@ module SimpleComp = {
         jc <- jc + 1;
       }
       return vahe;
-  }
-
-
-  proc multiScalarMulR(P : int -> R, s : int -> int -> int, U : R) = {
-    var v, acc, aux, result : R;
-    var table : int -> int -> R;
-    var ic, jc, cnt : int;
-
-   
-    v     <- (2 ^ w - 1) *** U;
-    table <- fun (j i : int) => (i *** (P j)) +++ - v;
-    acc   <- l *** U;
-
-    ic <- 0;
-    while (ic < T) {
-      acc <@ doubleLoop(acc,w);
-      acc <@ completeAddLoop(acc, table, ic, s);
-      ic <- ic + 1;
-    }
-    
-    result <- acc +++ (- (l *** U));
-    return result;
   }
 
 
@@ -154,9 +135,29 @@ module SimpleComp = {
   }
 
 
+  proc multiScalarMulMain_Perfect(P : int -> R, s : int -> int -> int, U : R) = {
+    var v, acc, aux, result : R;
+    var table : int -> int -> R;
+    var ic, jc, cnt : int;
+   
+    v     <- (2 ^ w - 1) *** U;
+    table <- fun (j i : int) => (i *** (P j)) +++ - v;
+    acc   <- l *** U;
+
+    ic <- 0;
+    while (ic < T) {
+      acc <@ doubleLoop(acc,w);
+      acc <@ completeAddLoop(acc, table, ic, s);
+      ic <- ic + 1;
+    }
+    
+    result <- acc +++ (- (l *** U));
+    return result;
+  }
 
 
-  proc multiScalarMulMain(P : int -> R, s : int -> int -> int, U : R, table : int -> int -> R ) = {
+
+  proc multiScalarMulMain_Opt(P : int -> R, s : int -> int -> int, U : R, table : int -> int -> R ) = {
     var acc, aux, result : R;
 
     var ic, jc, cnt : int;
@@ -196,44 +197,61 @@ module SimpleComp = {
 }.
 
 
-module MultiScalarMul(O : OutCalls) = {
-
-  proc helper(acc : int, table : int -> int-> int, ic : int, P : int -> int, s : int -> int -> int, U : int) = {
-      var jc, aux, vahe;
-    
-      jc <- 1;
-      vahe <- acc;
-      while (jc < l + 1) {
-        aux <- table jc (s jc ic);
-        vahe <- vahe + aux;
-
-        jc <- jc + 1;
-      }
-      return vahe;
-  }
+module type UCompute = {
+  proc run() : R
+}.
 
 
+module type TCompute = {
+  proc run(P : int -> R, u_cand : R) : (bool * (int -> int -> R))
+}.
+
+module UniformU : UCompute = {
+   proc run() = {
+     var u_cand;
+     u_cand <$ r_distr;
+     return u_cand;
+   }
+}.
+
+
+
+module PerfectTable : TCompute = {
+   proc run(P : int -> R, u_cand : R)  = {
+     var flag, table;
+     flag   <- table_check P u_cand;
+     table  <- perfect_table_pure P ((2 ^ w - 1) *** u_cand);
+     return (flag, table);
+   }
+}.
+
+
+module NestedLoops(T : TCompute, U : UCompute) = {
+
+  proc multiScalarMul(P : int -> R, s : int -> int -> int) = {
+    var u_cand : R;
+    var flag, flagaux : bool;
+    var result, table;
+
+    (* choose a point (uniformly for completeness, adversarially for soundness *)
+    u_cand <@ U.run(); 
+    (* perform the checks on U  *)
+    flag   <- u_check u_cand;
+
+    (* try to compute the Table or fail  *)
+    (flagaux, table) <@ T.run(P, u_cand);
+    flag <- flagaux /\ flag;
   
+    (* double and add loops  *)
+    result <@ SimpleComp.multiScalarMulMain_Opt(P, s, u_cand, table);
 
-  (* proc helperI(acc : R, table : int -> int-> R, ic : int, s : int -> int -> int) = { *)
-  (*     var jc, aux, vahe, flag; *)
-    
-  (*     aux <- witness; *)
-  (*     flag <- true; *)
-  (*     jc <- 0; *)
-  (*     vahe <- acc; *)
-  (*     while (jc < l) { *)
-  (*       aux <- table jc (s jc ic); *)
-  (*       flag <- flag && (xof vahe) <> (xof aux); *)
-  (*       flag <- flag && (vahe <> idR); *)
-  (*       vahe <- (vahe %%% aux); *)
-
-  (*       jc <- jc + 1; *)
-  (*     } *)
-  (*     return (flag, vahe); *)
-  (* } *)
+    return (flag /\ result.`1, result.`2 +++ (- (l *** u_cand)));
+  }
+}.
 
 
+
+module MultiScalarMul(O : OutCalls) = {
 
   proc multiScalarMulI(P : int -> R, s : int -> int -> int, U : R) = {
     var u, v, acc, aux, result : R;
@@ -261,8 +279,6 @@ module MultiScalarMul(O : OutCalls) = {
   }
 
 
-
-
   proc multiScalarMul(P : int -> R, s : int -> int -> int) = {
     var u_cand : Point;
     var flag : bool;
@@ -278,37 +294,6 @@ module MultiScalarMul(O : OutCalls) = {
     } 
     return result;
   }
-
-  proc multiScalarMul_Completeness(P : int -> R, s : int -> int -> int) = {
-    var u_cand : R;
-    var flag : bool;
-    var result;
-
-    u_cand <@ O.getUniformU();
-    result <@ multiScalarMulI(P,s,u_cand);
-    return result;
-  }
-
-
-
-  (* proc multiScalarMulII(P : int -> R, s : int -> int -> int, U : R, table : int -> int -> R ) = { *)
-  (*   var acc, aux, result : R; *)
-
-  (*   var ic, jc, cnt : int; *)
-  (*   var flag, flagaux : bool; *)
-
-  (*   flag    <- true; *)
-  (*   flagaux <- true; *)
-  (*   acc     <- l *** U; *)
-  (*   ic      <- 0; *)
-  (*   while (ic < T) { *)
-  (*     acc <@ SimpleComp.doubleLoop(acc,w); *)
-  (*     (flagaux, acc) <@ helperI(acc, table, ic, s); *)
-  (*     flag <- flag && flagaux; *)
-  (*     ic <- ic + 1; *)
-  (*   }     *)
-  (*   return (flag, acc); *)
-  (* } *)
 
 
 }.
@@ -416,7 +401,7 @@ qed.
 
 
 lemma multiscalarR_spec argP args argU : 
- hoare [ SimpleComp.multiScalarMulR : 
+ hoare [ SimpleComp.multiScalarMulMain_Perfect : 
   arg = (argP, args, argU) 
      ==>  res = (multiScalarMulR  args argP)  ].
 proc. wp.
@@ -512,7 +497,7 @@ qed.
 
 
 lemma multiscalarR_spec_ph argP args argU : 
- phoare [ SimpleComp.multiScalarMulR : 
+ phoare [ SimpleComp.multiScalarMulMain_Perfect : 
   arg = (argP, args, argU) 
      ==>  res = (multiScalarMulR  args argP)  ] = 1%r.
 phoare split ! 1%r 0%r. auto.

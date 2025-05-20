@@ -28,64 +28,6 @@ op p3 (P : ( int -> R)) :  real
 
 
 
-
-
-
-module type UCompute = {
-  proc run() : R
-}.
-
-
-module type TCompute = {
-  proc run(P : int -> R, u_cand : R) : (bool * (int -> int -> R))
-}.
-
-op point_distr : Point distr.
-
-module UniformU : UCompute = {
-   proc run() = {
-     var u_cand;
-     u_cand <$ r_distr;
-     return u_cand;
-   }
-}.
-
-
-
-module PerfectTable : TCompute = {
-   proc run(P : int -> R, u_cand : R)  = {
-     var flag, table;
-     flag   <- table_check P u_cand;
-     table  <- perfect_table_pure P ((2 ^ w - 1) *** u_cand);
-     return (flag, table);
-   }
-}.
-
-
-module NestedLoops(T : TCompute, U : UCompute) = {
-
-  proc multiScalarMul(P : int -> R, s : int -> int -> int) = {
-    var u_cand : R;
-    var flag, flagaux : bool;
-    var result, table;
-
-    (* choose a point (uniformly for completeness, adversarially for soundness *)
-    u_cand <@ U.run(); 
-    (* perform the checks on U  *)
-    flag   <- u_check u_cand;
-
-    (* try to compute the Table or fail  *)
-    (flagaux, table) <@ T.run(P, u_cand);
-    flag <- flagaux /\ flag;
-  
-    (* double and add loops  *)
-    result <@ SimpleComp.multiScalarMulMain(P, s, u_cand, table);
-
-    return (flag /\ result.`1, result.`2 +++ (- (l *** u_cand)));
-  }
-}.
-
-
 lemma incompleteAddLoop_specR_ph argcc argT argic args  :
  phoare [ SimpleComp.incompleteAddLoop : arg = (argcc, argT, argic,  args)
      ==>  res = helperI_pure l argT args argic argcc ] = 1%r.
@@ -131,7 +73,7 @@ qed.
 
 
 lemma multm_spec_h argP args argU argtable :
- hoare [ SimpleComp.multiScalarMulMain : arg = (argP, args, argU, argtable)   
+ hoare [ SimpleComp.multiScalarMulMain_Opt : arg = (argP, args, argU, argtable)   
   ==>  res = multiScalarMulII_pure T l argtable args (l *** argU) w   ] .
 proc. 
 while (
@@ -159,7 +101,7 @@ qed.
 
 
 lemma multm_spec_ph argP args argU argtable :
- phoare [ SimpleComp.multiScalarMulMain : arg = (argP, args, argU, argtable)   
+ phoare [ SimpleComp.multiScalarMulMain_Opt : arg = (argP, args, argU, argtable)   
   ==>  res = multiScalarMulII_pure T l argtable args (l *** argU) w ]  = 1%r.
 phoare split ! 1%r 0%r. auto.
    proc. wp.
