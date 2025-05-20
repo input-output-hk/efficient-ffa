@@ -6,7 +6,7 @@ require import BitEncoding StdBigop Bigalg.
 (*---*) import Bigint BIA.
 
 
-require import MultiScalarMul_Abstract AuxResults IterationProps.
+require import MultiScalarMul_Abstract MultiScalarMul_Abstract_Setup AuxResults IterationProps.
 require import Distr.
 
 (* add group order premise n < p *)

@@ -5,7 +5,7 @@ require import BitEncoding StdBigop Bigalg.
 (*---*) import Ring.IntID IntOrder BS2Int.
 (*---*) import Bigint BIA.
 
-require import MultiScalarMul_Abstract.
+require import MultiScalarMul_Abstract_Setup.
 
 
 lemma iteriZ : forall (n : int), 0 <= n =>  forall (z : int) (f : int -> R), z *** (iteri n (fun i acc => acc +++ f i) idR)

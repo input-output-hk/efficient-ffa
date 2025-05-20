@@ -6,6 +6,9 @@ require import BitEncoding StdBigop Bigalg.
 (*---*) import Ring.IntID IntOrder BS2Int.
 (*---*) import Bigint BIA.
 
+require import MultiScalarMul_Abstract_Setup IterationProps.
+
+
 (*  
 
    P := (beta, x, y) 
@@ -16,88 +19,6 @@ require import BitEncoding StdBigop Bigalg.
        2.2/ all variations of identity point
 
 *)
-
-(* unique representation of points on the curve *)
-type R.                  
-       
-(* identity element  *)
-op idR : R. 
-op ( +++ ) (a b : R) : R.
-(* iteration of +++ n times (= iterop n ( +++ ) x idR.)  *)
-op ( *** ) (n : int) (x : R) : R.  
-(* inverse *)
-op [-] (a : R) : R.
-(* coincides with +++ under some conditions  *)
-op ( %%% ) (a b : R) : R.
-
-(* non-unique representation of points (not nec. on the curve) *)
-type F.
-
-op xof : R -> F.
-op yof : R -> F.
-
-axiom same_res (a b : R) :  a <> idR => b <> idR => xof a <> xof b 
-  => a %%% b = a +++ b.
-
-(* op properties  *)
-axiom op_assoc (a b c : R) : (a +++ b) +++ c = a +++ (b +++ c).
-axiom op_comm (a b : R) : a +++ b = b +++ a.
-axiom op_id (x : R) :  x +++ idR = x.
-axiom op_id' (x : R) : idR +++ x = x.
-axiom op_inv (a : R) :  a +++ -a = idR. 
-
-
-
-(* op iteration properties  *)
-axiom one_mul (a : R) : 1 *** a = a.
-axiom zero_mul (a : R) : 0 *** a = idR. 
-axiom nplus_dist (i b : int) b0 :  (i + b) *** b0 = i *** b0 +++ b *** b0.
-axiom nmul_mul (i b : int) b0 :  (i * b) *** b0 = i *** (b *** b0).
-axiom neg_mul (i : int) b0 :  (- i) *** b0 = - (i *** b0).
-axiom mul_idr : forall z, z *** idR = idR.
-axiom mul_plus_distr   : forall (a : int), forall (b c : R),   
- a *** (b +++ c) = a *** b +++ a *** c.
-
-
-
-lemma qiq : forall a, 0 <= a => forall (c : int), forall (b : R),
-   a *** b +++ c *** b = (a + c) *** b.
-apply natind. progress. smt.
-progress. rewrite nplus_dist. auto.
-have ->: (n + 1 + c) = ((n + c) + 1). smt().
-rewrite nplus_dist. 
-rewrite - H0. smt().    
-smt(op_comm op_assoc).
-qed.    
-
-lemma const_add_inj : forall (x y a : R), x +++ a = y +++ a <=> x = y.
-proof. progress.
-have q : (x +++ a) +++ - a = (y +++ a) +++ - a.
-    progress. smt (op_assoc op_comm op_id op_id' op_inv).
-    progress. smt (op_assoc op_comm op_id op_id' op_inv).
-qed.
-
-lemma neg_neg_id : forall (x : R), - - x = x.
-proof. progress.
-rewrite - (const_add_inj (- - x) x (- x)). 
-smt (op_assoc op_comm op_id op_id' op_inv).
-qed.
-
-
-lemma kik  (a b c d : R) :  a +++ b +++ (c +++ d) = a +++ c +++ (b +++ d). 
- by smt(op_assoc op_comm). qed.
-
-
-lemma nosmt mulsc : forall (a : int), 0 <= a => forall b r,  a *** (b *** r) = (a * b) *** r.
-apply intind.
-    progress.
-rewrite zero_mul. rewrite zero_mul. auto.
-progress.
-    rewrite nplus_dist. auto.
-have ->: (i + 1) * b = i * b + b. smt().
-rewrite H0.    
-rewrite nplus_dist. smt.
-qed.    
 
 
 
@@ -117,7 +38,7 @@ op onCurve : Point -> bool.
 op idF     : Point -> bool.
 op embed   : Point -> R.
 
-op perfect_table_pure  parg varg = 
+op perfect_table_pure  parg (varg : R) = 
  (fun (j i : int) =>  (i *** (parg j)) +++ - varg).
 
 
@@ -192,6 +113,29 @@ module SimpleComp = {
   }
 
 
+  proc multiScalarMulR(P : int -> R, s : int -> int -> int, U : R) = {
+    var v, acc, aux, result : R;
+    var table : int -> int -> R;
+    var ic, jc, cnt : int;
+
+   
+    v     <- (2 ^ w - 1) *** U;
+    table <- fun (j i : int) => (i *** (P j)) +++ - v;
+    acc   <- l *** U;
+
+    ic <- 0;
+    while (ic < T) {
+      acc <@ doubleLoop(acc,w);
+      acc <@ completeAddLoop(acc, table, ic, s);
+      ic <- ic + 1;
+    }
+    
+    result <- acc +++ (- (l *** U));
+    return result;
+  }
+
+
+
   proc incompleteAddLoop(acc : R, table : int -> int-> R, ic : int, s : int -> int -> int) =    {
       var jc, aux, vahe, flag;
     
@@ -208,6 +152,8 @@ module SimpleComp = {
       }
       return (flag, vahe);
   }
+
+
 
 
   proc multiScalarMulMain(P : int -> R, s : int -> int -> int, U : R, table : int -> int -> R ) = {
@@ -268,29 +214,6 @@ module MultiScalarMul(O : OutCalls) = {
 
 
   
-
-  proc multiScalarMulR(P : int -> R, s : int -> int -> int, U : R) = {
-    var v, acc, aux, result : R;
-    var table : int -> int -> R;
-    var ic, jc, cnt : int;
-
-   
-    v     <- (2 ^ w - 1) *** U;
-    table <@ O.getT(P, v);
-    acc   <- l *** U;
-
-    ic <- 0;
-    while (ic < T) {
-      acc <@ SimpleComp.doubleLoop(acc,w);
-      acc <@ SimpleComp.completeAddLoop(acc, table, ic, s);
-      ic <- ic + 1;
-    }
-    
-    result <- acc +++ (- (l *** U));
-    return result;
-  }
-
-
 
   proc helperI(acc : R, table : int -> int-> R, ic : int, s : int -> int -> int) = {
       var jc, aux, vahe, flag;
@@ -491,3 +414,121 @@ conseq (helper_specR_ph argcc argT argic args).
 progress.
 qed.   
 
+
+lemma multiscalarR_spec argP args argU : 
+ hoare [ SimpleComp.multiScalarMulR : 
+  arg = (argP, args, argU) 
+     ==>  res = (multiScalarMulR  args argP)  ].
+proc. wp.
+while (0 <= ic
+ /\ (2 ^ w - 1) *** U = v
+ /\ table = (fun (j i : int) =>  (i *** (P j)) +++ - v)
+ /\ ic <= T
+ /\ acc = ((iteri ic
+            (fun i acc1 => acc1 +++
+              (iteri l
+                 (fun j acc2 => acc2 +++ (2 ^ (w * (ic - 1 - i)) * s j i) *** (P j)) idR)
+                 ) idR)) +++ l *** U).
+wp.
+ecall (helper_specR acc table ic s). simplify.
+wp.
+ecall (doublewtimes_spec acc w). skip. progress. smt(w_pos).
+smt(). smt().
+   rewrite mul_plus_distr.
+rewrite iteriZ.           smt().
+simplify.
+have -> : iteri ic{hr}
+  (fun (i : int) (acc0 : R) =>
+     acc0 +++
+     2 ^ w ***
+     iteri l
+       (fun (j : int) (acc2 : R) =>
+          acc2 +++ 2 ^ (w * (ic{hr} - 1 - i)) * s{hr} j i *** P{hr} j) idR)
+  idR
+     = iteri ic{hr}
+  (fun (i : int) (acc0 : R) =>
+     acc0 +++
+     iteri l
+       (fun (j : int) (acc2 : R) =>
+          acc2 +++ 2 ^ (w * (ic{hr}  - i )) * s{hr} j i *** P{hr} j) idR)
+  idR.
+apply eq_iteri.
+progress.
+rewrite iteriZ. smt(l_pos). congr.
+     apply eq_iteri. move => j acc.
+     progress. congr.
+      have ->: 2 ^ w *** (2 ^ (w * (ic{hr} - 1 - i)) * s{hr} j i *** P{hr} j)
+                = 2 ^ w * 2 ^ (w * (ic{hr} - 1 - i)) * s{hr} j i *** P{hr} j .
+  rewrite mulsc. smt. smt().
+        rewrite - exprD_nneg. smt(w_pos). smt(w_pos). smt().
+pose v := (2 ^ w - 1) *** U{hr}.
+have -> : iteri l
+  (fun (j : int) (acc0 : R) => acc0 +++ (s{hr} j ic{hr} *** P{hr} j +++ -v))
+  idR = iteri l
+  (fun (j : int) (acc0 : R) => acc0 +++ (s{hr} j ic{hr} *** P{hr} j)) idR +++
+     iteri l (fun (j : int) (acc0 : R) => acc0 +++ -v) idR.
+rewrite - iteriZZ. simplify.
+smt(l_pos). apply eq_iteri.  progress. smt.
+simplify.
+rewrite  iteriZZZ.
+simplify. smt(l_pos).
+rewrite kik .
+have ->: (2 ^ w *** (l *** U{hr}) +++ l *** -v) = l *** U{hr}.
+    rewrite /v.
+  rewrite  mulsc. smt.
+  have -> : l *** - (2 ^ w - 1) *** U{hr}
+    = (l * - (2 ^ w - 1)) *** U{hr}. rewrite  nmul_mul.  rewrite neg_mul. auto.
+   rewrite - nplus_dist. congr. smt().
+rewrite iteriS.
+smt(). simplify.
+have ->: 2 ^ 0 = 1. smt(@Int).
+smt().
+wp. 
+skip. progress. smt(T_pos). 
+rewrite iteri0. auto. smt.
+rewrite /multiScalarMulInt.
+have -> : ic0 = T. smt().
+simplify.
+  have ->: iteri T
+  (fun (i : int) (acc1 : R) =>
+     acc1 +++
+     iteri l
+       (fun (j : int) (acc2 : R) =>
+          acc2 +++ 2 ^ (w * (T - 1 - i)) * s{hr} j i *** P{hr} j) idR) idR +++
+l *** U{hr} +++ - l *** U{hr}
+       = iteri T
+  (fun (i : int) (acc1 : R) =>
+     acc1 +++
+     iteri l
+       (fun (j : int) (acc2 : R) =>
+          acc2 +++ 2 ^ (w * (T - 1 - i)) * s{hr} j i *** P{hr} j) idR) idR +++
+  (l *** U{hr} +++ - l *** U{hr} ).
+smt(op_assoc).
+rewrite op_inv.
+  rewrite op_id.
+  rewrite /multiScalarMulR.
+auto.
+qed.
+
+
+lemma multiscalarR_spec_ph argP args argU : 
+ phoare [ SimpleComp.multiScalarMulR : 
+  arg = (argP, args, argU) 
+     ==>  res = (multiScalarMulR  args argP)  ] = 1%r.
+phoare split ! 1%r 0%r. auto.
+   proc. wp.
+while true (T - ic). progress.
+wp.
+exists* acc, table, ic, s.
+elim*. move => accV tableV icV sV.
+call helper_specR_total.   
+call (_: arg = (accV, Top.w) ==> true).
+proc*. call (doublewtimes_spec_ph accV Top.w).
+skip. progress. smt(w_pos). skip.
+progress.
+smt().
+wp. 
+skip. progress. smt().
+hoare. simplify.   
+apply multiscalarR_spec.
+qed.
