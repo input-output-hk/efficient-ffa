@@ -1,5 +1,5 @@
 
-require import AllCore IntDiv CoreMap List.
+require import AllCore IntDiv CoreMap List Distr.
 
 require import AllCore Int IntDiv List StdOrder Bool.
 require import BitEncoding StdBigop Bigalg.
@@ -59,6 +59,21 @@ axiom mul_plus_distr   : forall (a : int), forall (b c : R),
  a *** (b +++ c) = a *** b +++ a *** c.
 
 
+
+lemma const_add_inj : forall (x y a : R), x +++ a = y +++ a <=> x = y.
+proof. progress.
+have q : (x +++ a) +++ - a = (y +++ a) +++ - a.
+    progress. smt (op_assoc op_comm op_id op_id' op_inv).
+    progress. smt (op_assoc op_comm op_id op_id' op_inv).
+qed.
+
+lemma neg_neg_id : forall (x : R), - - x = x.
+proof. progress.
+rewrite - (const_add_inj (- - x) x (- x)). 
+smt (op_assoc op_comm op_id op_id' op_inv).
+qed.
+
+
 (* params  *)
 op T : int.
 op l : int.
@@ -80,6 +95,18 @@ op perfect_table_pure  parg varg =
 
 
 op r_distr : R distr.
+
+
+axiom r_distr_full : is_full r_distr.
+axiom r_distr_uni : is_uniform r_distr.
+
+
+lemma r_distr_funi : is_funiform r_distr.
+proof. apply is_full_funiform.
+apply r_distr_full.
+apply r_distr_uni.
+qed.
+
 
 module type OutCalls = {
   proc getU() : Point

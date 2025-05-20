@@ -404,3 +404,38 @@ lemma nosmt popop5 (c a b : int) : a <= c => a - b <= c - b.
 smt().
 qed.
 
+
+
+require import Real Distr.
+
+lemma mu_split distr P Q :
+    mu distr (fun (x : 'a) => ! (P x /\ Q x)) = 
+     mu distr (fun (x : 'a) =>  (!P x \/ !Q x)).
+smt(). qed.    
+
+
+lemma mu_or_leq distr P Q :
+     mu distr (fun (x : 'a) =>  (P x \/ Q x))
+     <= mu distr P   
+       + mu distr Q.
+rewrite Distr.mu_or.
+smt(@Distr).
+qed.    
+
+
+
+lemma mu_or_leq_param distr p q P Q:  
+     mu distr P <= p
+     => mu distr Q <= q
+     => mu distr (fun (x : 'a) =>  (P x \/ Q x)) <= p + q.
+progress.
+have z : mu distr (fun (x : 'a) => P x \/ Q x)
+    <=  mu distr P   
+       + mu distr Q.
+apply mu_or_leq.
+apply (RealOrder.ler_trans (mu distr P + mu distr Q)).      
+apply z.
+smt().
+qed.     
+
+

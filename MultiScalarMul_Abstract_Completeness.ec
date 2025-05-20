@@ -6,18 +6,19 @@ require import BitEncoding StdBigop Bigalg.
 (*---*) import Bigint BIA.
 
 
-require import MultiScalarMul_Abstract.
+require import MultiScalarMul_Abstract AuxResults.
 require import Distr.
 
-  (* add group order premise n < p *)
+(* add group order premise n < p *)
 axiom funny_one n b :  exists (x : R), n *** x = b.
-axiom r_distr_full : is_full r_distr.
-axiom r_distr_uni : is_uniform r_distr.
+
 (* only if gcd(n,order) = 1 *)
 axiom const_mul_inj : forall n, 1 <= n => forall x y, n *** x = n *** y => x = y.
 
-
+(* check the U candidate  *)
 op u_check (r : R) : bool.
+
+(* check whether the table could be computed *)
 op table_check (P : int -> R) (r : R) : bool.
 
 op p1 : real.
@@ -28,37 +29,6 @@ op p2 : real = mu r_distr (fun (x : R) => ! u_check x).
 op p3 (P : ( int -> R)) :  real 
    = mu r_distr (fun (x : R) => ! table_check P x).
 
-
-
-lemma mu_split distr P Q :
-    mu distr (fun (x : 'a) => ! (P x /\ Q x)) = 
-     mu distr (fun (x : 'a) =>  (!P x \/ !Q x)).
-smt(). qed.    
-
-
-lemma mu_or_leq distr P Q :
-     mu distr (fun (x : 'a) =>  (P x \/ Q x))
-     <= mu distr P   
-       + mu distr Q.
-rewrite Distr.mu_or.
-smt(@Distr).
-qed.    
-
-require import Real.
-
-lemma mu_or_leq_param distr p q P Q:  
-     mu distr P <= p
-     => mu distr Q <= q
-     => mu distr (fun (x : 'a) =>  (P x \/ Q x)) <= p + q.
-progress.
-have z : mu distr (fun (x : 'a) => P x \/ Q x)
-    <=  mu distr P   
-       + mu distr Q.
-apply mu_or_leq.
-apply (RealOrder.ler_trans (mu distr P + mu distr Q)).      
-apply z.
-smt().
-qed.     
 
 
 lemma iteri_ub ['a 'b] (g : 'a -> 'b) (f : 'a -> int -> 'b -> (bool * 'b)) (a_distr : 'a distr) (p : real)  :
@@ -74,29 +44,8 @@ admitted.
 
 
 
-lemma r_distr_funi : is_funiform r_distr.
-proof. apply is_full_funiform.
-apply r_distr_full.
-apply r_distr_uni.
-qed.
-
-
-lemma const_add_inj : forall (x y a : R), x +++ a = y +++ a <=> x = y.
-proof. progress.
-have q : (x +++ a) +++ - a = (y +++ a) +++ - a.
-    progress. smt (op_assoc op_comm op_id op_id' op_inv).
-    progress. smt (op_assoc op_comm op_id op_id' op_inv).
-qed.
-
-lemma neg_neg_id : forall (x : R), - - x = x.
-proof. progress.
-rewrite - (const_add_inj (- - x) x (- x)). 
-smt (op_assoc op_comm op_id op_id' op_inv).
-qed.
-
 
 op predicate (x : R) (r : R) = xof x <> xof r.
-
 
 
 op helperI_pure (l : int) (argT : int -> int -> R)
@@ -141,7 +90,7 @@ module PerfectTable : TCompute = {
 }.
 
 module SimpleComp = {
-  proc multiScalarMul_Iter11(p : R, w : int) = {
+  proc doubleLoop(p : R, w : int) = {
       var cnt;
       cnt <- 0;
       while (cnt < w) {
@@ -152,7 +101,7 @@ module SimpleComp = {
   }
 
 
-  proc multiScalarMul_Iter12(acc : R, table : int -> int-> R, ic : int, s : int -> int -> int) =    {
+  proc incompleteAddLoop(acc : R, table : int -> int-> R, ic : int, s : int -> int -> int) =    {
       var jc, aux, vahe, flag;
     
       aux <- witness;
@@ -171,7 +120,7 @@ module SimpleComp = {
 
 
 
-  proc multiScalarMul_Iter1(P : int -> R, s : int -> int -> int, U : R, table : int -> int -> R ) = {
+  proc multiScalarMulMain(P : int -> R, s : int -> int -> int, U : R, table : int -> int -> R ) = {
     var acc, aux, result : R;
 
     var ic, jc, cnt : int;
@@ -182,9 +131,9 @@ module SimpleComp = {
     acc     <- l *** U;
     ic      <- 0;
     while (ic < T) {
-      acc <@ multiScalarMul_Iter11(acc,w);
+      acc <@ doubleLoop(acc,w);
 
-      (flagaux, acc) <@ multiScalarMul_Iter12(acc, table, ic, s);
+      (flagaux, acc) <@ incompleteAddLoop(acc, table, ic, s);
       flag <- flag && flagaux;
       ic <- ic + 1;
     }    
@@ -229,7 +178,7 @@ module NestedLoops(T : TCompute, U : UCompute) = {
     flag <- flagaux /\ flag;
   
     (* double and add loops  *)
-    result <@ SimpleComp.multiScalarMul_Iter1(P, s, u_cand, table);
+    result <@ SimpleComp.multiScalarMulMain(P, s, u_cand, table);
 
     return (flag /\ result.`1, result.`2 +++ (- (l *** u_cand)));
   }
@@ -238,8 +187,8 @@ module NestedLoops(T : TCompute, U : UCompute) = {
 }.
 
 
-lemma multiScalarMul_Iter12_specR_ph argcc argT argic args  :
- phoare [ SimpleComp.multiScalarMul_Iter12 : arg = (argcc, argT, argic,  args)
+lemma incompleteAddLoop_specR_ph argcc argT argic args  :
+ phoare [ SimpleComp.incompleteAddLoop : arg = (argcc, argT, argic,  args)
      ==>  res = helperI_pure l argT args argic argcc ] = 1%r.
 proc.
 while (0 <= jc 
@@ -275,15 +224,15 @@ smt().
 qed.  
 
 
-lemma multiScalarMul_Iter12_specR_h argcc argT argic args  :
- hoare [ SimpleComp.multiScalarMul_Iter12 : arg = (argcc, argT, argic,  args)
+lemma incompleteAddLoop_specR_h argcc argT argic args  :
+ hoare [ SimpleComp.incompleteAddLoop : arg = (argcc, argT, argic,  args)
      ==>  res = helperI_pure l argT args argic argcc ].
-conseq (multiScalarMul_Iter12_specR_ph argcc argT argic args).
+conseq (incompleteAddLoop_specR_ph argcc argT argic args).
 qed.   
 
 
 lemma doublewtimes_spec_ph argP argw :
- phoare [ SimpleComp.multiScalarMul_Iter11 : arg = (argP, argw) /\
+ phoare [ SimpleComp.doubleLoop : arg = (argP, argw) /\
    0 <= argw  ==>  res = (2 ^ argw) *** argP  ] = 1%r.
 proc. 
    while (cnt <= w /\ 0 <= argw /\ 0 <= cnt /\ p = (2 ^ cnt) *** argP) (w - cnt).
@@ -302,14 +251,14 @@ qed.
 
 
 lemma doublewtimes_spec argP argw :
- hoare [ SimpleComp.multiScalarMul_Iter11 : arg = (argP, argw) /\
+ hoare [ SimpleComp.doubleLoop : arg = (argP, argw) /\
    0 <= argw  ==>  res = (2 ^ argw) *** argP  ].
 conseq (doublewtimes_spec_ph argP argw).   
 qed.   
 
 
 lemma multm_spec_h argP args argU argtable :
- hoare [ SimpleComp.multiScalarMul_Iter1 : arg = (argP, args, argU, argtable)   
+ hoare [ SimpleComp.multiScalarMulMain : arg = (argP, args, argU, argtable)   
   ==>  res = multiScalarMulII_pure T l argtable args (l *** argU) w   ] .
 proc. 
 while (
@@ -319,7 +268,7 @@ while (
   /\ (flag , acc) = multiScalarMulII_pure ic l argtable args (l *** argU) w
  ) .
 wp.
-ecall (multiScalarMul_Iter12_specR_h acc argtable ic args).
+ecall (incompleteAddLoop_specR_h acc argtable ic args).
 ecall (doublewtimes_spec acc w). 
 skip.
 progress. smt(w_pos).
@@ -336,7 +285,7 @@ rewrite - H2.
 qed. 
 
 lemma multm_spec_ph argP args argU argtable :
- phoare [ SimpleComp.multiScalarMul_Iter1 : arg = (argP, args, argU, argtable)   
+ phoare [ SimpleComp.multiScalarMulMain : arg = (argP, args, argU, argtable)   
   ==>  res = multiScalarMulII_pure T l argtable args (l *** argU) w ]  = 1%r.
 phoare split ! 1%r 0%r. auto.
    proc. wp.
@@ -344,7 +293,7 @@ while (table = argtable /\ s = args) (T - ic). progress.
 wp.
 exists* acc, table, ic, s.
 elim*. move => accV tableV icV sV.
-call (multiScalarMul_Iter12_specR_ph (2 ^ w *** accV) argtable icV args).
+call (incompleteAddLoop_specR_ph (2 ^ w *** accV) argtable icV args).
 call (doublewtimes_spec_ph accV MultiScalarMul_Abstract.w).
 skip.  progress. smt(w_pos).  smt().
 wp. progress.
