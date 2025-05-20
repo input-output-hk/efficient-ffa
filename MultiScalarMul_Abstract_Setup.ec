@@ -29,6 +29,11 @@ op yof : R -> F.
 
 axiom same_res (a b : R) :  a <> idR => b <> idR => xof a <> xof b 
   => a %%% b = a +++ b.
+axiom opt_never_id (a b : R) :  a <> idR => b <> idR => xof a <> xof b 
+  => a %%% b <> idR.
+axiom no_order_two_elems x n : 0 < n => 2 ^ n *** x <> idR.
+
+
 
 (* op properties  *)
 axiom op_assoc (a b c : R) : (a +++ b) +++ c = a +++ (b +++ c).

@@ -21,23 +21,23 @@ lemma tablePT parg varg : hoare [ O.getPT : arg = (parg,varg)
 proof. conseq (tablePT_ph parg varg). auto. qed.
    
 
-lemma helpereqs argacc argtable argic args  : 
- equiv [ SimpleComp.completeAddLoop ~ MultiScalarMul(O).helperI : 
-  arg{2} = (argacc, argtable, argic, args) /\ ={acc,table,ic,s}
-       /\ (forall i j, table{1} i j <> idR)
-     ==>  res{2}.`1 => (res{1} = res{2}.`2)].
-proc.
-while (={jc,acc,table,aux,s,ic} /\ (flag{2} => ={vahe})
- /\ (forall i j, table{1} i j <> idR)).
- wp. skip. progress.
-   have -> : vahe{1} = vahe{2}. smt().
-rewrite same_res. 
-  smt().
-  smt(). 
-  smt().
-  smt().
-wp. skip. progress. 
-qed.
+(* lemma helpereqs argacc argtable argic args  :  *)
+(*  equiv [ SimpleComp.completeAddLoop ~ SimpleComp.incompleteAddLoop :  *)
+(*   arg{2} = (argacc, argtable, argic, args) /\ ={acc,table,ic,s} *)
+(*        /\ (forall i j, table{1} i j <> idR) *)
+(*      ==>  res{2}.`1 => (res{1} = res{2}.`2)]. *)
+(* proc. *)
+(* while (={jc,acc,table,aux,s,ic} /\ (flag{2} => ={vahe}) *)
+(*  /\ (forall i j, table{1} i j <> idR)). *)
+(*  wp. skip. progress. *)
+(*    have -> : vahe{1} = vahe{2}. smt(). *)
+(* rewrite same_res.  admit. *)
+(*   smt(). *)
+(*   smt().  *)
+(*   smt(). *)
+(*   (* smt(). *) *)
+(* wp. skip. progress.  *)
+(* qed. *)
 
 
 lemma multieqs argP args argU  :
@@ -50,31 +50,34 @@ wp.
 while ((flag{2} => ={table,acc,U,s} /\ (forall i j, table{2} i j <> idR)) /\ (flag{2} => flagaux{2}) /\ ={ic}  ).
 wp.
 inline SimpleComp.completeAddLoop.
-inline MultiScalarMul(O).helperI.
+inline SimpleComp.incompleteAddLoop.   
 wp.
-while ((flag{2} /\ flag0{2} => ={vahe, acc0,table0,aux0,s0,ic0} /\ (forall i j, table0{2} i j <> idR)) /\ ={jc0}).
+while ((flag{2} /\ flag0{2} => ={vahe, acc0,table0,aux0,s0,ic0} /\ (forall i j, table0{2} i j <> idR) /\ vahe{2} <> idR) /\ ={jc0} ).
  wp. skip. progress.
    have -> : vahe{1} = vahe{2}. smt().
-rewrite same_res.
+rewrite same_res. 
   smt().
   smt().
   smt().
   smt().
+  smt().
      smt().
      smt().
      smt().
      smt().
      smt().
-     smt().
+apply opt_never_id. smt(). smt().
+smt().
 wp.
-inline SimpleComp.doubleLoop.
-wp.
-   while ((flag{2} => ={p}) /\ ={w,cnt0}). wp. skip. progress.
-   smt(). wp. skip. progress.
-smt(). smt(). smt(). smt(). smt(). smt().
-   smt(). smt().  smt(). smt(). smt().
+ecall {1} (doublewtimes_spec_ph acc{1} w).
+ecall {2} (doublewtimes_spec_ph acc{2} w).
+skip. progress. 
+smt(w_pos). smt(). smt(). smt().
+smt(). smt().
+apply no_order_two_elems. smt(w_pos).
+smt(). smt(). smt().
+smt(). smt().    
 wp. 
-(* ecall {1} (tableP_ph P{1} v{1} ). *)
 ecall {2} (tablePT_ph P{2} v{2}).    
 wp. skip. progress. smt(). smt().
 have -> :     acc_L = acc_R. smt(). auto.

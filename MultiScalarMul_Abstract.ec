@@ -215,23 +215,23 @@ module MultiScalarMul(O : OutCalls) = {
 
   
 
-  proc helperI(acc : R, table : int -> int-> R, ic : int, s : int -> int -> int) = {
-      var jc, aux, vahe, flag;
+  (* proc helperI(acc : R, table : int -> int-> R, ic : int, s : int -> int -> int) = { *)
+  (*     var jc, aux, vahe, flag; *)
     
-      aux <- witness;
-      flag <- true;
-      jc <- 0;
-      vahe <- acc;
-      while (jc < l) {
-        aux <- table jc (s jc ic);
-        flag <- flag && (xof vahe) <> (xof aux);
-        flag <- flag && (vahe <> idR);
-        vahe <- (vahe %%% aux);
+  (*     aux <- witness; *)
+  (*     flag <- true; *)
+  (*     jc <- 0; *)
+  (*     vahe <- acc; *)
+  (*     while (jc < l) { *)
+  (*       aux <- table jc (s jc ic); *)
+  (*       flag <- flag && (xof vahe) <> (xof aux); *)
+  (*       flag <- flag && (vahe <> idR); *)
+  (*       vahe <- (vahe %%% aux); *)
 
-        jc <- jc + 1;
-      }
-      return (flag, vahe);
-  }
+  (*       jc <- jc + 1; *)
+  (*     } *)
+  (*     return (flag, vahe); *)
+  (* } *)
 
 
 
@@ -251,7 +251,7 @@ module MultiScalarMul(O : OutCalls) = {
     ic <- 0;
     while (ic < T) {
       acc <@ SimpleComp.doubleLoop(acc,w);
-      (flagaux, acc) <@ helperI(acc, table, ic, s);
+      (flagaux, acc) <@ SimpleComp.incompleteAddLoop(acc, table, ic, s);      
       flag <- flag && flagaux;
       ic <- ic + 1;
     }
@@ -291,24 +291,24 @@ module MultiScalarMul(O : OutCalls) = {
 
 
 
-  proc multiScalarMulII(P : int -> R, s : int -> int -> int, U : R, table : int -> int -> R ) = {
-    var acc, aux, result : R;
+  (* proc multiScalarMulII(P : int -> R, s : int -> int -> int, U : R, table : int -> int -> R ) = { *)
+  (*   var acc, aux, result : R; *)
 
-    var ic, jc, cnt : int;
-    var flag, flagaux : bool;
+  (*   var ic, jc, cnt : int; *)
+  (*   var flag, flagaux : bool; *)
 
-    flag    <- true;
-    flagaux <- true;
-    acc     <- l *** U;
-    ic      <- 0;
-    while (ic < T) {
-      acc <@ SimpleComp.doubleLoop(acc,w);
-      (flagaux, acc) <@ helperI(acc, table, ic, s);
-      flag <- flag && flagaux;
-      ic <- ic + 1;
-    }    
-    return (flag, acc);
-  }
+  (*   flag    <- true; *)
+  (*   flagaux <- true; *)
+  (*   acc     <- l *** U; *)
+  (*   ic      <- 0; *)
+  (*   while (ic < T) { *)
+  (*     acc <@ SimpleComp.doubleLoop(acc,w); *)
+  (*     (flagaux, acc) <@ helperI(acc, table, ic, s); *)
+  (*     flag <- flag && flagaux; *)
+  (*     ic <- ic + 1; *)
+  (*   }     *)
+  (*   return (flag, acc); *)
+  (* } *)
 
 
 }.
