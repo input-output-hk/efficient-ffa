@@ -30,7 +30,7 @@ declare axiom tablePT_ph parg varg : phoare [ O.getPT : arg = (parg,varg)
    
 
 lemma helpereqs argacc argtable argic args  : 
- equiv [ MultiScalarMul(O).helperR ~ MultiScalarMul(O).helperI : 
+ equiv [ SimpleComp.completeAddLoop ~ MultiScalarMul(O).helperI : 
   arg{2} = (argacc, argtable, argic, args) /\ ={acc,table,ic,s}
        /\ (forall i j, table{1} i j <> idR)
      ==>  res{2}.`1 => (res{1} = res{2}.`2)].
@@ -46,67 +46,6 @@ rewrite same_res.
   smt().
 wp. skip. progress. 
 qed.
-    
-
-lemma helper_specR_ph2 argcc argT argic args  : 
- phoare [ MultiScalarMul(O).helperR : arg = (argcc, argT, argic,  args) 
-     ==>  res = iteri l (fun j acc => acc +++ argT j (args j argic)) argcc ] = 1%r.
-proc.
-while (0 <= jc 
- /\ jc <= l 
- /\ (acc, table, ic,  s) = (argcc, argT, argic, args) 
- /\ vahe =    iteri jc (fun j acc => acc +++ argT j (args j argic)) acc) (l - jc).
-move => z.
-wp. skip. progress. smt(). smt(). rewrite iteriS. smt().
-   simplify.
-smt(op_assoc).
-smt().   
-   wp. skip. progress. smt(l_pos). 
-rewrite iteri0. auto.
-smt(op_id).
-smt().
-smt().
-qed.   
-
-   
-lemma helper_specR_ph argcc argT argic args  : 
- phoare [ MultiScalarMul(O).helperR : arg = (argcc, argT, argic,  args) 
-     ==>  res = argcc +++  iteri l (fun j acc => acc +++ argT j (args j argic)) idR ] = 1%r.
-proc.
-while (0 <= jc 
- /\ jc <= l 
- /\ (acc, table, ic,  s) = (argcc, argT, argic, args) 
- /\ vahe = acc +++   iteri jc (fun j acc => acc +++ argT j (args j argic)) idR) (l - jc).
-move => z.
-wp. skip. progress. smt(). smt(). rewrite iteriS. smt().
-   simplify.
-smt(op_assoc).
-smt().   
-   wp. skip. progress. smt(l_pos). 
-rewrite iteri0. auto.
-smt(op_id).
-smt().
-smt().
-qed.   
-
-
-lemma helper_specR_total  : 
- phoare [ MultiScalarMul(O).helperR : true ==>  true ] = 1%r.
-proc*.
-exists*  acc, table, ic, s.
-elim*. move => accV tableV icV sV.        
-call (helper_specR_ph accV tableV icV sV).
-auto.
-qed.    
-
-
-lemma helper_specR argcc argT argic args  : 
- hoare [ MultiScalarMul(O).helperR : arg = (argcc, argT, argic,  args) 
-     ==>  res = argcc +++  iteri l (fun j acc => acc +++ argT j (args j argic)) idR ].
-conseq (helper_specR_ph argcc argT argic args).   
-progress.
-qed.   
-
 
 lemma multiscalarR_spec argP args argU : 
  hoare [ MultiScalarMul(O).multiScalarMulR : 
@@ -236,7 +175,7 @@ proc.
 wp.
 while ((flag{2} => ={table,acc,U,s} /\ (forall i j, table{2} i j <> idR)) /\ (flag{2} => flagaux{2}) /\ ={ic}  ).
 wp.
-inline MultiScalarMul(O).helperR.
+inline SimpleComp.completeAddLoop.
 inline MultiScalarMul(O).helperI.
 wp.
 while ((flag{2} /\ flag0{2} => ={vahe, acc0,table0,aux0,s0,ic0} /\ (forall i j, table0{2} i j <> idR)) /\ ={jc0}).
@@ -317,4 +256,3 @@ qed.
 
 
 end section.
-

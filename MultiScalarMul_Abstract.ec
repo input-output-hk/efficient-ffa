@@ -176,6 +176,22 @@ module SimpleComp = {
   }
 
 
+  proc completeAddLoop(acc : R, table : int -> int-> R, ic : int, s : int -> int -> int) = {
+      var jc, aux, vahe;
+
+      aux <- witness;
+      jc <- 0;
+      vahe <- acc;
+      while (jc < l) {
+        aux <- table jc (s jc ic);
+        vahe <- vahe +++ aux;
+
+        jc <- jc + 1;
+      }
+      return vahe;
+  }
+
+
   proc incompleteAddLoop(acc : R, table : int -> int-> R, ic : int, s : int -> int -> int) =    {
       var jc, aux, vahe, flag;
     
@@ -250,33 +266,6 @@ module MultiScalarMul(O : OutCalls) = {
       return vahe;
   }
 
-  proc helperR(acc : R, table : int -> int-> R, ic : int, s : int -> int -> int) = {
-      var jc, aux, vahe;
-
-      aux <- witness;
-      jc <- 0;
-      vahe <- acc;
-      while (jc < l) {
-        aux <- table jc (s jc ic);
-        vahe <- vahe +++ aux;
-
-        jc <- jc + 1;
-      }
-      return vahe;
-  }
-
-
-
-  (* proc doubleWtimes(p : R, w : int) = { *)
-  (*     var cnt; *)
-  (*     cnt <- 0; *)
-  (*     while (cnt < w) { *)
-  (*       p <- p +++ p; *)
-  (*       cnt <- cnt + 1; *)
-  (*     } *)
-  (*     return p; *)
-  (* } *)
-
 
   
 
@@ -293,7 +282,7 @@ module MultiScalarMul(O : OutCalls) = {
     ic <- 0;
     while (ic < T) {
       acc <@ SimpleComp.doubleLoop(acc,w);
-      acc <@ helperR(acc, table, ic, s);
+      acc <@ SimpleComp.completeAddLoop(acc, table, ic, s);
       ic <- ic + 1;
     }
     
@@ -434,9 +423,71 @@ move => z.
    smt(@Int).
 qed.
 
-
 lemma doublewtimes_spec argP argw :
  hoare [ SimpleComp.doubleLoop : arg = (argP, argw) /\
    0 <= argw  ==>  res = (2 ^ argw) *** argP  ].
 conseq (doublewtimes_spec_ph argP argw).   
 qed.   
+
+
+    
+
+lemma helper_specR_ph2 argcc argT argic args  : 
+ phoare [ SimpleComp.completeAddLoop : arg = (argcc, argT, argic,  args) 
+     ==>  res = iteri l (fun j acc => acc +++ argT j (args j argic)) argcc ] = 1%r.
+proc.
+while (0 <= jc 
+ /\ jc <= l 
+ /\ (acc, table, ic,  s) = (argcc, argT, argic, args) 
+ /\ vahe =    iteri jc (fun j acc => acc +++ argT j (args j argic)) acc) (l - jc).
+move => z.
+wp. skip. progress. smt(). smt(). rewrite iteriS. smt().
+   simplify.
+smt(op_assoc).
+smt().   
+   wp. skip. progress. smt(l_pos). 
+rewrite iteri0. auto.
+smt(op_id).
+smt().
+smt().
+qed.   
+
+   
+lemma helper_specR_ph argcc argT argic args  : 
+ phoare [ SimpleComp.completeAddLoop : arg = (argcc, argT, argic,  args) 
+     ==>  res = argcc +++  iteri l (fun j acc => acc +++ argT j (args j argic)) idR ] = 1%r.
+proc.
+while (0 <= jc 
+ /\ jc <= l 
+ /\ (acc, table, ic,  s) = (argcc, argT, argic, args) 
+ /\ vahe = acc +++   iteri jc (fun j acc => acc +++ argT j (args j argic)) idR) (l - jc).
+move => z.
+wp. skip. progress. smt(). smt(). rewrite iteriS. smt().
+   simplify.
+smt(op_assoc).
+smt().   
+   wp. skip. progress. smt(l_pos). 
+rewrite iteri0. auto.
+smt(op_id).
+smt().
+smt().
+qed.   
+
+
+lemma helper_specR_total  : 
+  phoare [ SimpleComp.completeAddLoop : true ==>  true ] = 1%r.
+proc*.
+exists*  acc, table, ic, s.
+elim*. move => accV tableV icV sV.        
+call (helper_specR_ph accV tableV icV sV).
+auto.
+qed.    
+
+
+lemma helper_specR argcc argT argic args  : 
+ hoare [ SimpleComp.completeAddLoop : arg = (argcc, argT, argic,  args) 
+     ==>  res = argcc +++  iteri l (fun j acc => acc +++ argT j (args j argic)) idR ].
+conseq (helper_specR_ph argcc argT argic args).   
+progress.
+qed.   
+
