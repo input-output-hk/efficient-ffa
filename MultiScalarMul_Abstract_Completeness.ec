@@ -6,7 +6,7 @@ require import BitEncoding StdBigop Bigalg.
 (*---*) import Bigint BIA.
 
 
-require import MultiScalarMul_Abstract AuxResults.
+require import MultiScalarMul_Abstract AuxResults IterationProps.
 require import Distr.
 
 (* add group order premise n < p *)
@@ -28,21 +28,6 @@ op p2 : real = mu r_distr (fun (x : R) => ! u_check x).
 
 op p3 (P : ( int -> R)) :  real 
    = mu r_distr (fun (x : R) => ! table_check P x).
-
-
-
-lemma iteri_ub ['a 'b] (g : 'a -> 'b) (f : 'a -> int -> 'b -> (bool * 'b)) (a_distr : 'a distr) (p : real)  :
-  (forall i acc, mu a_distr
-    (fun (r : 'a) => !(f r i acc).`1) <= p)
-  => forall (N : int), 1 <= N =>
-  mu a_distr
-   (fun (x : 'a) =>
-      !(iteri N (fun j (acc : bool * 'b)
-        =>
-   let r = f x j acc.`2 in (acc.`1 /\ r.`1, r.`2)) (true,  g x)).`1 ) <= N%r * p.
-admitted.     
-
-
 
 
 op predicate (x : R) (r : R) = xof x <> xof r.
@@ -119,20 +104,17 @@ module SimpleComp = {
   }
 
 
-
   proc multiScalarMulMain(P : int -> R, s : int -> int -> int, U : R, table : int -> int -> R ) = {
     var acc, aux, result : R;
 
     var ic, jc, cnt : int;
     var flag, flagaux : bool;
-
     flag    <- true;
     flagaux <- true;
     acc     <- l *** U;
     ic      <- 0;
     while (ic < T) {
       acc <@ doubleLoop(acc,w);
-
       (flagaux, acc) <@ incompleteAddLoop(acc, table, ic, s);
       flag <- flag && flagaux;
       ic <- ic + 1;
@@ -182,8 +164,6 @@ module NestedLoops(T : TCompute, U : UCompute) = {
 
     return (flag /\ result.`1, result.`2 +++ (- (l *** u_cand)));
   }
- 
-
 }.
 
 
@@ -343,22 +323,6 @@ wp. skip. progress.
 qed.
 
 
-
-
-
-lemma mu_split_q distr P Q p :
-     mu distr P + mu distr Q <= p =>
-     mu distr (fun (x : 'a) =>  (P x \/ Q x)) <= p.
-apply RealOrder.ler_trans. apply mu_or_leq.
-qed.    
-
-
-lemma kkkk (a b c d : real) : a <= c => b <= d => a + b <= c + d.
-smt().
-qed.    
-
-
-require import Distr.
 
 
 lemma completeness_I argP args :

@@ -439,3 +439,19 @@ smt().
 qed.     
 
 
+
+lemma mu_split_q distr P Q p :
+     mu distr P + mu distr Q <= p =>
+     mu distr (fun (x : 'a) =>  (P x \/ Q x)) <= p.
+apply RealOrder.ler_trans. apply mu_or_leq.
+qed.    
+
+
+lemma nosmt addass (a b c : int) : a + (b + c) = (a + b) + c.    by smt(). qed.
+lemma nosmt muldist (a b c : int) : a * (b + c) = a * b + a * c. by smt(). qed.
+lemma nosmt eqsym ['a] (a b : 'a) : a = b => b = a.              by smt(). qed.
+
+
+lemma kkkk (a b c d : real) : a <= c => b <= d => a + b <= c + d.
+smt().
+qed.    

@@ -6,7 +6,7 @@ require import BitEncoding StdBigop Bigalg.
 (*---*) import Bigint BIA.
 
 require import MultiScalarMul_Abstract.
-
+require import IterationProps.
 
 section.
 
@@ -26,16 +26,6 @@ declare axiom tableP_ph parg varg : phoare [ O.getT : arg = (parg,varg)
 
 declare axiom tablePT_ph parg varg : phoare [ O.getPT : arg = (parg,varg)
    ==> res.`1 => (res.`2 = (fun (j i : int) =>  (i *** (parg j)) +++ - varg)  /\ (forall i j, res.`2 i j <> idR) )   ] = 1%r.
-
-
-lemma nosmt addass (a b c : int) : a + (b + c) = (a + b) + c.    by smt(). qed.
-lemma nosmt muldist (a b c : int) : a * (b + c) = a * b + a * c. by smt(). qed.
-lemma nosmt eqsym ['a] (a b : 'a) : a = b => b = a.              by smt(). qed.
-
-lemma kik  (a b c d : R) :  a +++ b +++ (c +++ d) = a +++ c +++ (b +++ d). 
- by smt(op_assoc op_comm). qed.
-
-    
 
 
 lemma doublewtimes_spec_ph argP argw :
@@ -62,9 +52,7 @@ lemma doublewtimes_spec argP argw :
    0 <= argw  ==>  res = (2 ^ argw) *** argP  ].
 conseq (doublewtimes_spec_ph argP argw).   
 qed.   
-
     
-
 
 lemma helpereqs argacc argtable argic args  : 
  equiv [ MultiScalarMul(O).helperR ~ MultiScalarMul(O).helperI : 
@@ -83,7 +71,6 @@ rewrite same_res.
   smt().
 wp. skip. progress. 
 qed.
-
     
 
 lemma helper_specR_ph2 argcc argT argic args  : 
@@ -105,7 +92,6 @@ smt(op_id).
 smt().
 smt().
 qed.   
-
 
    
 lemma helper_specR_ph argcc argT argic args  : 
@@ -145,63 +131,6 @@ lemma helper_specR argcc argT argic args  :
 conseq (helper_specR_ph argcc argT argic args).   
 progress.
 qed.   
-
-
-lemma iteriZ : forall (n : int), 0 <= n =>  forall (z : int) (f : int -> R), z *** (iteri n (fun i acc => acc +++ f i) idR)
-     = iteri n (fun i acc => acc +++ z *** (f i)) idR.
-apply intind.     
-progress. rewrite iteri0. auto. rewrite iteri0. auto. 
-apply mul_idr.
-progress.
-rewrite iteriS. auto.
-rewrite iteriS. auto.
-simplify.
-rewrite - H0.     
-apply mul_plus_distr. 
-qed.
-     
-lemma iteriZZ :  forall (n : int), 0 <= n => forall (z : R)  (f : int -> R),
-   (iteri n (fun i acc => acc +++ f i +++ z) idR)
-     = (iteri n (fun i acc => acc +++ f i) idR)
-        +++ (iteri n (fun i acc => acc +++ z) idR).
-apply intind. progress. rewrite iteri0. auto.
-rewrite iteri0. auto. rewrite iteri0. auto. rewrite op_id. auto.
-progress.
-rewrite iteriS. auto.
-rewrite iteriS. auto.
-rewrite iteriS. auto.
-simplify.
-rewrite H0. simplify.
-smt (op_assoc op_comm).
-qed.     
-
-
-lemma iteriZZZ  : forall (n : int), 0 <= n => forall (z : R),
-  (iteri n (fun i acc => acc +++ z) idR)
-     = n *** z.
-apply intind. progress. rewrite iteri0. auto. rewrite zero_mul. auto.
-progress.
-rewrite iteriS. auto. simplify.
-rewrite H0.
-rewrite nplus_dist. smt.
-qed.     
-
-
- 
-    
- 
-lemma nosmt mulsc : forall (a : int), 0 <= a => forall b r,  a *** (b *** r) = (a * b) *** r.
-apply intind.
-    progress.
-rewrite zero_mul. rewrite zero_mul. auto.
-progress.
-    rewrite nplus_dist. auto.
-have ->: (i + 1) * b = i * b + b. smt().
-rewrite H0.    
-rewrite nplus_dist. smt.
-qed.    
-
-
 
 
 lemma multiscalarR_spec argP args argU : 
@@ -268,7 +197,6 @@ have ->: (2 ^ w *** (l *** U{hr}) +++ l *** -v) = l *** U{hr}.
   have -> : l *** - (2 ^ w - 1) *** U{hr}
     = (l * - (2 ^ w - 1)) *** U{hr}. rewrite  nmul_mul.  rewrite neg_mul. auto.
    rewrite - nplus_dist. congr. smt().
-
 rewrite iteriS.
 smt(). simplify.
 have ->: 2 ^ 0 = 1. smt(@Int).
@@ -323,6 +251,7 @@ hoare. simplify.
 apply multiscalarR_spec.
 qed.
 
+
 lemma multieqs argP args argU  :
  equiv [ MultiScalarMul(O).multiScalarMulR 
         ~ MultiScalarMul(O).multiScalarMulI :
@@ -357,13 +286,12 @@ wp.
 smt(). smt(). smt(). smt(). smt(). smt().
    smt(). smt().  smt(). smt(). smt().
 wp. 
-
 ecall {1} (tableP_ph P{1} v{1} ).
 ecall {2} (tablePT_ph P{2} v{2}).    
-
 wp. skip. progress. smt(). smt().
 have -> :     acc_L = acc_R. smt(). auto.
 qed.
+
 
 lemma multiscalarI_spec_ph argP args  argU : 
  phoare [ MultiScalarMul(O).multiScalarMulI : 
@@ -389,6 +317,7 @@ smt().
 smt.
 qed.
 
+
 lemma multiscalarI_spec_h argP args  argU : 
  hoare [ MultiScalarMul(O).multiScalarMulI : 
   arg = (argP, args, argU) 
@@ -411,4 +340,6 @@ wp. skip.
 smt().
 qed.   
 
+
 end section.
+

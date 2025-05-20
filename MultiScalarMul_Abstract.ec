@@ -74,6 +74,23 @@ smt (op_assoc op_comm op_id op_id' op_inv).
 qed.
 
 
+lemma kik  (a b c d : R) :  a +++ b +++ (c +++ d) = a +++ c +++ (b +++ d). 
+ by smt(op_assoc op_comm). qed.
+
+
+lemma nosmt mulsc : forall (a : int), 0 <= a => forall b r,  a *** (b *** r) = (a * b) *** r.
+apply intind.
+    progress.
+rewrite zero_mul. rewrite zero_mul. auto.
+progress.
+    rewrite nplus_dist. auto.
+have ->: (i + 1) * b = i * b + b. smt().
+rewrite H0.    
+rewrite nplus_dist. smt.
+qed.    
+
+
+
 (* params  *)
 op T : int.
 op l : int.
