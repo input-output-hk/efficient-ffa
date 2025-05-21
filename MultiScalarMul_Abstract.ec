@@ -39,7 +39,7 @@ op idF     : Point -> bool.
 op embed   : Point -> R.
 
 op perfect_table_pure  parg (varg : R) = 
- (fun (j i : int) =>  (i *** (parg j)) +++ - varg).
+ (fun (j i : int) =>  (i *** (parg j)) +++ - (2 ^ w - 1) *** varg).
 
 
 op r_distr : R distr.
@@ -66,7 +66,7 @@ module type OutCalls = {
 
 op predicate (x : R) (r : R) = xof x <> xof r.
 (* check the U candidate  *)
-op u_check (r : R) : bool.
+op u_check (r : R) (P : int -> R) (s : int -> int -> int) : bool.
 
 (* check whether the table could be computed *)
 op table_check (P : int -> R) (r : R) : bool.
@@ -157,13 +157,16 @@ module SimpleComp = {
 
 
 
-  proc multiScalarMulMain_Opt(P : int -> R, s : int -> int -> int, U : R, table : int -> int -> R ) = {
+  proc multiScalarMulMain_Opt(P : int -> R, s : int -> int -> int, U : R) = {
     var acc, aux, result : R;
-
+    var table;
     var ic, jc, cnt : int;
     var flag, flagaux : bool;
     flag    <- true;
     flagaux <- true;
+
+    table  <- perfect_table_pure P U;
+
     acc     <- l *** U;
     ic      <- 0;
     while (ic < T) {
@@ -175,22 +178,27 @@ module SimpleComp = {
     return (flag, acc);
   }
 
+
+  proc multiScalarMulMain_Opt_Corrected(P : int -> R, s : int -> int -> int, U : R) = {
+    var result, flag;
+    flag   <- u_check U P s;
+    result <@ multiScalarMulMain_Opt(P,s,U);
+    return (flag /\ result.`1, result.`2 +++ (- (l *** U)));
+  }
+
   proc multiScalarMul_Fun(P : int -> R, s : int -> int -> int) = {
     var u_cand, flag, result, table;
 
     u_cand <$ r_distr;
 
    (* check u *)
-   flag   <- u_check u_cand;
+   flag   <- u_check u_cand P s;
 
-   (* check table  *)
-   flag   <- flag /\ table_check P (u_cand);
-   table  <- perfect_table_pure  P ((2 ^ w - 1) *** ( u_cand));
+   table  <- perfect_table_pure  P (u_cand);
 
-   (* do the double-and-add computation  *)
-   result <- multiScalarMulII_pure T l table s (l *** ( u_cand)) w;
+   result <- multiScalarMulII_pure T l table s (l *** u_cand) w;
 
-   return (flag /\ result.`1, result.`2 +++ (- (l *** ( u_cand))));
+   return (flag /\ result.`1, result.`2 +++ (- (l *** u_cand)));
   }
 
 
@@ -202,9 +210,6 @@ module type UCompute = {
 }.
 
 
-module type TCompute = {
-  proc run(P : int -> R, u_cand : R) : (bool * (int -> int -> R))
-}.
 
 module UniformU : UCompute = {
    proc run() = {
@@ -216,68 +221,27 @@ module UniformU : UCompute = {
 
 
 
-module PerfectTable : TCompute = {
-   proc run(P : int -> R, u_cand : R)  = {
-     var flag, table;
-     flag   <- table_check P u_cand;
-     table  <- perfect_table_pure P ((2 ^ w - 1) *** u_cand);
-     return (flag, table);
-   }
-}.
-
-
-module NestedLoops(T : TCompute, U : UCompute) = {
+module NestedLoops(U : UCompute) = {
 
   proc multiScalarMul(P : int -> R, s : int -> int -> int) = {
     var u_cand : R;
     var flag, flagaux : bool;
-    var result, table;
+    var result;
 
     (* choose a point (uniformly for completeness, adversarially for soundness *)
     u_cand <@ U.run(); 
     (* perform the checks on U  *)
-    flag   <- u_check u_cand;
+    (* flag   <- u_check u_cand P s; *)
 
-    (* try to compute the Table or fail  *)
-    (flagaux, table) <@ T.run(P, u_cand);
-    flag <- flagaux /\ flag;
-  
     (* double and add loops  *)
-    result <@ SimpleComp.multiScalarMulMain_Opt(P, s, u_cand, table);
-
-    return (flag /\ result.`1, result.`2 +++ (- (l *** u_cand)));
+    result <@ SimpleComp.multiScalarMulMain_Opt_Corrected(P, s, u_cand);
+    return result;
   }
 }.
 
 
 
 module MultiScalarMul(O : OutCalls) = {
-
-  proc multiScalarMulI(P : int -> R, s : int -> int -> int, U : R) = {
-    var u, v, acc, aux, result : R;
-    var table : int -> int -> R;
-    var ic, jc, cnt : int;
-    var flag, flagaux : bool;
-
-    flag  <- true;
-    flagaux <- true;
-    v     <- (2 ^ w - 1) *** U;
-    (flagaux, table) <@ O.getPT(P, v);
-    flag <- flag && flagaux;
-    acc   <- l *** U;
-
-    ic <- 0;
-    while (ic < T) {
-      acc <@ SimpleComp.doubleLoop(acc,w);
-      (flagaux, acc) <@ SimpleComp.incompleteAddLoop(acc, table, ic, s);      
-      flag <- flag && flagaux;
-      ic <- ic + 1;
-    }
-    
-    result <- acc +++ (- (l *** U));
-    return (flag, result);
-  }
-
 
   proc multiScalarMul(P : int -> R, s : int -> int -> int) = {
     var u_cand : Point;
@@ -287,12 +251,10 @@ module MultiScalarMul(O : OutCalls) = {
     u_cand <@ O.getU();
     flag <- ! idF u_cand && onCurve u_cand;
 
-    if(flag = true) {
-      result <@ multiScalarMulI(P,s,embed u_cand);
-    } else{
-      result <- (false, witness);    
-    } 
-    return result;
+    result <@ SimpleComp.multiScalarMulMain_Opt_Corrected(P, s, embed u_cand);
+    (* result <@ multiScalarMulI(P,s,embed u_cand); *)
+
+    return (flag /\ result.`1 , result.`2);
   }
 
 
