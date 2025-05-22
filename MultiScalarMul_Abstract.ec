@@ -9,19 +9,6 @@ require import BitEncoding StdBigop Bigalg.
 require import MultiScalarMul_Abstract_Setup IterationProps.
 
 
-(*  
-
-   P := (beta, x, y) 
-   1/ subset by "onCurve"
-   2/ equiv. rel by  
- 
-       2.1/ non unique representation of "x" and "y"
-       2.2/ all variations of identity point
-
-*)
-
-
-
 (* params  *)
 op T : int.
 op l : int.
@@ -32,11 +19,7 @@ axiom w_pos : 0 < w.
 axiom l_pos : 0 < l.
 axiom T_pos : 0 < T.
 
-type Point.
 
-op onCurve : Point -> bool.
-op idF     : Point -> bool.
-op embed   : Point -> R.
 
 op perfect_table_pure  parg (varg : R) = 
  (fun (j i : int) =>  (i *** (parg j)) +++ - (2 ^ w - 1) *** varg).
@@ -49,6 +32,27 @@ axiom r_distr_full : is_full r_distr.
 axiom r_distr_uni : is_uniform r_distr.
 
 
+
+op multiScalarMulRP  (s : int -> int -> int) (P : int -> R) (ic jc : int)
+  : R
+ = iteri ic
+     (fun i acc1 => acc1 +++ 
+       iteri jc
+         (fun j acc2 => 
+          acc2 +++ (2 ^ (w * (T - 1 - i)) * s j i) *** (P j)) idR
+        ) idR.
+
+
+op multiScalarMulR  (s : int -> int -> int) (P : int -> R) 
+  : R
+ = iteri T
+     (fun i acc1 => acc1 +++ 
+       iteri l
+         (fun j acc2 => 
+          acc2 +++ (2 ^ (w * (T - 1 - i)) * s j i) *** (P j)) idR
+        ) idR.
+
+
 lemma r_distr_funi : is_funiform r_distr.
 proof. apply is_full_funiform.
 apply r_distr_full.
@@ -56,15 +60,14 @@ apply r_distr_uni.
 qed.
 
 
+
+
 module type OutCalls = {
-  proc getU() : Point
-  proc getUniformU() : R
-  proc getT(P : int -> R, v : R) : int -> int -> R
-  proc getPT(P : int -> R, v : R) : bool * (int -> int -> R)
+  proc getU() : R
 }.
 
 
-op predicate (x : R) (r : R) = xof x <> xof r.
+op xdiff (x : R) (r : R) = xof x <> xof r.
 (* check the U candidate  *)
 op u_check (r : R) (P : int -> R) (s : int -> int -> int) : bool.
 
@@ -75,7 +78,7 @@ op table_check (P : int -> R) (r : R) : bool.
 op helperI_pure (l : int) (argT : int -> int -> R)
   (args : int -> int -> int) (argic : int) (argcc : R) 
     = (iteri l (fun j (acc : bool * R) 
-        => (acc.`1 /\ predicate acc.`2 (argT j (args j argic)) , acc.`2 %%% argT j (args j argic))) (true, argcc)).
+        => (acc.`1 /\ xdiff acc.`2 (argT j (args j argic)) , acc.`2 %%% argT j (args j argic))) (true, argcc)).
 
   
 op multiScalarMulII_pure (T l : int) (argT : int -> int -> R)
@@ -83,8 +86,29 @@ op multiScalarMulII_pure (T l : int) (argT : int -> int -> R)
     = (iteri T (fun i (acc : bool * R) 
         => let r = helperI_pure l argT args i ((2 ^ argw) *** acc.`2) in (acc.`1 /\ r.`1, r.`2)) (true, argu)).
 
+    
+op helperI_pure2 (l : int) (argT : int -> int -> R)
+  (args : int -> int -> int) (argic : int) (argcc : R) (argP : int -> R)(argu : R)
+    = (iteri l (fun j (acc : bool * R) 
+        => (acc.`1 /\ xdiff ((multiScalarMulRP args argP argic j) +++ l *** argu) (argT j (args j argic)) , acc.`2 %%% argT j (args j argic))) (true, argcc)).
+
+  
+op multiScalarMulII_pure2 (T l : int) (argT : int -> int -> R)
+  (args : int -> int -> int) (argu : R) (argw : int)(argP : int -> R)
+    = (iteri T (fun i (acc : bool * R) 
+        => let r = helperI_pure2 l argT args i ((2 ^ argw) *** acc.`2) argP argu in (acc.`1 /\ r.`1, r.`2)) (true, argu)).
 
 
+
+
+
+module UniformU : OutCalls = {
+   proc getU() = {
+     var u_cand;
+     u_cand <$ r_distr;
+     return u_cand;
+   }
+}.
 
 
 
@@ -126,7 +150,7 @@ module SimpleComp = {
       vahe <- acc;
       while (jc < l) {
         aux <- table jc (s jc ic);
-        flag <- flag /\ predicate vahe aux;
+        flag <- flag /\ xdiff vahe aux;
         vahe <- (vahe %%% aux);
 
         jc <- jc + 1;
@@ -192,48 +216,36 @@ module SimpleComp = {
     u_cand <$ r_distr;
 
    (* check u *)
-   flag   <- u_check u_cand P s;
+    flag   <- u_check u_cand P s;
+    table  <- perfect_table_pure  P u_cand;
+    result <- multiScalarMulII_pure T l table s (l *** u_cand) w;
 
-   table  <- perfect_table_pure  P (u_cand);
+    return (flag /\ result.`1, result.`2 +++ (- (l *** u_cand)));
+  }
 
-   result <- multiScalarMulII_pure T l table s (l *** u_cand) w;
 
-   return (flag /\ result.`1, result.`2 +++ (- (l *** u_cand)));
+  proc multiScalarMul_Fun2(P : int -> R, s : int -> int -> int) = {
+    var u_cand, flag, result, table;
+
+    u_cand <$ r_distr;
+
+   (* check u *)
+    flag   <- u_check u_cand P s;
+    table  <- perfect_table_pure  P u_cand;
+    result <- multiScalarMulII_pure T l table s (l *** u_cand) w;
+
+    return (flag /\ result.`1, result.`2 +++ (- (l *** u_cand)));
   }
 
 
 }.
 
 
-module type UCompute = {
-  proc run() : R
-}.
 
-
-
-module UniformU : UCompute = {
-   proc run() = {
-     var u_cand;
-     u_cand <$ r_distr;
-     return u_cand;
-   }
-}.
-
-
-
-module NestedLoops(U : UCompute) = {
-
-  proc multiScalarMul(P : int -> R, s : int -> int -> int) = {
-    var u_cand : R;
-    var flag, flagaux : bool;
-    var result;
-
-    (* choose a point (uniformly for completeness, adversarially for soundness *)
-    u_cand <@ U.run(); 
-    (* perform the checks on U  *)
-    (* flag   <- u_check u_cand P s; *)
-
-    (* double and add loops  *)
+module MultiScalarMul(O : OutCalls) = {
+  proc run(P : int -> R, s : int -> int -> int) = {
+    var u_cand, result;
+    u_cand <@ O.getU();
     result <@ SimpleComp.multiScalarMulMain_Opt_Corrected(P, s, u_cand);
     return result;
   }
@@ -241,34 +253,7 @@ module NestedLoops(U : UCompute) = {
 
 
 
-module MultiScalarMul(O : OutCalls) = {
 
-  proc multiScalarMul(P : int -> R, s : int -> int -> int) = {
-    var u_cand : Point;
-    var flag : bool;
-    var result;
-
-    u_cand <@ O.getU();
-    flag <- ! idF u_cand && onCurve u_cand;
-
-    result <@ SimpleComp.multiScalarMulMain_Opt_Corrected(P, s, embed u_cand);
-    (* result <@ multiScalarMulI(P,s,embed u_cand); *)
-
-    return (flag /\ result.`1 , result.`2);
-  }
-
-
-}.
-
-
-op multiScalarMulR  (s : int -> int -> int) (P : int -> R) 
-  : R
- = iteri T 
-     (fun i acc1 => acc1 +++ 
-       iteri l
-         (fun j acc2 => 
-          acc2 +++ (2 ^ (w * (T - 1 - i)) * s j i) *** (P j)) idR
-        ) idR.
 
 
 

@@ -15,8 +15,6 @@ axiom funny_one n b :  exists (x : R), n *** x = b.
 (* only if gcd(n,order) = 1 *)
 axiom const_mul_inj : forall n, 1 <= n => forall x y, n *** x = n *** y => x = y.
 
-
-
 op p1 : real.
 axiom p1_prop x : mu r_distr (fun r => x = xof r) <= p1.
 
@@ -33,15 +31,15 @@ while (0 <= jc
  /\ flag = (iteri 
                   jc 
                   (fun j (acc : bool * R) => 
-                     (acc.`1 /\ predicate acc.`2 (argT j (args j argic)) , 
+                     (acc.`1 /\ xdiff acc.`2 (argT j (args j argic)) , 
                       acc.`2 %%% argT j (args j argic))) 
                   (true, argcc)).`1
  /\ (acc, table, ic,  s) = (argcc, argT, argic, args) 
- /\ vahe =  (iteri jc (fun j (acc : bool * R) => (acc.`1 /\ predicate acc.`2 (argT j (args j argic)) , acc.`2 %%% argT j (args j argic))) (true, argcc)).`2) (l - jc).
+ /\ vahe =  (iteri jc (fun j (acc : bool * R) => (acc.`1 /\ xdiff acc.`2 (argT j (args j argic)) , acc.`2 %%% argT j (args j argic))) (true, argcc)).`2) (l - jc).
 move => z.
 wp. skip. progress. smt(). smt(). rewrite iteriS. smt().
    simplify.
-   rewrite /predicate. 
+   rewrite /xdiff. 
 pose xxx := (iteri jc{hr}
      (fun (j : int) (acc0 : bool * R) =>
         (acc0.`1 /\
@@ -59,6 +57,7 @@ rewrite iteri0. auto. auto.
 smt().   
 smt().
 qed.  
+
 
 
 lemma incompleteAddLoop_specR_h argcc argT argic args  :
@@ -117,10 +116,10 @@ qed.
 
 lemma compl_I_equiv : 
  equiv [ SimpleComp.multiScalarMul_Fun ~
-         NestedLoops(UniformU).multiScalarMul
+         MultiScalarMul(UniformU).run
      : ={arg} ==> res{1}.`1 = res{2}.`1 ].
 proc.
-inline UniformU.run. 
+inline UniformU.getU. 
 
 seq 1 1 : (#pre /\ u_cand{1} = u_cand0{2}).
     rnd. skip. progress.
@@ -151,14 +150,14 @@ apply (iteri_ub (fun (x : R) => l *** x) f  r_distr (l%r * p1) _ T _)  .
 move => i acc.
 rewrite /f. rewrite /helperI_pure.   
 pose h := fun  a j b
-    =>  ((predicate b
+    =>  ((xdiff b
                (perfect_table_pure P{hr} ( a) j (s{hr} j i)))
         , b %%% perfect_table_pure P{hr} ( a) j (s{hr} j i)).
 apply  (iteri_ub (fun (x : R) => 2 ^ w *** acc) h r_distr p1).  
 progress.
 rewrite /h. simplify.           
 rewrite /perfect_table_pure. simplify.
-rewrite /predicate.            
+rewrite /xdiff.            
 simplify.
  have -> : (fun (r : R) =>
      xof (acc0) = xof (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** r))
@@ -210,3 +209,12 @@ apply p1_prop.
     smt(l_pos).
     smt(T_pos).
 qed.           
+
+(*
+TODO:
+
+1/ define multiScalarMul with perfect +++ but still doing the flag check
+2/ prove that !flag is same in both cases
+3/ analyze the !flag case
+
+  *)

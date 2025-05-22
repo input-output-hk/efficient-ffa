@@ -87,7 +87,7 @@ qed.
 
 
 lemma multiscalar_spec_h argP args : 
- phoare [ MultiScalarMul(O).multiScalarMul : 
+ phoare [ MultiScalarMul(O).run : 
   arg = (argP, args) 
      ==>  res.`1 => res.`2 = (multiScalarMulR  args argP)  ] = 1%r .
 proc.
@@ -98,7 +98,7 @@ apply O_lossless.
  auto.   
 
 exists* u_cand. elim*. move => u_candV.
-call (multiscalarI_spec_ph  argP args (embed u_candV)).
+call (multiscalarI_spec_ph  argP args u_candV).
 wp.   skip. progress.
 hoare. simplify. call(_:true). auto. auto.
  qed.   
