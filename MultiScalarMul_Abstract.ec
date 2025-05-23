@@ -33,25 +33,6 @@ axiom r_distr_uni : is_uniform r_distr.
 
 
 
-op multiScalarMulRP  (s : int -> int -> int) (P : int -> R) (ic jc : int)
-  : R
- = iteri ic
-     (fun i acc1 => acc1 +++ 
-       iteri jc
-         (fun j acc2 => 
-          acc2 +++ (2 ^ (w * (T - 1 - i)) * s j i) *** (P j)) idR
-        ) idR.
-
-
-op multiScalarMulR  (s : int -> int -> int) (P : int -> R) 
-  : R
- = iteri T
-     (fun i acc1 => acc1 +++ 
-       iteri l
-         (fun j acc2 => 
-          acc2 +++ (2 ^ (w * (T - 1 - i)) * s j i) *** (P j)) idR
-        ) idR.
-
 
 lemma r_distr_funi : is_funiform r_distr.
 proof. apply is_full_funiform.
@@ -75,28 +56,52 @@ op u_check (r : R) (P : int -> R) (s : int -> int -> int) : bool.
 op table_check (P : int -> R) (r : R) : bool.
 
 
-op helperI_pure (l : int) (argT : int -> int -> R)
+op incompleteAddLoop (l : int) (argT : int -> int -> R)
   (args : int -> int -> int) (argic : int) (argcc : R) 
     = (iteri l (fun j (acc : bool * R) 
-        => (acc.`1 /\ xdiff acc.`2 (argT j (args j argic)) , acc.`2 %%% argT j (args j argic))) (true, argcc)).
+        => (acc.`1 /\ xdiff acc.`2 (argT j (args j argic)), 
+             acc.`2 %%% argT j (args j argic))) (true, argcc)).
 
   
-op multiScalarMulII_pure (T l : int) (argT : int -> int -> R)
+op multiScalarMul (T l : int) (argT : int -> int -> R)
   (args : int -> int -> int) (argu : R) (argw : int)
     = (iteri T (fun i (acc : bool * R) 
-        => let r = helperI_pure l argT args i ((2 ^ argw) *** acc.`2) in (acc.`1 /\ r.`1, r.`2)) (true, argu)).
+        => let r = incompleteAddLoop l argT args i ((2 ^ argw) *** acc.`2) in 
+         (acc.`1 /\ r.`1, r.`2)) (true, argu)).
 
-    
-op helperI_pure2 (l : int) (argT : int -> int -> R)
-  (args : int -> int -> int) (argic : int) (argcc : R) (argP : int -> R)(argu : R)
-    = (iteri l (fun j (acc : bool * R) 
-        => (acc.`1 /\ xdiff ((multiScalarMulRP args argP argic j) +++ l *** argu) (argT j (args j argic)) , acc.`2 %%% argT j (args j argic))) (true, argcc)).
 
-  
-op multiScalarMulII_pure2 (T l : int) (argT : int -> int -> R)
-  (args : int -> int -> int) (argu : R) (argw : int)(argP : int -> R)
-    = (iteri T (fun i (acc : bool * R) 
-        => let r = helperI_pure2 l argT args i ((2 ^ argw) *** acc.`2) argP argu in (acc.`1 /\ r.`1, r.`2)) (true, argu)).
+
+op multiScalarMul_Simpl  (s : int -> int -> int) (P : int -> R) (ic jc : int)
+  : R
+ = iteri ic
+     (fun i acc1 => acc1 +++ 
+       iteri jc
+         (fun j acc2 => 
+          acc2 +++ (2 ^ (w * (T - 1 - i)) * s j i) *** (P j)) idR
+        ) idR.
+
+op gg (s : int -> int -> int) (P : int -> R) (i : int) (u : R) :  R 
+  = (multiScalarMul_Simpl s P i l) +++ l *** u.
+
+
+op hh (args : int -> int -> int)  (argP : int -> R)  (argic : int) (l : int) (u : R)
+ =  2 ^ w *** gg args argP argic u +++  iteri l (fun j acc => acc +++ perfect_table_pure argP u j (args j argic)) idR.
+
+
+axiom muleqsimp i s u w P:
+   (multiScalarMul i l (perfect_table_pure P u) s (l *** u) w).`2
+ = gg s P i u.
+
+
+axiom comeqsimp args argP  argic l r :
+  (iteri l
+   (fun (i1 : int) (acc0 : bool * R) =>
+      (acc0.`1 /\ xdiff acc0.`2 (perfect_table_pure argP r i1 (args i1 argic)),
+       acc0.`2 %%% perfect_table_pure argP r i1 (args i1 argic)))
+   (true, 2 ^ w *** gg args argP argic r)).`2
+ = hh args argP argic l r .    
+
+
 
 
 
@@ -181,6 +186,7 @@ module SimpleComp = {
 
 
 
+
   proc multiScalarMulMain_Opt(P : int -> R, s : int -> int -> int, U : R) = {
     var acc, aux, result : R;
     var table;
@@ -218,7 +224,7 @@ module SimpleComp = {
    (* check u *)
     flag   <- u_check u_cand P s;
     table  <- perfect_table_pure  P u_cand;
-    result <- multiScalarMulII_pure T l table s (l *** u_cand) w;
+    result <- multiScalarMul T l table s (l *** u_cand) w;
 
     return (flag /\ result.`1, result.`2 +++ (- (l *** u_cand)));
   }
@@ -232,7 +238,7 @@ module SimpleComp = {
    (* check u *)
     flag   <- u_check u_cand P s;
     table  <- perfect_table_pure  P u_cand;
-    result <- multiScalarMulII_pure T l table s (l *** u_cand) w;
+    result <- multiScalarMul T l table s (l *** u_cand) w;
 
     return (flag /\ result.`1, result.`2 +++ (- (l *** u_cand)));
   }
@@ -350,7 +356,7 @@ qed.
 lemma multiscalarR_spec argP args argU : 
  hoare [ SimpleComp.multiScalarMulMain_Perfect : 
   arg = (argP, args, argU) 
-     ==>  res = (multiScalarMulR  args argP)  ].
+     ==>  res = (multiScalarMul_Simpl args argP T l)  ].
 proc. wp.
 while (0 <= ic
  /\ (2 ^ w - 1) *** U = v
@@ -446,7 +452,7 @@ qed.
 lemma multiscalarR_spec_ph argP args argU : 
  phoare [ SimpleComp.multiScalarMulMain_Perfect : 
   arg = (argP, args, argU) 
-     ==>  res = (multiScalarMulR  args argP)  ] = 1%r.
+     ==>  res = (multiScalarMul_Simpl args argP T l)  ] = 1%r.
 phoare split ! 1%r 0%r. auto.
    proc. wp.
 while true (T - ic). progress.
