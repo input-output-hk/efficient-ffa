@@ -59,16 +59,18 @@ rewrite nplus_dist. smt.
 qed.     
 
 
-lemma iteri_ub ['a 'b] (g : 'a -> 'b) (f : 'a -> int -> 'b -> (bool * 'b)) (a_distr : 'a distr) (p : real)  :
-  (forall i acc, mu a_distr
-    (fun (r : 'a) => !(f r i acc).`1) <= p)
-  => forall (N : int), 1 <= N =>
-  mu a_distr
-   (fun (x : 'a) =>
-      !(iteri N (fun j (acc : bool * 'b)
-        =>
-   let r = f x j acc.`2 in (acc.`1 /\ r.`1, r.`2)) (true,  g x)).`1 ) <= N%r * p.
-admitted.     
+
+
+(* lemma iteri_ub ['a 'b] (g : 'a -> 'b) (f : 'a -> int -> 'b -> (bool * 'b)) (a_distr : 'a distr) (p : real)  : *)
+(*   (forall i acc, mu a_distr *)
+(*     (fun (r : 'a) => !(f r i acc).`1) <= p) *)
+(*   => forall (N : int), 1 <= N => *)
+(*   mu a_distr *)
+(*    (fun (x : 'a) => *)
+(*       !(iteri N (fun j (acc : bool * 'b) *)
+(*         => *)
+(*    let r = f x j acc.`2 in (acc.`1 /\ r.`1, r.`2)) (true,  g x)).`1 ) <= N%r * p. *)
+(* admitted.      *)
 
 
 
@@ -77,7 +79,7 @@ lemma iteri_ub1 ['a 'b] (g : 'a -> 'b) (f : 'a -> int  -> (bool * 'b)) (a_distr 
 
    forall (N : int), 0 <= N =>
 
-  (forall i, 0 <= i <= N => mu a_distr
+  (forall i, 0 <= i < N => mu a_distr
     (fun (r : 'a) => !(f r i).`1) <= p) =>
   mu a_distr
    (fun (x : 'a) =>
@@ -195,7 +197,7 @@ qed.
 
 
 lemma iteri_ub3 ['a 'b] (g : 'a -> 'b) (f : 'a -> int -> (bool * 'b)) (a_distr : 'a distr) (N : int) (p : real)  :
-  (forall i, 0 <= i <= N => mu a_distr
+  (forall i, 0 <= i < N => mu a_distr
     (fun (r : 'a) => !(f r i ).`1) <= p)
 
   => 
