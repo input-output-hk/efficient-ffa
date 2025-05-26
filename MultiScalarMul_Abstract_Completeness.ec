@@ -9,15 +9,14 @@ require import BitEncoding StdBigop Bigalg.
 require import MultiScalarMul_Abstract MultiScalarMul_Abstract_Setup AuxResults IterationProps.
 require import Distr.
 
-(* add group order premise n < p *)
-axiom funny_one n b :  exists (x : R), n *** x = b.
+op invertme (n : int) : int.
+axiom invertmeP n x : (invertme n) *** (n *** x)  = x.
+axiom notxdiff x y : ! (xdiff x y) => x = y \/ x = -y.
 
 (* only if gcd(n,order) = 1 *)
-axiom const_mul_inj : forall n, 1 <= n => forall x y, n *** x = n *** y => x = y.
+(* axiom const_mul_inj : forall n, 1 <= n => forall x y, n *** x = n *** y => x = y. *)
 
-op p1 : real.
-axiom p1_prop x : mu r_distr (fun r => x = xof r) <= p1.
-
+op p1 : real = mu r_distr (fun (x : R) => x = idR).
 op p2 P s : real = mu r_distr (fun (x : R) => ! u_check x P s).
 
 
@@ -291,8 +290,9 @@ have oo : (fun (r : R) =>
          (perfect_table_pure P{hr} r i0 (s{hr} i0 i)) 
            \/         (hh s{hr} P{hr} i i0 r) =
          (- perfect_table_pure P{hr} r i0 (s{hr} i0 i)))).
- admit.
 
+move => r. progress.
+     apply notxdiff. auto.
   apply (RealOrder.ler_trans  
            (mu r_distr
     (fun (r : R) =>
@@ -346,7 +346,12 @@ have ->: (fun (x : R) =>
        (fun (j : int) (acc : R) =>
           acc +++ (s{hr} j i *** P{hr} j)) idR +++ i0 *** - (2 ^ w - 1) *** x +++
      - (s{hr} i0 i *** P{hr} i0) +++ (2 ^ w - 1) *** x  = idR).
-     apply fun_ext. move => r. admit.
+     apply fun_ext. move => r.
+       pose k := 2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++ 2 ^ w *** (l *** r).
+
+ 
+     rewrite  (iteriZZZZ (fun j => s{hr} j i *** P{hr} j) i0 _ (- (2 ^ w - 1) *** r)) . smt(). timeout 10. smt.
+ 
 
 have ->: (fun (x : R) =>
      2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++ 2 ^ w *** (l *** x) +++
@@ -389,81 +394,42 @@ have ->: (fun (x : R) =>
 have ->: (dmap r_distr
         (fun (x : R) =>
            (2 ^ w - 1) *** x +++ i0 *** - (2 ^ w - 1) *** x +++
-           2 ^ w *** (l *** x))) = r_distr. admit.
+           2 ^ w *** (l *** x))) = r_distr. 
+     have ->: (fun (x : R) =>
+     (2 ^ w - 1) *** x +++ i0 *** - (2 ^ w - 1) *** x +++ 2 ^ w *** (l *** x))
+    = (fun (x : R) =>
+     ((2 ^ w - 1) +  i0 * - (2 ^ w - 1)  + 2 ^ w * l) *** x).
+       apply fun_ext. move => x.
+       rewrite - neg_mul.
+       rewrite - nmul_mul.
+       rewrite  - nplus_dist.
+       rewrite - nmul_mul.
+       rewrite  - nplus_dist.
+       auto.
+apply (dmap_bij r_distr r_distr _ (fun (x : R) => (invertme (2 ^ w - 1 + i0 * - (2 ^ w - 1) + 2 ^ w * l) ) *** x ) ).
+progress. apply r_distr_full.
+progress. apply r_distr_funi.          
+  progress. rewrite invertmeP. auto.
+
+progress. smt. 
+   
 have ->: (dmap r_distr
      (fun (x : R) =>
         2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
         iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j)
           idR +++
         - s{hr} i0 i *** P{hr} i0 +++ x))
-   = r_distr. admit.
+   = r_distr.
+apply (dmap_bij r_distr r_distr _ (fun (x : R) =>   -  (2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
+        iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j)
+          idR +++
+        - s{hr} i0 i *** P{hr} i0)  +++ x )).
+progress. apply r_distr_full.
+progress. apply r_distr_funi.
+progress. timeout 10. smt.
+progress. timeout 10. smt.
+auto.
+   
+   
 admit.
-admit.   
-
-(* TODO: massage the expression and find the conditions for being invertible  *)
-
- 
-
-(* rewrite /h. simplify.            *)
-(* rewrite /perfect_table_pure. simplify. *)
-(* rewrite /xdiff.             *)
-(* simplify. *)
-(*  have -> : (fun (r : R) => *)
-(*      xof (acc0) = xof (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** r)) *)
-(*      = (fun (r : F) => *)
-(*      xof (acc0 ) = r) \o (fun r =>  xof (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** r)) . smt(). *)
-(* rewrite - dmapE. simplify. *)
-(* rewrite - dmap_comp. *)
-(*  have  ->:  ((dmap r_distr *)
-(*         (fun (x : R) => s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x))) *)
-(*    = r_distr. *)
-(*     have -> : dmap r_distr (fun (x : R) => s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x) = *)
-(*        dmap r_distr ((fun (x : R) => s{hr} i0 i *** P{hr} i0 +++ x) \o (fun x => - (2 ^ w - 1) *** x)). smt (). *)
-(* rewrite - dmap_comp. *)
-(*    have -> : (fun (x0 : R) => - (2 ^ w - 1) *** x0) *)
-(*     = (fun (x0 : R) => - x0) \o (fun x => (2 ^ w - 1) *** x).   smt(). *)
-(*      rewrite - dmap_comp. *)
-(*     have ->: (dmap r_distr (fun (x0 : R) => (2 ^ w - 1) *** x0))  = r_distr. *)
-(*     pose  funny_op := fun (a : R) => choiceb (fun (x : R) => (2 ^ w - 1) *** x = a) witness. *)
-(*       apply (dmap_bij _ _ _ funny_op). *)
-(*      progress. apply r_distr_full. *)
-(*      progress. apply r_distr_funi. *)
-(*     progress. *)
-(*     rewrite /funny_op. *)
-(*     pose xxx := choiceb (fun (x : R) => (2 ^ w - 1) *** x = (2 ^ w - 1) *** a) witness. *)
-(*       have : (2 ^ w - 1) *** xxx = (2 ^ w - 1) *** a. *)
-     
-(*     apply (choicebP (fun (x : R) => (2 ^ w - 1) *** x = (2 ^ w - 1) *** a)). exists a. auto.  *)
-    
-(*     progress. *)
-(*     apply (const_mul_inj (2 ^ w - 1)). smt. auto. *)
-(*     rewrite /funny_op. *)
-(*     progress. *)
-(*     apply (choicebP (fun (x : R) => (2 ^ w - 1) *** x = b)). *)
-(*     simplify. *)
-(*     apply (funny_one (2 ^ w - 1) b). *)
-(*     have ->: (dmap r_distr (fun (x0 : R) => -x0)) = r_distr. *)
-(*     apply (dmap_bij _ _ _ ((fun (x : R) => - x ))).     *)
-(*     progress. apply r_distr_full. *)
-(*     progress. apply r_distr_funi. *)
-(*     progress. apply neg_neg_id. *)
-(*     progress. apply neg_neg_id. *)
-(*     apply (dmap_bij _ _ _ ((fun (x : R) => x +++ - s{hr} i0 i *** P{hr} i0 ))). *)
-(*     progress. apply r_distr_full. *)
-(*     progress. apply r_distr_funi. *)
-(*     progress. smt (op_assoc op_comm op_id op_id' op_inv). *)
-(*     progress. smt (op_assoc op_comm op_id op_id' op_inv). *)
-(* rewrite  dmapE.     *)
-(* apply p1_prop. *)
-(*     smt(l_pos). *)
-(*     smt(T_pos). *)
-(* qed.            *)
-
-(* (* *)
-(* TODO: *)
-
-(* 1/ define multiScalarMul with perfect +++ but still doing the flag check *)
-(* 2/ prove that !flag is same in both cases *)
-(* 3/ analyze the !flag case *)
-
-(*   *) *)
+qed.

@@ -59,6 +59,15 @@ rewrite nplus_dist. smt.
 qed.     
 
 
+lemma iteriZZZZ (f : int -> R)  : 
+  forall (n : int), 0 <= n => forall (z : R),
+iteri n
+   (fun (j : int) (acc : R) =>
+      acc +++ (f j +++ z)) idR
+ = iteri n
+   (fun (j : int) (acc : R) =>
+      acc +++ (f j)) idR +++ n *** z.
+admitted.
 
 
 (* lemma iteri_ub ['a 'b] (g : 'a -> 'b) (f : 'a -> int -> 'b -> (bool * 'b)) (a_distr : 'a distr) (p : real)  : *)
