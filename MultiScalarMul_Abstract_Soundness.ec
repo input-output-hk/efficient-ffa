@@ -21,13 +21,15 @@ lemma multieqs2 argP args argU  :
      ==>  res{2}.`1 => (res{1} = res{2}.`2)].
 proc.
 wp.
-inline SimpleComp.multiScalarMulMain_Opt. wp.
-while ((flag0{2} => ={table,acc,U,s} /\ (forall i j, table{2} i j <> idR)) /\ (flag0{2} => flagaux{2}) /\ ={ic} /\ s{1} = s0{2}  ).
+inline SimpleComp.multiScalarMulMain_Opt.
+inline   SimpleComp.multiScalarMulMain_Perfect_Helper.
+       wp.
+while ((flag0{2} => ={table,acc,U,s} /\ (forall i j, table{2} i j <> idR)) /\ (flag0{2} => flagaux{2}) /\ ={ic} /\ s0{1} = s0{2}  ).
 wp.
 inline SimpleComp.completeAddLoop.
 inline SimpleComp.incompleteAddLoop.   
 wp.
-while ((flag0{2} /\ flag1{2} => ={vahe, acc0,table0,aux0,s0,ic0} /\ (forall i j, table0{2} i j <> idR) /\ vahe{2} <> idR) /\ ={jc0} /\ s0{1} = s1{2} ).
+while ((flag0{2} /\ flag1{2} => ={vahe, acc0,table0,aux0,ic0} /\ (forall i j, table0{2} i j <> idR) /\ vahe{2} <> idR) /\ ={jc0} /\ s1{1} = s1{2} ).
  wp. skip. progress.
    have -> : vahe{1} = vahe{2}. smt().
 rewrite same_res. 
@@ -40,7 +42,7 @@ rewrite same_res.
      smt().
      smt().
      smt().
-     smt().
+
 apply opt_never_id. smt(). smt().
 smt().
 wp.
@@ -49,11 +51,12 @@ ecall {2} (doublewtimes_spec_ph acc{2} w).
 skip. progress. 
 smt(w_pos). smt(). smt(). smt().
 smt(). 
-apply no_order_two_elems. smt(w_pos).
+apply no_order_two_elems. smt(w_pos). 
 smt(). smt(). smt().
-smt(). smt().    
+smt(). smt().     admit. admit.
 wp. 
- skip. progress. admit. smt().
+ skip. progress. admit.
+smt().
 qed.
 
 
@@ -98,7 +101,7 @@ apply O_lossless.
  auto.   
 exists* u_cand. elim*. move => u_candV.
 call (multiscalarI_spec_ph  argP args u_candV).
-wp.   skip. progress.
+wp.   skip. progress. rewrite H. auto.
 hoare. simplify. call(_:true). auto. auto.
  qed.   
 

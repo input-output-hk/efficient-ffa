@@ -55,6 +55,12 @@ axiom mul_plus_distr   : forall (a : int), forall (b c : R),
  a *** (b +++ c) = a *** b +++ a *** c.
 
 
+op xdiff (x : R) (r : R) = xof x <> xof r.
+op invertme (n : int) : int.
+axiom invertmeP n x : (invertme n) *** (n *** x)  = x.
+axiom notxdiff (x y : R) : ! (xdiff x y) => x = y \/ x = -y.
+
+
 
 lemma qiq : forall a, 0 <= a => forall (c : int), forall (b : R),
    a *** b +++ c *** b = (a + c) *** b.

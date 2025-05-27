@@ -70,6 +70,17 @@ iteri n
 admitted.
 
 
+lemma iteriZZZZZ (f : int -> R)  start : 
+  forall (n : int), 0 <= n =>
+iteri n
+   (fun (j : int) (acc : R) =>
+      acc +++ (f j)) start
+ = iteri n
+   (fun (j : int) (acc : R) =>
+      acc +++ (f j)) idR +++ start.
+admitted.
+
+
 (* lemma iteri_ub ['a 'b] (g : 'a -> 'b) (f : 'a -> int -> 'b -> (bool * 'b)) (a_distr : 'a distr) (p : real)  : *)
 (*   (forall i acc, mu a_distr *)
 (*     (fun (r : 'a) => !(f r i acc).`1) <= p) *)
