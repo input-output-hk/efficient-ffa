@@ -321,10 +321,11 @@ progress.
 qed.   
 
 
-lemma multiscalarR_helper_spec argP args argU  argT: 
+lemma multiscalarR_helper_spec argP args argU  argT: 0 <= argT =>
  hoare [ SimpleComp.multiScalarMulMain_Perfect_Helper : 
   arg = (argP, args, argU, argT) 
      ==>  res.`2 = (multiScalarMul_Simpl args argP argT l ) +++ l *** argU  ].
+proof. move => argTp.
 proc. wp.
 while (0 <= ic /\ argT = Targ
  /\ (2 ^ w - 1) *** U = v
@@ -390,40 +391,21 @@ smt(). simplify.
 have ->: 2 ^ 0 = 1. smt(@Int).
 smt().
 wp. 
-skip. progress. admit. 
+skip. progress.  
 rewrite iteri0. auto. smt.
 rewrite /multiScalarMulInt.
 have -> : ic0 = Targ{hr}. smt().
 simplify. 
 rewrite /multiScalarMul_Simpl.
-(*   have ->: iteri T *)
-(*   (fun (i : int) (acc1 : R) => *)
-(*      acc1 +++ *)
-(*      iteri l *)
-(*        (fun (j : int) (acc2 : R) => *)
-(*           acc2 +++ 2 ^ (w * (T - 1 - i)) * s{hr} j i *** P{hr} j) idR) idR +++ *)
-(* l *** U{hr} +++ - l *** U{hr} *)
-(*        = iteri T *)
-(*   (fun (i : int) (acc1 : R) => *)
-(*      acc1 +++ *)
-(*      iteri l *)
-(*        (fun (j : int) (acc2 : R) => *)
-(*           acc2 +++ 2 ^ (w * (T - 1 - i)) * s{hr} j i *** P{hr} j) idR) idR +++ *)
-(*   (l *** U{hr} +++ - l *** U{hr} ). *)
-(* smt(op_assoc). *)
-(* rewrite op_inv. *)
-(*   rewrite op_id. *)
-(*   rewrite /multiScalarMulR. *)
     reflexivity.
-(* auto. *)
 qed.
 
 
-
-lemma multiscalarR_helper_spec_ph argP args argU argT : 
- phoare [ SimpleComp.multiScalarMulMain_Perfect_Helper : 
-  arg = (argP, args, argU, argT) 
+lemma multiscalarR_helper_spec_ph argP args argU argT : 0 <= argT
+ => phoare [ SimpleComp.multiScalarMulMain_Perfect_Helper : 
+  arg = (argP, args, argU, argT)  
      ==>  res.`2 = (multiScalarMul_Simpl args argP argT l) +++ l *** argU ] = 1%r.
+move => pp.
 phoare split ! 1%r 0%r. auto.
    proc. wp.
 while true (argT - ic). progress.
@@ -439,7 +421,7 @@ smt().
 wp. 
 skip. progress. smt().
 hoare. simplify.   
-apply multiscalarR_helper_spec.
+conseq (multiscalarR_helper_spec argP args argU argT _). auto.
 qed.
 
 
@@ -449,11 +431,14 @@ lemma multiscalarR_spec_ph argP args argU  :
      ==>  res = (multiScalarMul_Simpl args argP T l) ] = 1%r.
 proc.   
 call (multiscalarR_helper_spec_ph argP args argU T). auto.
-progress. smt.
+progress. smt(T_pos).
+skip. auto.
+progress. rewrite H.
+smt.   
 qed.
 
 
-lemma compelteAddLoop_ph argcc argT argic args  : 
+lemma compelteAddLoop_ph argcc argT argic args :
  phoare [ SimpleComp.completeAddLoop : arg = (argcc, argT, argic,  args) 
      ==>  res = (completeAddLoop l argT args argic argcc) ] = 1%r.    
 proc.
@@ -489,12 +474,14 @@ qed.
 lemma compelteAddLoop_h argcc argT argic args  : 
  hoare [ SimpleComp.completeAddLoop : arg = (argcc, argT, argic,  args) 
      ==>  res = (completeAddLoop l argT args argic argcc) ].
-conseq (compelteAddLoop_ph argcc argT argic args). qed.
+conseq (compelteAddLoop_ph argcc argT argic args). 
+qed.
 
 
-lemma multm_spec_h argP args argU  argT :
+lemma multm_spec_h argP args argU  argT : 0 <= argT =>
  hoare [ SimpleComp.multiScalarMulMain_Perfect_Helper : arg = (argP, args, argU, argT)   
-  ==>  res = (multiScalarMul_Complete argT l (perfect_table_pure argP argU) args (l *** argU) w)   ] .
+  ==>  res = (multiScalarMul_Complete argT l (perfect_table_pure argP argU) args (l *** argU) w) ].
+move => pp.
 proc. 
 while (argT = Targ /\
   0 <= ic 
@@ -509,7 +496,7 @@ skip.
 progress. smt(w_pos).
 smt(). smt(). 
 rewrite /multiScalarMul_Complete. rewrite iteriS. smt(). smt(). 
-wp. skip. progress. admit.
+wp. skip. progress. 
 rewrite /multiScalarMul_Complete. rewrite iteri0.
 auto. auto. 
 have -> : Targ{hr} = ic0. smt(T_pos).
@@ -517,9 +504,10 @@ auto.
 qed. 
 
 
-lemma multm_spec_ph argP args argU argT :
+lemma multm_spec_ph argP args argU argT : 0 <= argT =>
  phoare [ SimpleComp.multiScalarMulMain_Perfect_Helper : arg = (argP, args, argU, argT)   
-  ==>  res = (multiScalarMul_Complete argT l (perfect_table_pure argP argU) args (l *** argU) w)   ] = 1%r .
+  ==>  res = (multiScalarMul_Complete argT l (perfect_table_pure argP argU) args (l *** argU) w)   ] = 1%r.
+move => pp.
 phoare split ! 1%r 0%r. auto.
 proc. while true (argT - ic). auto.
 call helper_specR_total.
@@ -527,15 +515,14 @@ call doubleLoop_total.
 skip. smt().
 wp. skip. smt().
 hoare.
-proc*. ecall (multm_spec_h argP args argU argT).
+proc*. 
+call (multm_spec_h argP args argU argT pp).
 auto.
 qed.
 
 
-
 op gg (s : int -> int -> int) (P : int -> R) (i : int) (u : R) :  R 
   = (multiScalarMul_Simpl s P i l) +++ l *** u.
-
 
 
 lemma oook argP (r : R) (argic : int)  args start : forall (n : int), 0 <= n =>
@@ -556,6 +543,7 @@ rewrite iteriS. auto.
   rewrite iteriS. auto.
 simplify.   rewrite H0. auto.
 qed.  
+
   
 op hh (args : int -> int -> int)  (argP : int -> R)  (argic : int) (l : int) (u : R) =  2 ^ w *** gg args argP argic u +++  (iteri l
    (fun (i1 : int) (acc0 : R) =>
@@ -563,26 +551,24 @@ op hh (args : int -> int -> int)  (argP : int -> R)  (argic : int) (l : int) (u 
    idR).
 
 
-lemma comeqsimp args argP  argic l r :
+lemma comeqsimp args argP argic l r : 0 <= l =>
   (iteri l
    (fun (i1 : int) (acc0 : bool * R) =>
       (acc0.`1 /\ xdiff acc0.`2 (perfect_table_pure argP r i1 (args i1 argic)),
        acc0.`2 +++ perfect_table_pure argP r i1 (args i1 argic)))
    (true, 2 ^ w *** gg args argP argic r)).`2
  = hh args argP argic l r .
-rewrite /hh. rewrite oook. 
-
-admit.
-
-rewrite  ( iteriZZZZZ (fun i1 => perfect_table_pure argP r i1 (args i1 argic))  (2 ^ w *** gg args argP argic r) l _ ). admit. smt.
+proof. move => pp.
+rewrite /hh. rewrite oook. assumption.
+rewrite (iteriZZZZZ (fun i1 => perfect_table_pure argP r i1 (args i1 argic))  (2 ^ w *** gg args argP argic r) l _ ). assumption. smt.
 qed.
 
 
-lemma muleqsimp2 argT s u P :
-   gg s P argT u = (multiScalarMul_Complete argT l (perfect_table_pure P u) s (l *** u) w).`2 .
+lemma muleqsimp2 argT s u P: 0 <= argT =>
+   gg s P argT u = (multiScalarMul_Complete argT l (perfect_table_pure P u) s (l *** u) w).`2.
+proof. move => pp.
 rewrite /gg.
-case (multiScalarMul_Simpl s P argT l +++ l *** u = (multiScalarMul_Complete argT l (perfect_table_pure P u) s (l *** u) w).`2
-). 
+case (multiScalarMul_Simpl s P argT l +++ l *** u = (multiScalarMul_Complete argT l (perfect_table_pure P u) s (l *** u) w).`2). 
 trivial.
 move => ineq.
 have : forall &m, 
@@ -592,18 +578,18 @@ have : forall &m,
      have ->: 1%r = Pr[ SimpleComp.multiScalarMulMain_Perfect_Helper(P,s, u,argT) @&m :
          res.`2 = gg s P argT u ].
     byphoare (_: arg = (P, s, u,argT) ==> _).
-    conseq (multiscalarR_helper_spec_ph P s u argT). auto. auto.
+    conseq (multiscalarR_helper_spec_ph P s u argT _). assumption. auto. auto.
     rewrite /gg. 
     byequiv.
     proc*.
-    ecall {2} (multm_spec_ph P s u argT).
-    ecall {1} (multiscalarR_helper_spec_ph P s u argT). skip. auto.
+    call {2} (multm_spec_ph P s u argT _). 
+    call {1} (multiscalarR_helper_spec_ph P s u argT _). skip. 
     progress. rewrite  H0. auto. smt(). auto. auto. 
    have : exists &m, true. smt().
     elim. move => &h. auto.
     move => _. rewrite /gg. move => p.
     have : Pr[SimpleComp.multiScalarMulMain_Perfect_Helper(P, s, u, argT) @ &h :
        false] = 1%r.
-     rewrite -  ineq. apply  (p &h).
+     rewrite -  ineq. apply (p &h).
   smt(@Distr).
 qed.
