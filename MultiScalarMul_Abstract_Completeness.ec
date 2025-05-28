@@ -124,10 +124,31 @@ wp. skip. progress.
 qed.
 
 
+lemma compl_flags P s &m : 
+  Pr[ MultiScalarMul(UniformU).run(P,s) @&m : !res.`1 ]
+   = Pr[ MultiScalarMul(UniformU).run_perfect(P,s) @&m : !res.`1 ].
+byequiv (_: _ ==> res{1}.`1 = res{2}.`1).
+proc.
+symmetry.
+ecall (multieqs2 P{1} s{1} u_cand{1}).   
+call (_:true). auto. skip. smt(). auto. smt().
+qed.   
 
 
-
-
+lemma compl_II_equiv P s &m :
+     Pr[ SimpleComp.multiScalarMul_Fun2(P,s) @&m : !res.`1 ]
+     = Pr[ MultiScalarMul(UniformU).run_perfect(P,s) @&m : !res.`1 ].
+byequiv (_: _ ==> res{1}.`1 = res{2}.`1).
+proc.
+inline UniformU.getU.
+seq 1 1 : (#pre /\ u_cand{1} = u_cand0{2}).
+    rnd. skip. progress.
+inline SimpleComp.multiScalarMulMain_Perfect.
+wp.
+ exists* P{2}, s{2} , u_cand0{2}. elim*. move => argP argS argU.
+call {2} (multm_spec_ph2 argP argS argU T). smt(T_pos).
+wp. skip. progress. auto. smt().
+qed.
 
 
 lemma completeness_I argP args :
@@ -144,7 +165,6 @@ rewrite mu_split. simplify.
 apply mu_split_q.
 apply kkkk. smt().
 auto.
-
 rewrite /multiScalarMul_Complete.
 
   have -> : (fun (x : R) =>
@@ -438,3 +458,11 @@ qed.
 
 
 
+lemma completeness_final_DONE argP args &m : 
+  Pr[ MultiScalarMul(UniformU).run(argP,args) @&m : !res.`1 ]
+       <= ((p2 argP args) + (T%r * (l%r * (p1 + p1)))).
+rewrite compl_flags.
+rewrite - compl_II_equiv.
+byphoare (_: arg = (argP , args) ==> _).
+apply completeness_I.   auto. auto.
+qed.  

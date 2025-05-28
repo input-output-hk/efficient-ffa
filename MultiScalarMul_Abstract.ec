@@ -170,9 +170,10 @@ module SimpleComp = {
   }
 
   proc multiScalarMulMain_Perfect(P : int -> R, s : int -> int -> int, U : R) = {
-     var result;
+     var result, flag;
+     flag   <- u_check U P s;    
      result <@ multiScalarMulMain_Perfect_Helper(P,s,U,T);
-     return  (result.`2 +++ (- (l *** U)));
+     return  (flag /\ result.`1, result.`2 +++ (- (l *** U)));
   }
 
 
@@ -242,7 +243,14 @@ module MultiScalarMul(O : OutCalls) = {
     var u_cand, result;
     u_cand <@ O.getU();
     result <@ SimpleComp.multiScalarMulMain_Opt_Corrected(P, s, u_cand);
-    return (result.`1, result.`2 +++ - l *** u_cand);
+    return result;
+  }
+
+  proc run_perfect(P : int -> R, s : int -> int -> int) = {
+    var u_cand, result;
+    u_cand <@ O.getU();
+    result <@ SimpleComp.multiScalarMulMain_Perfect(P, s, u_cand);
+    return result;
   }
 }.
 
@@ -428,11 +436,11 @@ qed.
 lemma multiscalarR_spec_ph argP args argU  : 
  phoare [ SimpleComp.multiScalarMulMain_Perfect : 
   arg = (argP, args, argU) 
-     ==>  res = (multiScalarMul_Simpl args argP T l) ] = 1%r.
+     ==>  res.`2 = (multiScalarMul_Simpl args argP T l) ] = 1%r.
 proc.   
 call (multiscalarR_helper_spec_ph argP args argU T). auto.
 progress. smt(T_pos).
-skip. auto.
+wp. skip. auto.
 progress. rewrite H.
 smt.   
 qed.
@@ -504,7 +512,7 @@ auto.
 qed. 
 
 
-lemma multm_spec_ph argP args argU argT : 0 <= argT =>
+lemma multm_spec_ph2 argP args argU argT : 0 <= argT =>
  phoare [ SimpleComp.multiScalarMulMain_Perfect_Helper : arg = (argP, args, argU, argT)   
   ==>  res = (multiScalarMul_Complete argT l (perfect_table_pure argP argU) args (l *** argU) w)   ] = 1%r.
 move => pp.
@@ -582,7 +590,7 @@ have : forall &m,
     rewrite /gg. 
     byequiv.
     proc*.
-    call {2} (multm_spec_ph P s u argT _). 
+    call {2} (multm_spec_ph2 P s u argT _). 
     call {1} (multiscalarR_helper_spec_ph P s u argT _). skip. 
     progress. rewrite  H0. auto. smt(). auto. auto. 
    have : exists &m, true. smt().
@@ -593,3 +601,56 @@ have : forall &m,
      rewrite -  ineq. apply (p &h).
   smt(@Distr).
 qed.
+
+
+
+axiom u_check_for_table U P s : u_check U P s =>
+  forall i j, perfect_table_pure P U i j <> idR.
+
+lemma multieqs2 argP args argU  :
+ equiv [ SimpleComp.multiScalarMulMain_Perfect 
+        ~ SimpleComp.multiScalarMulMain_Opt_Corrected :
+  arg{2} = (argP, args, argU) /\ ={P,s,U} 
+     ==>  (res{2}.`1 => (res{1} = res{2})) /\ (res{1}.`1 => res{2}.`1)   ].
+proc.
+wp.
+inline SimpleComp.multiScalarMulMain_Opt.
+inline   SimpleComp.multiScalarMulMain_Perfect_Helper.
+       wp.
+while ((flag0{2} /\ u_check U{2} P{2} s{2} =>  ={table,acc,U,s,flag0} /\ (forall i j, table{2} i j <> idR)) /\ (flag0{2} => flagaux{2}) /\ ={ic} /\ s0{1} = s0{2}
+ /\ table{2} = perfect_table_pure P{2} U{2} /\ Targ{1} = T /\ (flag0{1} /\ u_check U{2} P{2} s{2} => flag0{2})  ).
+wp.
+inline SimpleComp.completeAddLoop.
+inline SimpleComp.incompleteAddLoop.   
+wp.
+while ((flag0{2} /\ flag1{2} /\ u_check U{2} P{2} s{2} =>  ={flag1, vahe, acc0,table0,aux0,ic0} /\ (forall i j, table0{2} i j <> idR) /\ vahe{2} <> idR) /\ ={jc0} /\ s1{1} = s1{2} /\ table{2} = table0{2} 
+ /\ table{2} = perfect_table_pure P{2} U{2}  /\ Targ{1} = T  /\ (flag0{2} /\ flag1{1} /\ u_check U{2} P{2} s{2} => flag1{2})).
+ wp. skip. progress.  smt().  
+       have -> : vahe{2} = vahe{1}. smt(). 
+rewrite same_res. 
+  smt().
+  smt().
+  smt().
+  smt().
+  smt().
+     smt().
+     smt().
+     smt().
+     smt().
+apply opt_never_id. smt(). smt().
+smt(). smt(). smt().
+wp.
+ecall {1} (doublewtimes_spec_ph acc{1} w).
+ecall {2} (doublewtimes_spec_ph acc{2} w).
+skip. progress. 
+smt(w_pos). smt(). smt(). smt().
+smt().  
+apply no_order_two_elems. smt(w_pos). 
+smt(). smt(). smt().
+       smt(). smt().
+apply (u_check_for_table U{2} P{2} s{2} _ i j).        auto. smt(). smt().
+       wp. 
+ skip. progress.
+   apply (u_check_for_table U{2} P{2} s{2} H i j).       
+smt(). smt(). smt().
+ qed.
