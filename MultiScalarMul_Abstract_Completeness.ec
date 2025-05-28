@@ -10,13 +10,11 @@ require import MultiScalarMul_Abstract MultiScalarMul_Abstract_Setup AuxResults 
 require import Distr.
 
 
-(* only if gcd(n,order) = 1 *)
-(* axiom const_mul_inj : forall n, 1 <= n => forall x y, n *** x = n *** y => x = y. *)
-
 op p1 : real = mu r_distr (fun (x : R) => x = idR).
 op p2 P s : real = mu r_distr (fun (x : R) => ! u_check x P s).
 
-(* eq_iteri *)
+
+
 lemma incompleteAddLoop_specR_ph argcc argT argic args  :
  phoare [ SimpleComp.incompleteAddLoop : arg = (argcc, argT, argic,  args)
      ==>  res = incompleteAddLoop l argT args argic argcc ] = 1%r.
@@ -175,8 +173,7 @@ apply fun_ext. move => x.
              (2 ^ w *** acc2) in (acc1 /\ r.`1, r.`2)) T _ (true, l *** x)  ).
 smt(T_pos). simplify.
 
-  have -> :
-         (fun (i : int) (acc : bool * R) =>
+  pose f1 := (fun (i : int) (acc : bool * R) =>
          (acc.`1 /\
           (completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i
              (2 ^ w ***
@@ -195,27 +192,29 @@ smt(T_pos). simplify.
                      (completeAddLoop l (perfect_table_pure P{hr} x) s{hr}
                         i0 (2 ^ w *** acc0.`2)).`1,
                      (completeAddLoop l (perfect_table_pure P{hr} x) s{hr}
-                        i0 (2 ^ w *** acc0.`2)).`2)) (true, l *** x)).`2)).`2))
-       = (fun (i : int) (acc : bool * R) =>
+                        i0 (2 ^ w *** acc0.`2)).`2)) (true, l *** x)).`2)).`2)).
+   pose f2 :=       (fun (i : int) (acc : bool * R) =>
         (acc.`1 /\
          (completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i
             (2 ^ w *** (gg s{hr} P{hr} i x))).`1,
          (completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i
             (2 ^ w *** (gg s{hr} P{hr} i x))).`2)).
 
- apply fun_ext. move => z. apply fun_ext. move => zz. progress.
-        have -> : (iteri z
+ rewrite (eq_iteri f1 f2 T _ _).
+
+progress.
+ (* apply fun_ext. move => z. apply fun_ext. move => zz. progress. *)
+rewrite /f1 /f2.      
+        have -> : (iteri i
         (fun (i0 : int) (acc0 : bool * R) =>
            (acc0.`1 /\
             (completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i0
                (2 ^ w *** acc0.`2)).`1,
             (completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i0
-               (2 ^ w *** acc0.`2)).`2)) (true, l *** x)).`2 = gg s{hr} P{hr} z x. 
-rewrite (muleqsimp2 z s{hr} x P{hr}). 
-admit.
+               (2 ^ w *** acc0.`2)).`2)) (true, l *** x)).`2 = gg s{hr} P{hr} i x. 
+rewrite (muleqsimp2 i s{hr} x P{hr}).  auto.
 
-      auto. auto.
-rewrite (muleqsimp2 z s{hr} x P{hr}). admit. auto. auto.
+      auto. auto. auto.
 apply (iteri_ub3 (fun (x : R) => l *** x)   
         (fun x i => completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i
                (2 ^ w *** (gg s{hr} P{hr} i x) )) r_distr T (l%r * (p1 + p1)) _ ).  
@@ -247,7 +246,8 @@ apply fun_ext. move => r.
    (fun (j : int) (acc1 : bool) (acc2 : R) =>
         (acc1 /\ xdiff acc2 (perfect_table_pure P{hr} r j (s{hr} j i)),
          acc2 +++ perfect_table_pure P{hr} r j (s{hr} j i))) l _ (true, 2 ^ w *** gg s{hr} P{hr} i r)  ). smt(l_pos). simplify. 
-have ->: (fun (i0 : int) (acc : bool * R) =>
+
+ pose f1 := (fun (i0 : int) (acc : bool * R) =>
          (acc.`1 /\
           xdiff
             (iteri i0
@@ -263,19 +263,22 @@ have ->: (fun (i0 : int) (acc : bool * R) =>
                  xdiff acc0.`2 (perfect_table_pure P{hr} r i1 (s{hr} i1 i)),
                  acc0.`2 +++ perfect_table_pure P{hr} r i1 (s{hr} i1 i)))
              (true, 2 ^ w *** gg s{hr} P{hr} i r)).`2 +++
-          perfect_table_pure P{hr} r i0 (s{hr} i0 i)))
-       = (fun (j : int) (acc : bool * R) =>
+          perfect_table_pure P{hr} r i0 (s{hr} i0 i))).
+
+  pose f2 := (fun (j : int) (acc : bool * R) =>
         (acc.`1 /\ xdiff (hh s{hr} P{hr} i j r) (perfect_table_pure P{hr} r j (s{hr} j i)),
          (hh s{hr} P{hr} i j r) +++ perfect_table_pure P{hr} r j (s{hr} j i))).
-apply fun_ext. move => q.  apply fun_ext. move => qq.
+     
+ rewrite (eq_iteri f1 f2 l _ _).
+progress. rewrite /f1 /f2.
 
- have -> : (iteri q
+ have -> : (iteri i0
     (fun (i1 : int) (acc0 : bool * R) =>
        (acc0.`1 /\ xdiff acc0.`2 (perfect_table_pure P{hr} r i1 (s{hr} i1 i)),
         acc0.`2 +++ perfect_table_pure P{hr} r i1 (s{hr} i1 i)))
     (true, 2 ^ w *** gg s{hr} P{hr} i r)).`2
-   =  (hh s{hr} P{hr} i q r) .
-rewrite comeqsimp. admit.
+   =  (hh s{hr} P{hr} i i0 r) .
+rewrite comeqsimp. auto.
 auto. auto. auto.
 move => condi.
 apply  (iteri_ub3 (fun (x : R) => 2 ^ w *** (gg s{hr} P{hr} i x)) 
