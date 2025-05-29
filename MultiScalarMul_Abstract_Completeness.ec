@@ -5,15 +5,12 @@ require import BitEncoding StdBigop Bigalg.
 (*---*) import Ring.IntID IntOrder BS2Int.
 (*---*) import Bigint BIA.
 
-
 require import MultiScalarMul_Abstract MultiScalarMul_Abstract_Setup AuxResults IterationProps.
 require import Distr.
 
 
 op p1 : real = mu r_distr (fun (x : R) => x = idR).
 op p2 P s : real = mu r_distr (fun (x : R) => ! u_check x P s).
-
-
 
 lemma incompleteAddLoop_specR_ph argcc argT argic args  :
  phoare [ SimpleComp.incompleteAddLoop : arg = (argcc, argT, argic,  args)
@@ -149,6 +146,12 @@ wp.
 call {2} (multm_spec_ph2 argP argS argU T). smt(T_pos).
 wp. skip. progress. auto. smt().
 qed.
+
+    (*  *)
+axiom completeness_constraints :   forall i, 0 <= i < l
+  =>  
+   0 < `| (2 ^ w - 1) * (1 - i) + 2 ^ w * l | < order
+  /\ 0 < `| (1 - 2 ^ w) * (1 + i) + 2 ^ w * l | < order.
 
 
 lemma completeness_I argP args :
@@ -389,7 +392,7 @@ have ->: (fun (x : R) =>
      ((2 ^ w - 1) *** x +++
      i0 *** - (2 ^ w - 1) *** x  +++
      2 ^ w *** (l *** x)) = idR).
-apply fun_ext. move => r. timeout 10. smt.
+apply fun_ext. move => r. timeout 15. smt.
 
 have ->: (fun (x : R) =>
      2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
@@ -433,9 +436,23 @@ have ->: (dmap r_distr
 apply (dmap_bij r_distr r_distr _ (fun (x : R) => (invertme (2 ^ w - 1 + i0 * - (2 ^ w - 1) + 2 ^ w * l) ) *** x ) ).
 progress. apply r_distr_full.
 progress. apply r_distr_funi.          
-  progress. rewrite invertmeP. auto.
+  progress. 
+pose A := 2 ^ w - 1.
+have -> : (A + i0 * -A + 2 ^ w * l) = (A + - i0 * A + 2 ^ w * l). smt().
+have ->: (A + - i0 * A + 2 ^ w * l) = A * (1 - i0) + 2 ^ w * l. smt().
+   
+rewrite invertmeP. rewrite /A. smt(completeness_constraints). auto. 
 
-progress. smt. 
+progress. 
+pose A := 2 ^ w - 1.
+have -> : (A + i0 * -A + 2 ^ w * l) = (A + - i0 * A + 2 ^ w * l). smt().
+have ->: (A + - i0 * A + 2 ^ w * l) = A * (1 - i0) + 2 ^ w * l. smt().
+timeout 10.
+have ->: (A * (1 - i0) + 2 ^ w * l) *** (invertme (A * (1 - i0) + 2 ^ w * l) *** b)
+ =  invertme (A * (1 - i0) + 2 ^ w * l) *** ((A * (1 - i0) + 2 ^ w * l)  *** b).
+ smt.
+rewrite invertmeP. rewrite /A. smt(completeness_constraints). auto. 
+
    
 have ->: (dmap r_distr
      (fun (x : R) =>
@@ -450,21 +467,10 @@ apply (dmap_bij r_distr r_distr _ (fun (x : R) =>   -  (2 ^ w *** multiScalarMul
         - s{hr} i0 i *** P{hr} i0)  +++ x )).
 progress. apply r_distr_full.
 progress. apply r_distr_funi.
-progress. timeout 10. smt.
-progress. timeout 10. smt.
+progress. timeout 15. smt.
+progress. timeout 15. smt.
 auto.
-
-
-
-
-
-
-
-
 (* second symmetrical case *)
-
-
-
 rewrite /hh. rewrite /perfect_table_pure. rewrite /gg.
 
 have ->: (fun (x : R) =>
@@ -480,7 +486,7 @@ have ->: (fun (x : R) =>
        (fun (j : int) (acc : R) =>
           acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR)
      +++  (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x) = idR).
-apply fun_ext. move => r. smt.
+apply fun_ext. move => r. timeout 20. smt.
 have ->: (fun (x : R) =>
      2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l +++ l *** x) +++
      iteri i0
@@ -512,7 +518,6 @@ have ->: (fun (x : R) =>
 
  
      rewrite  (iteriZZZZ (fun j => s{hr} j i *** P{hr} j) i0 _ (- (2 ^ w - 1) *** r)) . smt(). timeout 10. smt.
- 
 
 have ->: (fun (x : R) =>
      2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++ 2 ^ w *** (l *** x) +++
@@ -570,9 +575,26 @@ have ->: (dmap r_distr
 apply (dmap_bij r_distr r_distr _ (fun (x : R) => (invertme (- (2 ^ w - 1) + i0 * - (2 ^ w - 1) + 2 ^ w * l) ) *** x ) ).
 progress. apply r_distr_full.
 progress. apply r_distr_funi.          
-  progress. rewrite invertmeP. auto.
+  progress. rewrite invertmeP.
 
-progress. smt. 
+ (* have -> : (- (2 ^ w - 1)) + i0 * - (2 ^ w - 1) + 2 ^ w * l *)
+ (*    = (1 - 2 ^ w) * (1 - i0) + 2 ^ w * l .  *)
+smt(completeness_constraints).   
+auto.
+
+progress.
+ have ->: ((- (2 ^ w - 1)) + i0 * - (2 ^ w - 1) + 2 ^ w * l) ***
+(invertme ((- (2 ^ w - 1)) + i0 * - (2 ^ w - 1) + 2 ^ w * l) *** b)
+  = (invertme ((- (2 ^ w - 1)) + i0 * - (2 ^ w - 1) + 2 ^ w * l)) ***
+( ((- (2 ^ w - 1)) + i0 * - (2 ^ w - 1) + 2 ^ w * l) *** b). smt.   
+rewrite invertmeP.
+ (* have -> : (- (2 ^ w - 1)) + i0 * - (2 ^ w - 1) + 2 ^ w * l *)
+ (*    = (1 - 2 ^ w) * (1 - i0) + 2 ^ w * l .  *)
+(*    have ->: (- (2 ^ w - 1)) = ((1 - 2 ^ w )). smt(). *)
+(* pose B := (1 - 2 ^ w). *)
+(* have ->: B + i0 * B *)
+(*      = B * (1 + i0). smt(). *)
+smt(completeness_constraints).    auto.
    
 have ->: (dmap r_distr
      (fun (x : R) =>

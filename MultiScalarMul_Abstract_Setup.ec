@@ -10,6 +10,9 @@ require import BitEncoding StdBigop Bigalg.
 
 (* unique representation of points on the curve *)
 type R.                  
+
+op order : int.
+axiom order_pos : 0 < order.
        
 (* identity element  *)
 op idR : R. 
@@ -56,9 +59,11 @@ axiom mul_plus_distr   : forall (a : int), forall (b c : R),
 
 
 op xdiff (x : R) (r : R) = xof x <> xof r.
-op invertme (n : int) : int.
-axiom invertmeP n x : (invertme n) *** (n *** x)  = x.
 axiom notxdiff (x y : R) : ! (xdiff x y) => x = y \/ x = -y.
+
+op invertme (n : int) : int.
+axiom invertmeP (n : int) x :   0 < (`| n |) < order => (invertme n) *** (n *** x) = x.
+
 
 
 

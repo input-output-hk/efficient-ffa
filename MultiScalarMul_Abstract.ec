@@ -6,7 +6,7 @@ require import BitEncoding StdBigop Bigalg.
 require import MultiScalarMul_Abstract_Setup IterationProps.
 
 
-(* params  *)
+(* algorithm params  *)
 op T : int.
 op l : int.
 op w : int.
