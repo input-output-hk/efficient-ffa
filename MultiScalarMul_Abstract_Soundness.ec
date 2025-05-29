@@ -15,19 +15,19 @@ declare module O <: OutCalls.
 declare axiom O_lossless : islossless O.getU. 
 
 lemma multiscalarI_spec_ph argP args  argU : 
- phoare [ SimpleComp.multiScalarMulMain_Opt_Corrected : 
+ phoare [ MSM.multiScalarMulMain_Opt_Corrected : 
   arg = (argP, args, argU) 
      ==>  res.`1 => res.`2 = (multiScalarMul_Simpl args argP T l)  ] = 1%r.
 proof.
 bypr.
 progress.
-have ih: 1%r = Pr[SimpleComp.multiScalarMulMain_Perfect(P{m}, s{m}, U{m}) @ &m 
+have ih: 1%r = Pr[MSM.completeMain(P{m}, s{m}, U{m}) @ &m 
   : res.`2 = multiScalarMul_Simpl args argP T l].
 byphoare (_: arg = (argP, args, argU) ==> _).
 conseq (multiscalarR_spec_ph argP args argU). smt(). auto.
-have : Pr[SimpleComp.multiScalarMulMain_Opt_Corrected(P{m}, s{m}, U{m}) @ &m :
+have : Pr[MSM.multiScalarMulMain_Opt_Corrected(P{m}, s{m}, U{m}) @ &m :
    res.`1 => res.`2 = multiScalarMul_Simpl args argP T l] >=
-Pr[SimpleComp.multiScalarMulMain_Perfect(P{m}, s{m}, U{m}) @ &m :
+Pr[MSM.completeMain(P{m}, s{m}, U{m}) @ &m :
    res.`2 = multiScalarMul_Simpl args argP T l].
 byequiv (_: ={glob O} /\ arg{2} = (P{m}, s{m}, U{m}) /\ arg{1} = (P{m}, s{m}, U{m}) ==> res{2}.`1 => res{2}.`2 = res.`2{1} ).
 proc*.

@@ -22,7 +22,8 @@ module UniformU : OutCalls = {
 axiom completeness_constraints :   forall i, 0 <= i < l
   =>  
    0 < `| (2 ^ w - 1) * (1 - i) + 2 ^ w * l | < order
-  /\ 0 < `| (1 - 2 ^ w) * (1 + i) + 2 ^ w * l | < order.
+  
+ /\ 0 < `| (1 - 2 ^ w) * (1 + i) + 2 ^ w * l | < order.
 
 
 op p1 : real = mu r_distr (fun (x : R) => x = idR).
@@ -41,14 +42,14 @@ qed.
 
 
 lemma compl_II_equiv P s &m :
-     Pr[ SimpleComp.multiScalarMul_Functional(P,s) @&m : !res.`1 ]
+     Pr[ MSM.multiScalarMul_Functional(P,s) @&m : !res.`1 ]
      = Pr[ MultiScalarMul(UniformU).run_perfect(P,s) @&m : !res.`1 ].
 byequiv (_: _ ==> res{1}.`1 = res{2}.`1).
 proc.
 inline UniformU.getU.
 seq 1 1 : (#pre /\ u_cand{1} = u_cand0{2}).
     rnd. skip. progress.
-inline SimpleComp.multiScalarMulMain_Perfect.
+inline MSM.completeMain.
 wp.
  exists* P{2}, s{2} , u_cand0{2}. elim*. move => argP argS argU.
 call {2} (multm_spec_ph2 argP argS argU T). smt(param_pos).
@@ -57,7 +58,7 @@ qed.
 
 
 lemma completeness_I argP args :
-  phoare [ SimpleComp.multiScalarMul_Functional :
+  phoare [ MSM.multiScalarMul_Functional :
       arg = (argP , args) ==> !res.`1 ] 
             <= ((p2 argP args) + (T%r * (l%r * (p1 + p1)))).
 proc.
@@ -481,12 +482,6 @@ progress.
   = (invertme ((- (2 ^ w - 1)) + i0 * - (2 ^ w - 1) + 2 ^ w * l)) ***
 ( ((- (2 ^ w - 1)) + i0 * - (2 ^ w - 1) + 2 ^ w * l) *** b). smt.   
 rewrite invertmeP.
- (* have -> : (- (2 ^ w - 1)) + i0 * - (2 ^ w - 1) + 2 ^ w * l *)
- (*    = (1 - 2 ^ w) * (1 - i0) + 2 ^ w * l .  *)
-(*    have ->: (- (2 ^ w - 1)) = ((1 - 2 ^ w )). smt(). *)
-(* pose B := (1 - 2 ^ w). *)
-(* have ->: B + i0 * B *)
-(*      = B * (1 + i0). smt(). *)
 smt(completeness_constraints).    auto.
    
 have ->: (dmap r_distr

@@ -76,8 +76,7 @@ op multiScalarMul_Simpl  (s : int -> int -> int) (P : int -> R) (ic jc  : int)
            idR.
 
 
-
-module SimpleComp = {
+module MSM = {
 
   proc doubleLoop(p : R, w : int) = {
       var cnt;
@@ -107,6 +106,38 @@ module SimpleComp = {
   }
 
 
+  proc completeMainLoop(P : int -> R, s : int -> int -> int, U : R, Targ : int) = {
+    var v, acc, aux, result : R;
+    var table : int -> int -> R;
+    var ic, jc, cnt : int;
+    var flagaux, flag : bool;
+    flagaux <- true;
+    flag <- true;
+   
+    v     <- (2 ^ w - 1) *** U;
+    table <- perfect_table_pure P U;
+    acc   <- l *** U;
+
+    ic <- 0;
+    while (ic < Targ) {
+      acc            <@ doubleLoop(acc,w);
+      (flagaux, acc) <@ completeAddLoop(acc, table, ic, s);
+      flag <- flag && flagaux;
+      ic <- ic + 1;
+    }
+    
+    (* result <- acc +++ (- (l *** U)); *)
+    return (flag, acc);
+  }
+
+  proc completeMain(P : int -> R, s : int -> int -> int, U : R) = {
+     var result, flag;
+     flag   <- u_check U P s;    
+     result <@ completeMainLoop(P,s,U,T);
+     return  (flag /\ result.`1, result.`2 +++ (- (l *** U)));
+  }
+
+
 
   proc incompleteAddLoop(acc : R, table : int -> int-> R, ic : int, s : int -> int -> int) =    {
       var jc, aux, vahe, flag;   
@@ -124,37 +155,6 @@ module SimpleComp = {
       return (flag, vahe);
   }
 
-
-  proc multiScalarMulMain_Perfect_Helper(P : int -> R, s : int -> int -> int, U : R, Targ : int) = {
-    var v, acc, aux, result : R;
-    var table : int -> int -> R;
-    var ic, jc, cnt : int;
-    var flagaux, flag : bool;
-    flagaux <- true;
-    flag <- true;
-   
-    v     <- (2 ^ w - 1) *** U;
-    table <- perfect_table_pure P U;
-    acc   <- l *** U;
-
-    ic <- 0;
-    while (ic < Targ) {
-      acc <@ doubleLoop(acc,w);
-      (flagaux, acc) <@ completeAddLoop(acc, table, ic, s);
-      flag <- flag && flagaux;
-      ic <- ic + 1;
-    }
-    
-    (* result <- acc +++ (- (l *** U)); *)
-    return (flag, acc);
-  }
-
-  proc multiScalarMulMain_Perfect(P : int -> R, s : int -> int -> int, U : R) = {
-     var result, flag;
-     flag   <- u_check U P s;    
-     result <@ multiScalarMulMain_Perfect_Helper(P,s,U,T);
-     return  (flag /\ result.`1, result.`2 +++ (- (l *** U)));
-  }
 
 
   proc multiScalarMulMain_Opt(P : int -> R, s : int -> int -> int, U : R) = {
@@ -206,21 +206,21 @@ module MultiScalarMul(O : OutCalls) = {
   proc run(P : int -> R, s : int -> int -> int) = {
     var u_cand, result;
     u_cand <@ O.getU();
-    result <@ SimpleComp.multiScalarMulMain_Opt_Corrected(P, s, u_cand);
+    result <@ MSM.multiScalarMulMain_Opt_Corrected(P, s, u_cand);
     return result;
   }
 
   proc run_perfect(P : int -> R, s : int -> int -> int) = {
     var u_cand, result;
     u_cand <@ O.getU();
-    result <@ SimpleComp.multiScalarMulMain_Perfect(P, s, u_cand);
+    result <@ MSM.completeMain(P, s, u_cand);
     return result;
   }
 }.
 
 
 lemma doublewtimes_spec_ph argP argw :
- phoare [ SimpleComp.doubleLoop : arg = (argP, argw) /\
+ phoare [ MSM.doubleLoop : arg = (argP, argw) /\
    0 <= argw  ==>  res = (2 ^ argw) *** argP  ] = 1%r.
 proc. 
    while (cnt <= w /\ 0 <= argw /\ 0 <= cnt /\ p = (2 ^ cnt) *** argP) (w - cnt).
@@ -239,14 +239,14 @@ qed.
 
 
 lemma doublewtimes_spec argP argw :
- hoare [ SimpleComp.doubleLoop : arg = (argP, argw) /\
+ hoare [ MSM.doubleLoop : arg = (argP, argw) /\
    0 <= argw  ==>  res = (2 ^ argw) *** argP  ].
 conseq (doublewtimes_spec_ph argP argw).   
 qed.   
 
    
 lemma helper_specR_ph argcc argT argic args  : 
- phoare [ SimpleComp.completeAddLoop : arg = (argcc, argT, argic,  args) 
+ phoare [ MSM.completeAddLoop : arg = (argcc, argT, argic,  args) 
      ==>  res.`2 = argcc +++  iteri l (fun j acc => acc +++ argT j (args j argic)) idR ] = 1%r.
 proc.
 while (0 <= jc 
@@ -267,7 +267,7 @@ qed.
 
 
 lemma helper_specR_total  : 
-  phoare [ SimpleComp.completeAddLoop : true ==>  true ] = 1%r.
+  phoare [ MSM.completeAddLoop : true ==>  true ] = 1%r.
 proc*.
 exists*  acc, table, ic, s.
 elim*. move => accV tableV icV sV.        
@@ -277,7 +277,7 @@ qed.
 
 
 lemma doubleLoop_total  : 
-  phoare [ SimpleComp.doubleLoop : true ==>  true ] = 1%r.
+  phoare [ MSM.doubleLoop : true ==>  true ] = 1%r.
 proc.
 while true (w - cnt). auto.
 smt().
@@ -286,7 +286,7 @@ qed.
 
 
 lemma helper_specR argcc argT argic args  : 
- hoare [ SimpleComp.completeAddLoop : arg = (argcc, argT, argic,  args) 
+ hoare [ MSM.completeAddLoop : arg = (argcc, argT, argic,  args) 
      ==>  res.`2 = argcc +++  iteri l (fun j acc => acc +++ argT j (args j argic)) idR ].
 conseq (helper_specR_ph argcc argT argic args).   
 progress.
@@ -294,7 +294,7 @@ qed.
 
 
 lemma multiscalarR_helper_spec argP args argU  argT: 0 <= argT =>
- hoare [ SimpleComp.multiScalarMulMain_Perfect_Helper : 
+ hoare [ MSM.completeMainLoop : 
   arg = (argP, args, argU, argT) 
      ==>  res.`2 = (multiScalarMul_Simpl args argP argT l ) +++ l *** argU  ].
 proof. move => argTp.
@@ -374,7 +374,7 @@ qed.
 
 
 lemma multiscalarR_helper_spec_ph argP args argU argT : 0 <= argT
- => phoare [ SimpleComp.multiScalarMulMain_Perfect_Helper : 
+ => phoare [ MSM.completeMainLoop : 
   arg = (argP, args, argU, argT)  
      ==>  res.`2 = (multiScalarMul_Simpl args argP argT l) +++ l *** argU ] = 1%r.
 move => pp.
@@ -398,7 +398,7 @@ qed.
 
 
 lemma multiscalarR_spec_ph argP args argU  : 
- phoare [ SimpleComp.multiScalarMulMain_Perfect : 
+ phoare [ MSM.completeMain : 
   arg = (argP, args, argU) 
      ==>  res.`2 = (multiScalarMul_Simpl args argP T l) ] = 1%r.
 proc.   
@@ -411,7 +411,7 @@ qed.
 
 
 lemma compelteAddLoop_ph argcc argT argic args :
- phoare [ SimpleComp.completeAddLoop : arg = (argcc, argT, argic,  args) 
+ phoare [ MSM.completeAddLoop : arg = (argcc, argT, argic,  args) 
      ==>  res = (completeAddLoop l argT args argic argcc) ] = 1%r.    
 proc.
 wp.   
@@ -444,14 +444,14 @@ qed.
 
 
 lemma compelteAddLoop_h argcc argT argic args  : 
- hoare [ SimpleComp.completeAddLoop : arg = (argcc, argT, argic,  args) 
+ hoare [ MSM.completeAddLoop : arg = (argcc, argT, argic,  args) 
      ==>  res = (completeAddLoop l argT args argic argcc) ].
 conseq (compelteAddLoop_ph argcc argT argic args). 
 qed.
 
 
 lemma multm_spec_h argP args argU  argT : 0 <= argT =>
- hoare [ SimpleComp.multiScalarMulMain_Perfect_Helper : arg = (argP, args, argU, argT)   
+ hoare [ MSM.completeMainLoop : arg = (argP, args, argU, argT)   
   ==>  res = (multiScalarMulLoop argT l (perfect_table_pure argP argU) args (l *** argU) w) ].
 move => pp.
 proc. 
@@ -477,7 +477,7 @@ qed.
 
 
 lemma multm_spec_ph2 argP args argU argT : 0 <= argT =>
- phoare [ SimpleComp.multiScalarMulMain_Perfect_Helper : arg = (argP, args, argU, argT)   
+ phoare [ MSM.completeMainLoop : arg = (argP, args, argU, argT)   
   ==>  res = (multiScalarMulLoop argT l (perfect_table_pure argP argU) args (l *** argU) w)   ] = 1%r.
 move => pp.
 phoare split ! 1%r 0%r. auto.
@@ -544,10 +544,10 @@ case (multiScalarMul_Simpl s P argT l +++ l *** u = (multiScalarMulLoop argT l (
 trivial.
 move => ineq.
 have : forall &m, 
-  Pr[ SimpleComp.multiScalarMulMain_Perfect_Helper(P,s, u,argT) @&m :
+  Pr[ MSM.completeMainLoop(P,s, u,argT) @&m :
      gg s P argT u = (multiScalarMulLoop argT l (perfect_table_pure P u) s (l *** u) w).`2  ] = 1%r.
      progress.
-     have ->: 1%r = Pr[ SimpleComp.multiScalarMulMain_Perfect_Helper(P,s, u,argT) @&m :
+     have ->: 1%r = Pr[ MSM.completeMainLoop(P,s, u,argT) @&m :
          res.`2 = gg s P argT u ].
     byphoare (_: arg = (P, s, u,argT) ==> _).
     conseq (multiscalarR_helper_spec_ph P s u argT _). assumption. auto. auto.
@@ -560,7 +560,7 @@ have : forall &m,
    have : exists &m, true. smt().
     elim. move => &h. auto.
     move => _. rewrite /gg. move => p.
-    have : Pr[SimpleComp.multiScalarMulMain_Perfect_Helper(P, s, u, argT) @ &h :
+    have : Pr[MSM.completeMainLoop(P, s, u, argT) @ &h :
        false] = 1%r.
      rewrite -  ineq. apply (p &h).
   smt(@Distr).
@@ -572,20 +572,20 @@ axiom u_check_for_table U P s : u_check U P s =>
   forall i j, perfect_table_pure P U i j <> idR.
 
 lemma multieqs2 argP args argU  :
- equiv [ SimpleComp.multiScalarMulMain_Perfect 
-        ~ SimpleComp.multiScalarMulMain_Opt_Corrected :
+ equiv [ MSM.completeMain
+        ~ MSM.multiScalarMulMain_Opt_Corrected :
   arg{2} = (argP, args, argU) /\ ={P,s,U} 
      ==>  (res{2}.`1 => (res{1} = res{2})) /\ (res{1}.`1 => res{2}.`1)   ].
 proc.
 wp.
-inline SimpleComp.multiScalarMulMain_Opt.
-inline   SimpleComp.multiScalarMulMain_Perfect_Helper.
+inline MSM.multiScalarMulMain_Opt.
+inline   MSM.completeMainLoop.
        wp.
 while ((flag0{2} /\ u_check U{2} P{2} s{2} =>  ={table,acc,U,s,flag0} /\ (forall i j, table{2} i j <> idR)) /\ (flag0{2} => flagaux{2}) /\ ={ic} /\ s0{1} = s0{2}
  /\ table{2} = perfect_table_pure P{2} U{2} /\ Targ{1} = T /\ (flag0{1} /\ u_check U{2} P{2} s{2} => flag0{2})  ).
 wp.
-inline SimpleComp.completeAddLoop.
-inline SimpleComp.incompleteAddLoop.   
+inline MSM.completeAddLoop.
+inline MSM.incompleteAddLoop.   
 wp.
 while ((flag0{2} /\ flag1{2} /\ u_check U{2} P{2} s{2} =>  ={flag1, vahe, acc0,table0,aux0,ic0} /\ (forall i j, table0{2} i j <> idR) /\ vahe{2} <> idR) /\ ={jc0} /\ s1{1} = s1{2} /\ table{2} = table0{2} 
  /\ table{2} = perfect_table_pure P{2} U{2}  /\ Targ{1} = T  /\ (flag0{2} /\ flag1{1} /\ u_check U{2} P{2} s{2} => flag1{2})).
