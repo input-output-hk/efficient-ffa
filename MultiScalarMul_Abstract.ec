@@ -6,24 +6,28 @@ require import BitEncoding StdBigop Bigalg.
 require import MultiScalarMul_Abstract_Setup IterationProps.
 
 
-(* algorithm params  *)
-op T : int.
-op l : int.
-op w : int.
+(*
+1/ w: Computing MSM with w-bits window.
+2/ T: Scalars are encoded as T little-endian integer windows in the range 
+ [0, 2^w]
+3/ l: the number of base points
+*)
 
-(* params are positive  *)
-axiom w_pos : 0 < w.
-axiom l_pos : 0 < l.
-axiom T_pos : 0 < T.
+op w, T, l : int.                     
+(* all params are positive  *)
+axiom param_pos : 0 < w /\ 0 < T /\ 0 < l.
 
-
+(* precomputed table  *)
 op perfect_table_pure parg (varg : R) = 
- (fun (j i : int) =>  (i *** (parg j)) +++ - (2 ^ w - 1) *** varg).
+ (fun (j i : int) =>  (i *** (parg j)) 
+            +++ - (2 ^ w - 1) *** varg).
 
 
+(* distribution of points  *)
 op r_distr : R distr.
 
 
+(* we ask distribution to be full and uniform  *)
 axiom r_distr_full : is_full r_distr.
 axiom r_distr_uni : is_uniform r_distr.
 
@@ -35,64 +39,41 @@ apply r_distr_uni.
 qed.
 
 
+(* oracle calls for the algorithm  *)
 module type OutCalls = {
   proc getU() : R
 }.
 
 
-
-(* check the U candidate  *)
-op u_check (r : R) (P : int -> R) (s : int -> int -> int) : bool.
-
-op incompleteAddLoop (l : int) (argT : int -> int -> R)
-  (args : int -> int -> int) (argic : int) (argcc : R) 
-    = (iteri l (fun j (acc : bool * R) 
-        => (acc.`1 /\ xdiff acc.`2 (argT j (args j argic)), 
-             acc.`2 %%% argT j (args j argic))) (true, argcc)).
+(* uninstantiated check which is supposed to verify that given
+particular u, P, and s the MSM computation can be performed *) op
+u_check (u : R) (P : int -> R) (s : int -> int -> int) : bool.
 
 
+(* "adding" loop of the MSM  *)
 op completeAddLoop (l : int) (argT : int -> int -> R)
   (args : int -> int -> int) (argic : int) (argcc : R) 
     = (iteri l (fun j (acc : bool * R) 
         => (acc.`1 /\ xdiff acc.`2 (argT j (args j argic)), 
              acc.`2  +++ argT j (args j argic))) (true, argcc)).
 
-  
-op multiScalarMul (T l : int) (argT : int -> int -> R)
-  (args : int -> int -> int) (argu : R) (argw : int)
-    = (iteri T (fun i (acc : bool * R) 
-        => let r = incompleteAddLoop l argT args i ((2 ^ argw) *** acc.`2) in 
-         (acc.`1 /\ r.`1, r.`2)) (true, argu)).
 
-op multiScalarMul_Complete (T l : int) (argT : int -> int -> R)
+(* main loop of the MSM (doubling is inlined) *)
+op multiScalarMulLoop (T l : int) (argT : int -> int -> R)
   (args : int -> int -> int) (argu : R) (argw : int)
     = (iteri T (fun i (acc : bool * R) 
         => let r = completeAddLoop l argT args i ((2 ^ argw) *** acc.`2) in 
          (acc.`1 /\ r.`1, r.`2)) (true, argu)).
 
 
+(* specification *)
 op multiScalarMul_Simpl  (s : int -> int -> int) (P : int -> R) (ic jc  : int)
   : R
  = iteri ic
      (fun i acc1 => acc1 +++ 
        iteri jc
-         (fun j acc2 => 
-          acc2 +++ (2 ^ (w * (ic - 1 - i)) * s j i) *** (P j)) idR
-        ) idR.
-
-
-
-
-
-
-
-module UniformU : OutCalls = {
-   proc getU() = {
-     var u_cand;
-     u_cand <$ r_distr;
-     return u_cand;
-   }
-}.
+         (fun j acc2 => acc2 +++ (2 ^ (w * (ic - 1 - i)) * s j i) *** (P j)) idR)  
+           idR.
 
 
 
@@ -128,8 +109,7 @@ module SimpleComp = {
 
 
   proc incompleteAddLoop(acc : R, table : int -> int-> R, ic : int, s : int -> int -> int) =    {
-      var jc, aux, vahe, flag;
-    
+      var jc, aux, vahe, flag;   
       aux <- witness;
       flag <- true;
       jc <- 0;
@@ -177,8 +157,6 @@ module SimpleComp = {
   }
 
 
-
-
   proc multiScalarMulMain_Opt(P : int -> R, s : int -> int -> int, U : R) = {
     var acc, aux, result : R;
     var table;
@@ -208,29 +186,15 @@ module SimpleComp = {
     return (flag /\ result.`1, result.`2 +++ (- (l *** U)));
   }
 
-  proc multiScalarMul_Fun(P : int -> R, s : int -> int -> int) = {
+  proc multiScalarMul_Functional(P : int -> R, s : int -> int -> int) = {
     var u_cand, flag, result, table;
 
     u_cand <$ r_distr;
 
-   (* check u *)
+    (* check u *)
     flag   <- u_check u_cand P s;
     table  <- perfect_table_pure  P u_cand;
-    result <- multiScalarMul T l table s (l *** u_cand) w;
-
-    return (flag /\ result.`1, result.`2 +++ (- (l *** u_cand)));
-  }
-
-
-  proc multiScalarMul_Fun2(P : int -> R, s : int -> int -> int) = {
-    var u_cand, flag, result, table;
-
-    u_cand <$ r_distr;
-
-   (* check u *)
-    flag   <- u_check u_cand P s;
-    table  <- perfect_table_pure  P u_cand;
-    result <- multiScalarMul_Complete T l table s (l *** u_cand) w;
+    result <- multiScalarMulLoop T l table s (l *** u_cand) w;
 
     return (flag /\ result.`1, result.`2 +++ (- (l *** u_cand)));
   }
@@ -294,7 +258,7 @@ wp. skip. progress. smt(). smt(). rewrite iteriS. smt().
    simplify.
 smt(op_assoc).
 smt().   
-   wp. skip. progress. smt(l_pos). 
+   wp. skip. progress. smt(param_pos). 
 rewrite iteri0. auto.
 smt(op_id).
 smt().
@@ -347,7 +311,7 @@ while (0 <= ic /\ argT = Targ
 wp.
 ecall (helper_specR acc table ic s). simplify.
 wp.
-ecall (doublewtimes_spec acc w). skip. progress. smt(w_pos).
+ecall (doublewtimes_spec acc w). skip. progress. smt(param_pos).
 smt(). smt(). rewrite H3.
    rewrite mul_plus_distr.
 rewrite iteriZ.           smt().
@@ -369,13 +333,13 @@ have -> : iteri ic{hr}
   idR.
 apply eq_iteri.
 progress.
-rewrite iteriZ. smt(l_pos). congr.
+rewrite iteriZ. smt(param_pos). congr.
      apply eq_iteri. move => j acc.
      progress. congr.
       have ->: 2 ^ w *** (2 ^ (w * (ic{hr} - 1 - i)) * s{hr} j i *** P{hr} j)
                 = 2 ^ w * 2 ^ (w * (ic{hr} - 1 - i)) * s{hr} j i *** P{hr} j .
   rewrite mulsc. smt. smt().
-        rewrite - exprD_nneg. smt(w_pos). smt(w_pos). smt().
+        rewrite - exprD_nneg. smt(param_pos). smt(param_pos). smt().
 pose v := (2 ^ w - 1) *** U{hr}.
 have -> : iteri l
   (fun (j : int) (acc0 : R) => acc0 +++ (s{hr} j ic{hr} *** P{hr} j +++ -v))
@@ -383,10 +347,10 @@ have -> : iteri l
   (fun (j : int) (acc0 : R) => acc0 +++ (s{hr} j ic{hr} *** P{hr} j)) idR +++
      iteri l (fun (j : int) (acc0 : R) => acc0 +++ -v) idR.
 rewrite - iteriZZ. simplify.
-smt(l_pos). apply eq_iteri.  progress. smt.
+smt(param_pos). apply eq_iteri.  progress. smt.
 simplify.
 rewrite  iteriZZZ.
-simplify. smt(l_pos).
+simplify. smt(param_pos).
 rewrite kik .
 have ->: (2 ^ w *** (l *** U{hr}) +++ l *** -v) = l *** U{hr}.
     rewrite /v.
@@ -423,7 +387,7 @@ elim*. move => accV tableV icV sV.
 call helper_specR_total.   
 call (_: arg = (accV, Top.w) ==> true).
 proc*. call (doublewtimes_spec_ph accV Top.w).
-skip. progress. smt(w_pos). skip.
+skip. progress. smt(param_pos). skip.
 progress.
 smt().
 wp. 
@@ -439,7 +403,7 @@ lemma multiscalarR_spec_ph argP args argU  :
      ==>  res.`2 = (multiScalarMul_Simpl args argP T l) ] = 1%r.
 proc.   
 call (multiscalarR_helper_spec_ph argP args argU T). auto.
-progress. smt(T_pos).
+progress. smt(param_pos).
 wp. skip. auto.
 progress. rewrite H.
 smt.   
@@ -470,7 +434,7 @@ pose yyy := (iteri jc{hr}
  smt().
 (* smt(op_assoc). *)
 (* smt(). *)   
-   wp. skip. progress. smt(l_pos). 
+   wp. skip. progress. smt(param_pos). 
 rewrite iteri0. auto. auto.
 (* rewrite iteri0. auto. auto. *)
 smt().   
@@ -488,33 +452,33 @@ qed.
 
 lemma multm_spec_h argP args argU  argT : 0 <= argT =>
  hoare [ SimpleComp.multiScalarMulMain_Perfect_Helper : arg = (argP, args, argU, argT)   
-  ==>  res = (multiScalarMul_Complete argT l (perfect_table_pure argP argU) args (l *** argU) w) ].
+  ==>  res = (multiScalarMulLoop argT l (perfect_table_pure argP argU) args (l *** argU) w) ].
 move => pp.
 proc. 
 while (argT = Targ /\
   0 <= ic 
   /\ ic <= argT
   /\ (U, table, s) = (argU, (perfect_table_pure argP argU), args) 
-  /\ (flag, acc) = (multiScalarMul_Complete ic l ((perfect_table_pure argP argU)) args (l *** argU) w)
+  /\ (flag, acc) = (multiScalarMulLoop ic l ((perfect_table_pure argP argU)) args (l *** argU) w)
  ) .
 wp.
 ecall (compelteAddLoop_h acc (perfect_table_pure argP argU) ic args).
 ecall (doublewtimes_spec acc w). 
 skip.
-progress. smt(w_pos).
+progress. smt(param_pos).
 smt(). smt(). 
-rewrite /multiScalarMul_Complete. rewrite iteriS. smt(). smt(). 
+rewrite /multiScalarMulLoop. rewrite iteriS. smt(). smt(). 
 wp. skip. progress. 
-rewrite /multiScalarMul_Complete. rewrite iteri0.
+rewrite /multiScalarMulLoop. rewrite iteri0.
 auto. auto. 
-have -> : Targ{hr} = ic0. smt(T_pos).
+have -> : Targ{hr} = ic0. smt(param_pos).
 auto.
 qed. 
 
 
 lemma multm_spec_ph2 argP args argU argT : 0 <= argT =>
  phoare [ SimpleComp.multiScalarMulMain_Perfect_Helper : arg = (argP, args, argU, argT)   
-  ==>  res = (multiScalarMul_Complete argT l (perfect_table_pure argP argU) args (l *** argU) w)   ] = 1%r.
+  ==>  res = (multiScalarMulLoop argT l (perfect_table_pure argP argU) args (l *** argU) w)   ] = 1%r.
 move => pp.
 phoare split ! 1%r 0%r. auto.
 proc. while true (argT - ic). auto.
@@ -573,15 +537,15 @@ qed.
 
 
 lemma muleqsimp2 argT s u P: 0 <= argT =>
-   gg s P argT u = (multiScalarMul_Complete argT l (perfect_table_pure P u) s (l *** u) w).`2.
+   gg s P argT u = (multiScalarMulLoop argT l (perfect_table_pure P u) s (l *** u) w).`2.
 proof. move => pp.
 rewrite /gg.
-case (multiScalarMul_Simpl s P argT l +++ l *** u = (multiScalarMul_Complete argT l (perfect_table_pure P u) s (l *** u) w).`2). 
+case (multiScalarMul_Simpl s P argT l +++ l *** u = (multiScalarMulLoop argT l (perfect_table_pure P u) s (l *** u) w).`2). 
 trivial.
 move => ineq.
 have : forall &m, 
   Pr[ SimpleComp.multiScalarMulMain_Perfect_Helper(P,s, u,argT) @&m :
-     gg s P argT u = (multiScalarMul_Complete argT l (perfect_table_pure P u) s (l *** u) w).`2  ] = 1%r.
+     gg s P argT u = (multiScalarMulLoop argT l (perfect_table_pure P u) s (l *** u) w).`2  ] = 1%r.
      progress.
      have ->: 1%r = Pr[ SimpleComp.multiScalarMulMain_Perfect_Helper(P,s, u,argT) @&m :
          res.`2 = gg s P argT u ].
@@ -643,9 +607,9 @@ wp.
 ecall {1} (doublewtimes_spec_ph acc{1} w).
 ecall {2} (doublewtimes_spec_ph acc{2} w).
 skip. progress. 
-smt(w_pos). smt(). smt(). smt().
+smt(param_pos). smt(). smt(). smt().
 smt().  
-apply no_order_two_elems. smt(w_pos). 
+apply no_order_two_elems. smt(param_pos). 
 smt(). smt(). smt().
        smt(). smt().
 apply (u_check_for_table U{2} P{2} s{2} _ i j).        auto. smt(). smt().
