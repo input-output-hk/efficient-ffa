@@ -343,7 +343,7 @@ have ->: (fun (x : R) =>
        (fun (j : int) (acc : R) =>
           acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR)
      +++  - (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x) = idR).
-apply fun_ext. move => r. smt.
+apply fun_ext. move => r. timeout 10. smt.
 have ->: (fun (x : R) =>
      2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l +++ l *** x) +++
      iteri i0
@@ -453,7 +453,143 @@ progress. apply r_distr_funi.
 progress. timeout 10. smt.
 progress. timeout 10. smt.
 auto.
-admit.
+
+
+
+
+
+
+
+
+(* second symmetrical case *)
+
+
+
+rewrite /hh. rewrite /perfect_table_pure. rewrite /gg.
+
+have ->: (fun (x : R) =>
+     2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l +++ l *** x) +++
+     iteri i0
+       (fun (j : int) (acc : R) =>
+          acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR =
+     - (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x))
+
+   = (fun (x : R) =>
+     2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l +++ l *** x) +++
+     (iteri i0
+       (fun (j : int) (acc : R) =>
+          acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR)
+     +++  (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x) = idR).
+apply fun_ext. move => r. smt.
+have ->: (fun (x : R) =>
+     2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l +++ l *** x) +++
+     iteri i0
+       (fun (j : int) (acc : R) =>
+          acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR +++
+      (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x) = idR)
+ = (fun (x : R) =>
+     2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l) +++ (2 ^ w *** (l *** x)) +++
+     iteri i0
+       (fun (j : int) (acc : R) =>
+          acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR +++
+      (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x)  = idR).
+     apply fun_ext. move => r.
+smt.
+have ->: (fun (x : R) =>
+     2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l) +++ (2 ^ w *** (l *** x)) +++
+     iteri i0
+       (fun (j : int) (acc : R) =>
+          acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR +++
+      (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x)  = idR)
+  = (fun (x : R) =>
+     2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l) +++ (2 ^ w *** (l *** x)) +++
+     iteri i0
+       (fun (j : int) (acc : R) =>
+          acc +++ (s{hr} j i *** P{hr} j)) idR +++ i0 *** - (2 ^ w - 1) *** x +++
+     (s{hr} i0 i *** P{hr} i0) +++  - (2 ^ w - 1) *** x  = idR).
+     apply fun_ext. move => r.
+       pose k := 2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++ 2 ^ w *** (l *** r).
+
+ 
+     rewrite  (iteriZZZZ (fun j => s{hr} j i *** P{hr} j) i0 _ (- (2 ^ w - 1) *** r)) . smt(). timeout 10. smt.
+ 
+
+have ->: (fun (x : R) =>
+     2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++ 2 ^ w *** (l *** x) +++
+     iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j) idR +++
+     i0 *** - (2 ^ w - 1) *** x +++ s{hr} i0 i *** P{hr} i0 +++
+     - (2 ^ w - 1) *** x = idR)
+   = (fun (x : R) =>
+     (2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l  +++
+     iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j) idR     +++  s{hr} i0 i *** P{hr} i0) +++
+
+     (- (2 ^ w - 1) *** x +++
+     i0 *** - (2 ^ w - 1) *** x  +++
+     2 ^ w *** (l *** x)) = idR).
+apply fun_ext. move => r. timeout 10. smt.
+
+have ->: (fun (x : R) =>
+     2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
+     iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j) idR +++
+      s{hr} i0 i *** P{hr} i0 +++
+     (- (2 ^ w - 1) *** x +++ i0 *** - (2 ^ w - 1) *** x +++
+      2 ^ w *** (l *** x)) =
+     idR)
+     =  (fun (x : R) =>
+     2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
+     iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j) idR +++
+     s{hr} i0 i *** P{hr} i0 +++ x = idR) \o (fun  x => (-(2 ^ w - 1) *** x +++ i0 *** - (2 ^ w - 1) *** x +++
+      2 ^ w *** (l *** x)) ). smt().
+     rewrite - dmapE. simplify.
+
+have ->: (fun (x : R) =>
+     2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
+     iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j) idR +++
+     s{hr} i0 i *** P{hr} i0 +++ x = idR)
+     = (fun x => x = idR) \o (fun (x : R) =>
+     2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
+     iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j) idR +++
+      s{hr} i0 i *** P{hr} i0 +++ x). smt().
+     rewrite - dmapE.
+
+have ->: (dmap r_distr
+        (fun (x : R) =>
+           - (2 ^ w - 1) *** x +++ i0 *** - (2 ^ w - 1) *** x +++
+           2 ^ w *** (l *** x))) = r_distr. 
+     have ->: (fun (x : R) =>
+     - (2 ^ w - 1) *** x +++ i0 *** - (2 ^ w - 1) *** x +++ 2 ^ w *** (l *** x))
+    = (fun (x : R) =>
+     (- (2 ^ w - 1) +  i0 * - (2 ^ w - 1)  + 2 ^ w * l) *** x).
+       apply fun_ext. move => x.
+       rewrite - neg_mul.
+       rewrite - nmul_mul.
+       rewrite  - nplus_dist.
+       rewrite - nmul_mul.
+       rewrite  - nplus_dist.
+       auto.
+apply (dmap_bij r_distr r_distr _ (fun (x : R) => (invertme (- (2 ^ w - 1) + i0 * - (2 ^ w - 1) + 2 ^ w * l) ) *** x ) ).
+progress. apply r_distr_full.
+progress. apply r_distr_funi.          
+  progress. rewrite invertmeP. auto.
+
+progress. smt. 
+   
+have ->: (dmap r_distr
+     (fun (x : R) =>
+        2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
+        iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j)
+          idR +++
+        s{hr} i0 i *** P{hr} i0 +++ x))
+   = r_distr.
+apply (dmap_bij r_distr r_distr _ (fun (x : R) =>   -  (2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
+        iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j)
+          idR +++
+         s{hr} i0 i *** P{hr} i0)  +++ x )).
+progress. apply r_distr_full.
+progress. apply r_distr_funi.
+progress. timeout 10. smt.
+progress. timeout 10. smt.
+auto.
 qed.
 
 

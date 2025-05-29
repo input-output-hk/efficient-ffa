@@ -18,10 +18,10 @@ op ( +++ ) (a b : R) : R.
 op ( *** ) (n : int) (x : R) : R.  
 (* inverse *)
 op [-] (a : R) : R.
-(* coincides with +++ under some conditions  *)
+(* optimized +++ under which sometimes fails  *)
 op ( %%% ) (a b : R) : R.
 
-(* non-unique representation of points (not nec. on the curve) *)
+
 type F.
 
 op xof : R -> F.

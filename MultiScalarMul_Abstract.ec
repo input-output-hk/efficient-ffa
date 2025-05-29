@@ -17,7 +17,7 @@ axiom l_pos : 0 < l.
 axiom T_pos : 0 < T.
 
 
-op perfect_table_pure  parg (varg : R) = 
+op perfect_table_pure parg (varg : R) = 
  (fun (j i : int) =>  (i *** (parg j)) +++ - (2 ^ w - 1) *** varg).
 
 

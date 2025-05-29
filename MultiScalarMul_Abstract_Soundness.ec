@@ -14,8 +14,6 @@ declare module O <: OutCalls.
 
 declare axiom O_lossless : islossless O.getU. 
 
-
-
 lemma multiscalarI_spec_ph argP args  argU : 
  phoare [ SimpleComp.multiScalarMulMain_Opt_Corrected : 
   arg = (argP, args, argU) 
