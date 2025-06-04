@@ -17,17 +17,20 @@ op w, T, l : int.
 (* all params are positive  *)
 axiom param_pos : 0 < w /\ 0 < T /\ 0 < l.
 
+(* uninstantiated check which is supposed to verify that given
+particular u, P, and s the MSM computation can be performed *) 
+op u_check (u : R) (P : int -> R) (s : int -> int -> int) : bool.
+
 (* precomputed table  *)
 op perfect_table_pure parg (varg : R) = 
  (fun (j i : int) =>  (i *** (parg j)) 
             +++ - (2 ^ w - 1) *** varg).
+(* if the u_check was TRUE then no identities are in the table  *)
+axiom u_check_for_table U P s : u_check U P s =>
+  forall i j, perfect_table_pure P U i j <> idR.
 
-
-(* distribution of points  *)
+(* full and uniform distribution of points  *)
 op r_distr : R distr.
-
-
-(* we ask distribution to be full and uniform  *)
 axiom r_distr_full : is_full r_distr.
 axiom r_distr_uni : is_uniform r_distr.
 
@@ -43,11 +46,6 @@ qed.
 module type OutCalls = {
   proc getU() : R
 }.
-
-
-(* uninstantiated check which is supposed to verify that given
-particular u, P, and s the MSM computation can be performed *) op
-u_check (u : R) (P : int -> R) (s : int -> int -> int) : bool.
 
 
 (* "adding" loop of the MSM  *)
@@ -72,10 +70,11 @@ op multiScalarMul_Simpl  (s : int -> int -> int) (P : int -> R) (ic jc  : int)
  = iteri ic
      (fun i acc1 => acc1 +++ 
        iteri jc
-         (fun j acc2 => acc2 +++ (2 ^ (w * (ic - 1 - i)) * s j i) *** (P j)) idR)  
-           idR.
+         (fun j acc2 => acc2 +++ (2 ^ (w * (ic - 1 - i)) * s j i) *** (P j))
+         idR)    
+     idR.
 
-
+(* imperative implementation of algorithms  *)
 module MSM = {
 
   proc doubleLoop(p : R, w : int) = {
@@ -186,6 +185,7 @@ module MSM = {
     return (flag /\ result.`1, result.`2 +++ (- (l *** U)));
   }
 
+
   proc multiScalarMul_Functional(P : int -> R, s : int -> int -> int) = {
     var u_cand, flag, result, table;
 
@@ -219,7 +219,7 @@ module MultiScalarMul(O : OutCalls) = {
 }.
 
 
-lemma doublewtimes_spec_ph argP argw :
+lemma doubleLoop_spec_ph argP argw :
  phoare [ MSM.doubleLoop : arg = (argP, argw) /\
    0 <= argw  ==>  res = (2 ^ argw) *** argP  ] = 1%r.
 proc. 
@@ -238,14 +238,24 @@ move => z.
 qed.
 
 
-lemma doublewtimes_spec argP argw :
+lemma doubleLoop_spec argP argw :
  hoare [ MSM.doubleLoop : arg = (argP, argw) /\
    0 <= argw  ==>  res = (2 ^ argw) *** argP  ].
-conseq (doublewtimes_spec_ph argP argw).   
+conseq (doubleLoop_spec_ph argP argw).   
 qed.   
 
+
+lemma doubleLoop_total  : 
+  phoare [ MSM.doubleLoop : true ==>  true ] = 1%r.
+proc.
+while true (w - cnt). auto.
+smt().
+wp. auto. smt().
+qed.    
+
+
    
-lemma helper_specR_ph argcc argT argic args  : 
+lemma completeAddLoop_ph argcc argT argic args  : 
  phoare [ MSM.completeAddLoop : arg = (argcc, argT, argic,  args) 
      ==>  res.`2 = argcc +++  iteri l (fun j acc => acc +++ argT j (args j argic)) idR ] = 1%r.
 proc.
@@ -266,29 +276,20 @@ smt().
 qed.   
 
 
-lemma helper_specR_total  : 
+lemma completeAddLoop_total  : 
   phoare [ MSM.completeAddLoop : true ==>  true ] = 1%r.
 proc*.
 exists*  acc, table, ic, s.
 elim*. move => accV tableV icV sV.        
-call (helper_specR_ph accV tableV icV sV).
+call (completeAddLoop_ph accV tableV icV sV).
 auto.
 qed.    
 
 
-lemma doubleLoop_total  : 
-  phoare [ MSM.doubleLoop : true ==>  true ] = 1%r.
-proc.
-while true (w - cnt). auto.
-smt().
-wp. auto. smt().
-qed.    
-
-
-lemma helper_specR argcc argT argic args  : 
+lemma completeAddLoop_h argcc argT argic args  : 
  hoare [ MSM.completeAddLoop : arg = (argcc, argT, argic,  args) 
      ==>  res.`2 = argcc +++  iteri l (fun j acc => acc +++ argT j (args j argic)) idR ].
-conseq (helper_specR_ph argcc argT argic args).   
+conseq (completeAddLoop_ph argcc argT argic args).   
 progress.
 qed.   
 
@@ -309,9 +310,9 @@ while (0 <= ic /\ argT = Targ
                  (fun j acc2 => acc2 +++ (2 ^ (w * (ic - 1 - i)) * s j i) *** (P j)) idR)
                  ) idR)) +++ l *** U).
 wp.
-ecall (helper_specR acc table ic s). simplify.
+ecall (completeAddLoop_h acc table ic s). simplify.
 wp.
-ecall (doublewtimes_spec acc w). skip. progress. smt(param_pos).
+ecall (doubleLoop_spec acc w). skip. progress. smt(param_pos).
 smt(). smt(). rewrite H3.
    rewrite mul_plus_distr.
 rewrite iteriZ.           smt().
@@ -384,9 +385,9 @@ while true (argT - ic). progress.
 wp.
 exists* acc, table, ic, s.
 elim*. move => accV tableV icV sV.
-call helper_specR_total.   
+call completeAddLoop_total.   
 call (_: arg = (accV, Top.w) ==> true).
-proc*. call (doublewtimes_spec_ph accV Top.w).
+proc*. call (doubleLoop_spec_ph accV Top.w).
 skip. progress. smt(param_pos). skip.
 progress.
 smt().
@@ -450,7 +451,7 @@ conseq (compelteAddLoop_ph argcc argT argic args).
 qed.
 
 
-lemma multm_spec_h argP args argU  argT : 0 <= argT =>
+lemma completeMainLoop_spec_h argP args argU  argT : 0 <= argT =>
  hoare [ MSM.completeMainLoop : arg = (argP, args, argU, argT)   
   ==>  res = (multiScalarMulLoop argT l (perfect_table_pure argP argU) args (l *** argU) w) ].
 move => pp.
@@ -463,7 +464,7 @@ while (argT = Targ /\
  ) .
 wp.
 ecall (compelteAddLoop_h acc (perfect_table_pure argP argU) ic args).
-ecall (doublewtimes_spec acc w). 
+ecall (doubleLoop_spec acc w). 
 skip.
 progress. smt(param_pos).
 smt(). smt(). 
@@ -476,19 +477,19 @@ auto.
 qed. 
 
 
-lemma multm_spec_ph2 argP args argU argT : 0 <= argT =>
+lemma completeMainLoop_spec_ph2 argP args argU argT : 0 <= argT =>
  phoare [ MSM.completeMainLoop : arg = (argP, args, argU, argT)   
   ==>  res = (multiScalarMulLoop argT l (perfect_table_pure argP argU) args (l *** argU) w)   ] = 1%r.
 move => pp.
 phoare split ! 1%r 0%r. auto.
 proc. while true (argT - ic). auto.
-call helper_specR_total.
+call completeAddLoop_total.
 call doubleLoop_total.
 skip. smt().
 wp. skip. smt().
 hoare.
 proc*. 
-call (multm_spec_h argP args argU argT pp).
+call (completeMainLoop_spec_h argP args argU argT pp).
 auto.
 qed.
 
@@ -496,8 +497,13 @@ qed.
 op gg (s : int -> int -> int) (P : int -> R) (i : int) (u : R) :  R 
   = (multiScalarMul_Simpl s P i l) +++ l *** u.
 
+op hh (args : int -> int -> int)  (argP : int -> R)  (argic : int) (l : int) (u : R) =  2 ^ w *** gg args argP argic u +++  (iteri l
+   (fun (i1 : int) (acc0 : R) =>
+      (acc0 +++ perfect_table_pure argP u i1 (args i1 argic)))
+   idR).
 
-lemma oook argP (r : R) (argic : int)  args start : forall (n : int), 0 <= n =>
+
+lemma iteri_proj argP (r : R) (argic : int)  args start : forall (n : int), 0 <= n =>
    (iteri n
    (fun (i1 : int) (acc0 : bool * R) =>
       (acc0.`1 /\ xdiff acc0.`2 (perfect_table_pure argP r i1 (args i1 argic)),
@@ -516,12 +522,6 @@ rewrite iteriS. auto.
 simplify.   rewrite H0. auto.
 qed.  
 
-  
-op hh (args : int -> int -> int)  (argP : int -> R)  (argic : int) (l : int) (u : R) =  2 ^ w *** gg args argP argic u +++  (iteri l
-   (fun (i1 : int) (acc0 : R) =>
-      (acc0 +++ perfect_table_pure argP u i1 (args i1 argic)))
-   idR).
-
 
 lemma comeqsimp args argP argic l r : 0 <= l =>
   (iteri l
@@ -531,12 +531,12 @@ lemma comeqsimp args argP argic l r : 0 <= l =>
    (true, 2 ^ w *** gg args argP argic r)).`2
  = hh args argP argic l r .
 proof. move => pp.
-rewrite /hh. rewrite oook. assumption.
+rewrite /hh. rewrite iteri_proj. assumption.
 rewrite (iteriZZZZZ (fun i1 => perfect_table_pure argP r i1 (args i1 argic))  (2 ^ w *** gg args argP argic r) l _ ). assumption. smt.
 qed.
 
 
-lemma muleqsimp2 argT s u P: 0 <= argT =>
+lemma spec_equiv_fun_impl argT s u P: 0 <= argT =>
    gg s P argT u = (multiScalarMulLoop argT l (perfect_table_pure P u) s (l *** u) w).`2.
 proof. move => pp.
 rewrite /gg.
@@ -554,7 +554,7 @@ have : forall &m,
     rewrite /gg. 
     byequiv.
     proc*.
-    call {2} (multm_spec_ph2 P s u argT _). 
+    call {2} (completeMainLoop_spec_ph2 P s u argT _). 
     call {1} (multiscalarR_helper_spec_ph P s u argT _). skip. 
     progress. rewrite  H0. auto. smt(). auto. auto. 
    have : exists &m, true. smt().
@@ -567,11 +567,7 @@ have : forall &m,
 qed.
 
 
-
-axiom u_check_for_table U P s : u_check U P s =>
-  forall i j, perfect_table_pure P U i j <> idR.
-
-lemma multieqs2 argP args argU  :
+lemma complete_optimized_equiv argP args argU  :
  equiv [ MSM.completeMain
         ~ MSM.multiScalarMulMain_Opt_Corrected :
   arg{2} = (argP, args, argU) /\ ={P,s,U} 
@@ -604,8 +600,8 @@ rewrite same_res.
 apply opt_never_id. smt(). smt().
 smt(). smt(). smt().
 wp.
-ecall {1} (doublewtimes_spec_ph acc{1} w).
-ecall {2} (doublewtimes_spec_ph acc{2} w).
+ecall {1} (doubleLoop_spec_ph acc{1} w).
+ecall {2} (doubleLoop_spec_ph acc{2} w).
 skip. progress. 
 smt(param_pos). smt(). smt(). smt().
 smt().  
@@ -617,4 +613,4 @@ apply (u_check_for_table U{2} P{2} s{2} _ i j).        auto. smt(). smt().
  skip. progress.
    apply (u_check_for_table U{2} P{2} s{2} H i j).       
 smt(). smt(). smt().
- qed.
+qed.

@@ -30,18 +30,18 @@ op p1 : real = mu r_distr (fun (x : R) => x = idR).
 op p2 P s : real = mu r_distr (fun (x : R) => ! u_check x P s).
 
 
-lemma compl_flags P s &m : 
+lemma MSM_completeness_optimized_perfect_equiv P s &m : 
   Pr[ MultiScalarMul(UniformU).run(P,s) @&m : !res.`1 ]
    = Pr[ MultiScalarMul(UniformU).run_perfect(P,s) @&m : !res.`1 ].
 byequiv (_: _ ==> res{1}.`1 = res{2}.`1).
 proc.
 symmetry.
-ecall (multieqs2 P{1} s{1} u_cand{1}).   
+ecall (complete_optimized_equiv P{1} s{1} u_cand{1}).   
 call (_:true). auto. skip. smt(). auto. smt().
 qed.   
 
 
-lemma compl_II_equiv P s &m :
+lemma MSM_completeness_func_perfect_equiv P s &m :
      Pr[ MSM.multiScalarMul_Functional(P,s) @&m : !res.`1 ]
      = Pr[ MultiScalarMul(UniformU).run_perfect(P,s) @&m : !res.`1 ].
 byequiv (_: _ ==> res{1}.`1 = res{2}.`1).
@@ -52,12 +52,12 @@ seq 1 1 : (#pre /\ u_cand{1} = u_cand0{2}).
 inline MSM.completeMain.
 wp.
  exists* P{2}, s{2} , u_cand0{2}. elim*. move => argP argS argU.
-call {2} (multm_spec_ph2 argP argS argU T). smt(param_pos).
+call {2} (completeMainLoop_spec_ph2 argP argS argU T). smt(param_pos).
 wp. skip. progress. auto. smt().
 qed.
 
 
-lemma completeness_I argP args :
+lemma MSM_completeness_functional argP args :
   phoare [ MSM.multiScalarMul_Functional :
       arg = (argP , args) ==> !res.`1 ] 
             <= ((p2 argP args) + (T%r * (l%r * (p1 + p1)))).
@@ -131,7 +131,7 @@ rewrite /f1 /f2.
                (2 ^ w *** acc0.`2)).`1,
             (completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i0
                (2 ^ w *** acc0.`2)).`2)) (true, l *** x)).`2 = gg s{hr} P{hr} i x. 
-rewrite (muleqsimp2 i s{hr} x P{hr}).  auto.
+rewrite (spec_equiv_fun_impl i s{hr} x P{hr}).  auto.
       auto. auto. auto.
 apply (iteri_ub3 (fun (x : R) => l *** x)   
         (fun x i => completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i
@@ -146,19 +146,15 @@ have -> : (fun (r : R) =>
               xdiff acc.`2 (perfect_table_pure P{hr} r j (s{hr} j i)),
               acc.`2 +++ perfect_table_pure P{hr} r j (s{hr} j i)))
           (true, 2 ^ w *** (gg s{hr} P{hr} i r))).`1)
-
       =
-
       (fun (r : R) =>
      ! (iteri l
           (fun (j : int) (acc : bool * R) =>
              (acc.`1 /\
               xdiff (hh s{hr} P{hr} i j r) (perfect_table_pure P{hr} r j (s{hr} j i)),
-
               (hh s{hr} P{hr} i j r) +++ perfect_table_pure P{hr} r j (s{hr} j i)))
           (true, 2 ^ w *** (gg s{hr} P{hr} i r))).`1).
 apply fun_ext. move => r.
-
  rewrite   (iteriG (fun (x : bool * R) => x.`1) (fun (x : bool * R) => x.`2)
    (fun (j : int) (acc1 : bool) (acc2 : R) =>
         (acc1 /\ xdiff acc2 (perfect_table_pure P{hr} r j (s{hr} j i)),
@@ -470,9 +466,6 @@ apply (dmap_bij r_distr r_distr _ (fun (x : R) => (invertme (- (2 ^ w - 1) + i0 
 progress. apply r_distr_full.
 progress. apply r_distr_funi.          
   progress. rewrite invertmeP.
-
- (* have -> : (- (2 ^ w - 1)) + i0 * - (2 ^ w - 1) + 2 ^ w * l *)
- (*    = (1 - 2 ^ w) * (1 - i0) + 2 ^ w * l .  *)
 smt(completeness_constraints).   
 auto.
 
@@ -483,7 +476,7 @@ progress.
 ( ((- (2 ^ w - 1)) + i0 * - (2 ^ w - 1) + 2 ^ w * l) *** b). smt.   
 rewrite invertmeP.
 smt(completeness_constraints).    auto.
-   
+  
 have ->: (dmap r_distr
      (fun (x : R) =>
         2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
@@ -503,12 +496,11 @@ auto.
 qed.
 
 
-
-lemma completeness_final_DONE argP args &m : 
+lemma MSM_completeness argP args &m : 
   Pr[ MultiScalarMul(UniformU).run(argP,args) @&m : !res.`1 ]
-       <= ((p2 argP args) + (T%r * (l%r * (p1 + p1)))).
-rewrite compl_flags.
-rewrite - compl_II_equiv.
+       <= ((p2 argP args) + T%r * (l%r * (p1 + p1))).
+rewrite MSM_completeness_optimized_perfect_equiv.
+rewrite - MSM_completeness_func_perfect_equiv.
 byphoare (_: arg = (argP , args) ==> _).
-apply completeness_I.   auto. auto.
+apply MSM_completeness_functional. auto. auto.
 qed.  

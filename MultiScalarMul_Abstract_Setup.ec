@@ -37,7 +37,6 @@ axiom opt_never_id (a b : R) :  a <> idR => b <> idR => xof a <> xof b
 axiom no_order_two_elems x n : 0 < n => 2 ^ n *** x <> idR.
 
 
-
 (* op properties  *)
 axiom op_assoc (a b c : R) : (a +++ b) +++ c = a +++ (b +++ c).
 axiom op_comm (a b : R) : a +++ b = b +++ a.
