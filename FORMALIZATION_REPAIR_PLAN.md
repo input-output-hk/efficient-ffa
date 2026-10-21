@@ -9,7 +9,8 @@ algorithm now has a checked symbolic rejection bound. Circuit instantiation
 is outside the requested scope.
 An equation-level table proof now shows that accepting witnesses imply
 the per-step guards, using only the paper's initial unequal-x check.
-The paper and Lean artifact have not been changed.
+The original paper PDF and Lean proofs have not been changed. The local
+extracted LaTeX copy now has the endianness correction described below.
 
 ## Cleanup completed
 
@@ -185,12 +186,32 @@ abstract MSM correctness,
 including the table-constraint soundness connection, plus range-bounded
 FFA constraint proofs. Explain that accepting table constraints imply
 the per-step guards; the initial check does not guarantee that every
-choice of random offset allows successful construction. Keep scalar-window
-ordering consistent
-with the big-endian traversal. Explain separately which counterexamples
+choice of random offset allows successful construction. Keep the external
+little-endian convention consistent with descending traversal and the
+verified EasyCrypt reversal interface. Explain separately which counterexamples
 exposed inconsistent assumptions, which exposed an unverified algorithm
 stage, and which were merely unused library defects.
 
 Suggested review units: build/CI; sampler normalization and instantiation;
 table builder; quantitative rejection bound; optional concrete curve and FFA
 parameters/CRT; final paper claims. Circuit composition is out of scope.
+
+## Window-order correction implemented
+
+The paper and Lean artifact use little-endian scalar windows. Preserve that
+interface and process indices in descending order. The local extracted
+LaTeX source now corrects Figure 4 and its surrounding prose, with the
+post-window invariant acc = l*U + sum_j sum_(r=i..T) 2^(w*(r-i))*s[j,r]*P[j].
+The reviewable changes are retained in paper/endianness.patch; the original
+PDF is unchanged.
+
+MSM_WindowOrder.ec implements little-endian adapters for fixed-offset,
+sampled, and supplied-table execution. A group-sum reindexing proof shows
+that reversing the input view gives the independent little-endian weighted
+sum. All soundness connections and the rejection/success bounds transfer.
+The established core still explicitly accepts big-endian windows.
+
+The new regression checks [1,2] in base 4 against both actual specifications
+and proves 6P != 9P under nontriviality/inversion premises. No new axioms
+are introduced. The remaining implementation check needs the Halo2 source,
+which is absent from this workspace; no production convention is inferred.

@@ -12,7 +12,7 @@ Install those tools, register Alt-Ergo and Z3 with Why3, then run:
 EASYCRYPT=/path/to/easycrypt ./scripts/check-local.sh -why3 /path/to/why3.conf
 ```
 
-The script checks all 17 retained local theories independently, including
+The script checks all 18 retained local theories independently, including
 all FFA dependencies, then the positive and negative regression files.
 It rejects explicit admissions and weak/report proof modes, accounting for
 nested comments. Standard-library proofs are trusted as supplied rather
@@ -58,8 +58,9 @@ The loop equivalence proof now maintains nonidentity of the accumulator
 on accepted executions and proves the new doubling premise at each
 iteration. The two admitted group-iteration lemmas and the admitted
 divisibility lemma also have proofs. There are no active admissions in the
-six local files checked below. The scalar-window comment now says
-**big-endian**, matching the existing specification and forward loop.
+six local files checked below. The core scalar-window comment now says
+**big-endian**, matching its specification and forward loop. The little-endian interface described below
+provides a verified index reversal for the paper and Lean convention.
 
 ### Reproducing the checks
 
@@ -114,7 +115,8 @@ as supplied. The checker warns about the OCaml 5.2.1 garbage collector.
 - All retained local FFA dependencies and theorem files now check directly
   with the recorded toolchain. This establishes the proofs under their
   stated assumptions; concrete field parameters and circuit composition
-  remain open. The paper and Lean artifact are unchanged.
+  remain open. The original paper PDF and Lean proofs are unchanged; the
+  local paper source correction is described below.
 
 ## Audit cleanup and next steps
 
@@ -283,3 +285,48 @@ Regressions check that the V=2P row has no accepting witnesses under the
 interface hypotheses, and that isolated addition equations can accept
 equal inputs. The latter explains why the table-chain argument and its
 initial check matter.
+
+## Scalar window order
+
+The paper defines little-endian windows: input index i has weight 2^(w*i)
+with zero-based indices. Its published forward loop instead processes the
+least significant window first, which is incorrect for a doubling-first
+Horner recurrence. The Lean artifact already processes higher windows first.
+
+The corrected paper traversal is i=T,T-1,...,1 (one-based). The local
+extracted LaTeX copy has this correction, the corresponding accumulator
+invariant, and clarified prose/caption. `paper/endianness.patch` records
+those edits relative to that copy's original `paper/source.tex`; apply it
+from an unmodified extracted Lean-project root, not this repository.
+The downloaded PDF has not been rebuilt or replaced. The extracted source
+contains unrelated transcription artifacts and is not asserted to be the
+original publication source.
+
+`MSM_WindowOrder.ec` preserves the existing big-endian core and exposes
+little-endian entry points:
+
+- `LittleEndianMSM.run` for a fixed offset and constructed table;
+- `SampledLittleEndianMSM.run` for a uniform random offset;
+- `LittleEndianMSM.with_table` for supplied table entries, including the
+  equation-level table soundness connection.
+
+Each passes the index view `reverse_windows T s j i = s j (T-1-i)` to the
+core. Thus processing starts at input T-1 and finishes at input 0, exactly
+as in the corrected paper loop. This does not reverse bytes or bits within
+a window and does not add group operations or circuit assertions.
+
+`reversed_core_spec` proves agreement with the independent little-endian
+specification `msm_little_endian`, whose window i has weight 2^(w*i).
+Soundness, the supplied-table constraint theorem, and the same rejection
+upper bound and success lower bound are proved for the new entry points.
+The original big-endian entry points and their theorems remain available;
+callers must use the entry point matching their input convention.
+
+`tests/WindowOrder.ec` checks the actual group specifications: width 2
+and windows [1,2] give 6P without reversal and 9P with reversal. It also
+proves these differ for nonzero P under the existing inversion hypothesis
+with order>3, so the regression cannot be hidden by small-order equality.
+
+No Halo2/Rust implementation is present in this workspace. Its window
+extraction and traversal still need comparison with this explicit interface;
+these proof and paper edits make no claim to change that implementation.

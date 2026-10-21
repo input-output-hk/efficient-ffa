@@ -1,0 +1,41 @@
+--- a/paper/source.tex
++++ b/paper/source.tex
+@@ -584,13 +584,18 @@
+ 
+ Given the high cost of complete additions, we would like to use incomplete additions when possible. However, the preconditions of incomplete addition may not hold in the middle of the double-andadd loop. A common technique to overcome this challenge [DH20] is to use a random point as the initial value of the double-and-add accumulator. Such point is freely chosen by the prover. Importantly, the probability that a precondition (of incomplete addition) is violated in the loop is negligible over the choice of this point, which makes this method statistically complete. On the downside, for soundness, we must subtract the (scaled) random point from the result of the MSM and constraining such correction term to be the scaled version of the initial accumulator can be quite expensive.
+ 
+-We propose a novel idea that makes the random term in the accumulator invariant throughout the loop. This prevents it from scaling, thus significantly simplifying the final correction step. Let bases $P_{1}, \ldots, P_{\ell} \in E\left(\mathbb{Z}_{q}\right)$ and scalars $s_{1}, \ldots, s_{\ell} \in \mathbb{Z}$. We will compute $\sum_{j} s_{j} P_{j}$ via a windowed double-and-add loop with w-bits windows. Let the prover select a random point $U$ and set the initial accumulator of the double-and-add loop to be acc $:=\ell U$. Also, define $V:=\left(2^{\mathrm{w}}-1\right) U \cdot{ }^{6}$ On the $i$-th iteration of the double-and-add loop, we will double acc w times and then, for every $j \in[\ell]$, add $s_{j, i} P_{j}-V$, where $s_{j, i} \in\left[0,2^{\mathrm{w}}\right)$ is the $i$-th (little-endian) window of scalar $s_{j} .{ }^{7}$ After this, the random term in the accumulator becomes:
++We propose a novel idea that makes the random term in the accumulator invariant throughout the loop. This prevents it from scaling, thus significantly simplifying the final correction step. Let bases $P_{1}, \ldots, P_{\ell} \in E\left(\mathbb{Z}_{q}\right)$ and scalars $s_{1}, \ldots, s_{\ell} \in \mathbb{Z}$. We will compute $\sum_{j} s_{j} P_{j}$ via a windowed double-and-add loop with w-bits windows. Let the prover select a random point $U$ and set the initial accumulator of the double-and-add loop to be acc $:=\ell U$. Also, define $V:=\left(2^{\mathrm{w}}-1\right) U \cdot{ }^{6}$ Process the window indices in descending order, $i=T,T-1,\ldots,1$. At window $i$, we double acc w times and then, for every $j \in[\ell]$, add $s_{j, i} P_{j}-V$, where $s_{j, i} \in\left[0,2^{\mathrm{w}}\right)$ is the $i$-th (little-endian) window of scalar $s_{j} .{ }^{7}$ After this, the random term in the accumulator becomes:
+ 
+ $$
+ 2^{\mathrm{w}}(\ell U)-\ell V=2^{\mathrm{w}}(\ell U)-\ell\left(2^{\mathrm{w}}-1\right) U=\ell U,
+ $$
+ 
+-which makes the random term invariant $(\ell U)$ at the beginning of every iteration.
++which makes the random term invariant $(\ell U)$ at the beginning of every iteration. After processing window $i$, the accumulator equals
++\[
++  \operatorname{acc}=\ell U+
++  \sum_{j=1}^{\ell}\sum_{r=i}^{T}2^{\mathrm{w}(r-i)}s_{j,r}P_j.
++\]
++At $i=1$, subtracting $\ell U$ therefore gives the MSM for the stated little-endian scalar encoding.
+ 
+ \footnotetext{${ }^{6}$ The consistency of acc (resp. $V$ ) with respect to $U$ needs to be enforced with constraints, but this is relatively cheap given that $\ell$ (resp. $2^{\mathrm{w}}-1$ ) is constant and small.\\
+ ${ }^{7}$ The values $k P_{j}-V$ can be tabulated for every $k \in\left[0,2^{\mathrm{w}}\right)$, see Step 4 of Figure 4.
+@@ -626,7 +631,7 @@
+     set Table ${ }_{j}:=\left[-V, P_{j}-V, 2 P_{j}-V, \ldots,\left(2^{\mathrm{w}}-1\right) P_{j}-V\right]$
+     for every $j \in[\ell]$
+     set acc $:=\ell U$
+-    for $i=1$ to $T$ do
++    for $i=T$ downto $1$ do
+         for _ = 1 to w do $\quad$ p double
+             set acc := Double(acc)
+         for $j=1$ to $\ell$ do $\quad \triangleright$ and add
+@@ -638,7 +643,7 @@
+     return $R$
+ \end{verbatim}
+ 
+-Figure 4: Multi-scalar multiplication. Scalars are encoded as $T$ little-endian integer windows in the range $\left[0,2^{\text {w }}\right)$, which in-circuit can be represented as native values, since $2^{\mathrm{W}} \ll p$.
++Figure 4: Multi-scalar multiplication. Windows are processed from most significant to least significant. Scalars are encoded as $T$ little-endian integer windows in the range $\left[0,2^{\text {w }}\right)$, which in-circuit can be represented as native values, since $2^{\mathrm{W}} \ll p$.
+ 
+ The full algorithm is described in Figure 4. The tables in Step 4 can be computed with incomplete addition by adding $P_{j}$ to the previous table element (the first being $-V$ ). It can be shown that all the preconditions of IncompleteAdd are satisfied across the table computation as long as $x_{P_{j}} \not \neq_{q} x_{V}$, which may be asserted explicitly, only once per base $P_{j}$. Similarly, multiplications by a small constant term like in Steps 3 and 5 can be mainly computed with incomplete addition. We denote by $-V$ the opposite of $V$, which can be obtained by negating the $y$ coordinate of $V$, i.e., as $\left(x_{V},-y_{V}, \beta_{V}\right)$, see Section 3.2 for details about foreign-field negation (over $\mathbb{Z}_{q}$ ).
+ 
