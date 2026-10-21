@@ -12,7 +12,7 @@ Install those tools, register Alt-Ergo and Z3 with Why3, then run:
 EASYCRYPT=/path/to/easycrypt ./scripts/check-local.sh -why3 /path/to/why3.conf
 ```
 
-The script checks all 15 retained local theories independently, including
+The script checks all 16 retained local theories independently, including
 all FFA dependencies, then the positive and negative regression files.
 It rejects explicit admissions and weak/report proof modes, accounting for
 nested comments. Standard-library proofs are trusted as supplied rather
@@ -182,7 +182,52 @@ that x(P) != x(V) suffices is an expected-failure regression.
 Remaining limits: scalar multiplication for V and the initial offset,
 doubling, final correction and coordinate properties still use the abstract
 group interface. The guarded builder is a proposed repair, not evidence that
-the paper's circuit already implements these checks. No failure-probability
-bound for `SampledConstructedMSM` is claimed yet: the old completeness bound
-must be extended to include table rejection, with nonzero-point and scalar
-invertibility assumptions made explicit.
+the paper's circuit already implements these checks. The rejection bound below now covers `SampledConstructedMSM`, including
+table construction. Circuit instantiation is outside the current scope.
+
+## Rejection probability of the constructed algorithm
+
+`MSM_RejectionBound.ec` proves the bound for the actual sampled execution:
+
+```text
+Pr[SampledConstructedMSM.run(P,s) rejects]
+  <= (1 + l*(2^w+1) + 2*T*l) / q.
+```
+
+Here q is `group_cardinality`, the size of a proved finite, duplicate-free
+enumeration of the entire group R. Its positivity and `p1 = 1/q` follow
+from the existing full, uniform, lossless distribution assumptions; no new
+cardinality axiom is introduced. This q is not silently identified with
+the separate abstract `order` parameter used by the inversion axiom.
+
+The explicit input hypotheses are nonzero base points in every used row,
+valid scalar windows, and invertibility of multiplication by l and 2^w-1.
+`scalar_invertible_small` discharges invertibility when the scalar's absolute
+value is positive and below `order`. The result also depends on the existing
+group/coordinate assumptions, positive parameters and
+`completeness_constraints` used to prove the main-loop bound.
+
+The proof combines three bounds without assuming independence:
+
+| Failure event | Upper bound |
+| --- | --- |
+| Initial accumulator is the identity | 1/q |
+| Guarded table construction rejects | l*(2^w+1)/q |
+| MSM loop encounters a coordinate collision | 2*T*l/q |
+
+`sampled_rejection_bound_cardinality` states the final upper bound;
+`sampled_success_bound_cardinality` proves acceptance probability at least
+one minus that bound. `construction_event_equiv` connects the counted event
+to the program, and `sampled_constructed_lossless` accounts for termination.
+The existing ideal-table completeness theorem is preserved; its loop proof
+is now shared through `MSM_loop_failure_bound`.
+
+Regressions establish that zero base points and invalid windows reject with
+probability one, explaining why those inputs are excluded. They also show
+that multiplication by zero has a probability-one identity event and
+cannot be invertible on a nontrivial group. A claim that zero is
+invertible must be rejected by the checker.
+
+This is a symbolic bound under explicit assumptions. It is useful when
+1 + l*(2^w+1) + 2*T*l is small relative to q; no particular curve or parameter
+set is instantiated here.

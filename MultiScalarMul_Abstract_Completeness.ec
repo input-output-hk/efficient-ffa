@@ -66,69 +66,60 @@ wp. skip. progress. auto. smt().
 qed.
 
 
-lemma MSM_completeness_functional argP args :
-  phoare [ MSM.multiScalarMul_Functional :
-      arg = (argP , args) ==> !res.`1 ] 
-            <= ((p2 argP args) + (T%r * (l%r * (p1 + p1)))).
-proc.
-wp. rnd. skip. progress. 
-pose f := fun a i b => 
-  (completeAddLoop l (perfect_table_pure P{hr} a)
-    s{hr} i (2 ^ w *** b)).
-simplify.
-rewrite mu_split. simplify.
-apply mu_split_q.
-apply kkkk. smt().
-auto.
+lemma MSM_loop_failure_bound argP args :
+ mu r_distr (fun u =>
+  !(multiScalarMulLoop T l (perfect_table_pure argP u) args (l *** u) w).`1)
+ <= T%r * (l%r * (p1 + p1)).
+proof.
 rewrite /multiScalarMulLoop.
   have -> : (fun (x : R) =>
      ! (iteri T
           (fun (i : int) (acc : bool * R) =>
              let r =
-               completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i
+               completeAddLoop l (perfect_table_pure argP x) args i
                  (2 ^ w *** acc.`2) in (acc.`1 /\ r.`1, r.`2))
           (true, l *** x)).`1)
      = (fun (x : R) =>
      ! (iteri T
           (fun (i : int) (acc : bool * R) =>
-             let myacc = gg s{hr} P{hr} i x in
+             let myacc = gg args argP i x in
              let r =
-               completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i
+               completeAddLoop l (perfect_table_pure argP x) args i
                  (2 ^ w *** myacc ) in (acc.`1 /\ r.`1, r.`2))
           (true, l *** x)).`1).
 apply fun_ext. move => x.
  rewrite   (iteriG (fun (x : bool * R) => x.`1) (fun (x : bool * R) => x.`2)
    (fun (i : int) (acc1 : bool ) (acc2 : R) =>
          let r =
-           completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i
+           completeAddLoop l (perfect_table_pure argP x) args i
              (2 ^ w *** acc2) in (acc1 /\ r.`1, r.`2)) T _ (true, l *** x)  ).
 smt(param_pos). simplify.
   pose f1 := (fun (i : int) (acc : bool * R) =>
          (acc.`1 /\
-          (completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i
+          (completeAddLoop l (perfect_table_pure argP x) args i
              (2 ^ w ***
               (iteri i
                  (fun (i0 : int) (acc0 : bool * R) =>
                     (acc0.`1 /\
-                     (completeAddLoop l (perfect_table_pure P{hr} x) s{hr}
+                     (completeAddLoop l (perfect_table_pure argP x) args
                         i0 (2 ^ w *** acc0.`2)).`1,
-                     (completeAddLoop l (perfect_table_pure P{hr} x) s{hr}
+                     (completeAddLoop l (perfect_table_pure argP x) args
                         i0 (2 ^ w *** acc0.`2)).`2)) (true, l *** x)).`2)).`1,
-          (completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i
+          (completeAddLoop l (perfect_table_pure argP x) args i
              (2 ^ w ***
               (iteri i
                  (fun (i0 : int) (acc0 : bool * R) =>
                     (acc0.`1 /\
-                     (completeAddLoop l (perfect_table_pure P{hr} x) s{hr}
+                     (completeAddLoop l (perfect_table_pure argP x) args
                         i0 (2 ^ w *** acc0.`2)).`1,
-                     (completeAddLoop l (perfect_table_pure P{hr} x) s{hr}
+                     (completeAddLoop l (perfect_table_pure argP x) args
                         i0 (2 ^ w *** acc0.`2)).`2)) (true, l *** x)).`2)).`2)).
    pose f2 :=       (fun (i : int) (acc : bool * R) =>
         (acc.`1 /\
-         (completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i
-            (2 ^ w *** (gg s{hr} P{hr} i x))).`1,
-         (completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i
-            (2 ^ w *** (gg s{hr} P{hr} i x))).`2)).
+         (completeAddLoop l (perfect_table_pure argP x) args i
+            (2 ^ w *** (gg args argP i x))).`1,
+         (completeAddLoop l (perfect_table_pure argP x) args i
+            (2 ^ w *** (gg args argP i x))).`2)).
  rewrite (eq_iteri f1 f2 T _ _).
 progress.
  (* apply fun_ext. move => z. apply fun_ext. move => zz. progress. *)
@@ -136,15 +127,15 @@ rewrite /f1 /f2.
         have -> : (iteri i
         (fun (i0 : int) (acc0 : bool * R) =>
            (acc0.`1 /\
-            (completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i0
+            (completeAddLoop l (perfect_table_pure argP x) args i0
                (2 ^ w *** acc0.`2)).`1,
-            (completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i0
-               (2 ^ w *** acc0.`2)).`2)) (true, l *** x)).`2 = gg s{hr} P{hr} i x. 
-rewrite (spec_equiv_fun_impl i s{hr} x P{hr}).  auto.
+            (completeAddLoop l (perfect_table_pure argP x) args i0
+               (2 ^ w *** acc0.`2)).`2)) (true, l *** x)).`2 = gg args argP i x.
+rewrite (spec_equiv_fun_impl i args x argP).  auto.
       auto. auto. auto.
 apply (iteri_ub3 (fun (x : R) => l *** x)   
-        (fun x i => completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i
-               (2 ^ w *** (gg s{hr} P{hr} i x) )) r_distr T (l%r * (p1 + p1)) _ ). smt(param_pos).
+        (fun x i => completeAddLoop l (perfect_table_pure argP x) args i
+               (2 ^ w *** (gg args argP i x) )) r_distr T (l%r * (p1 + p1)) _ ). smt(param_pos).
 simplify.
 move => i.
 rewrite /completeAddLoop. simplify.            
@@ -152,22 +143,22 @@ have -> : (fun (r : R) =>
      ! (iteri l
           (fun (j : int) (acc : bool * R) =>
              (acc.`1 /\
-              xdiff acc.`2 (perfect_table_pure P{hr} r j (s{hr} j i)),
-              acc.`2 +++ perfect_table_pure P{hr} r j (s{hr} j i)))
-          (true, 2 ^ w *** (gg s{hr} P{hr} i r))).`1)
+              xdiff acc.`2 (perfect_table_pure argP r j (args j i)),
+              acc.`2 +++ perfect_table_pure argP r j (args j i)))
+          (true, 2 ^ w *** (gg args argP i r))).`1)
       =
       (fun (r : R) =>
      ! (iteri l
           (fun (j : int) (acc : bool * R) =>
              (acc.`1 /\
-              xdiff (hh s{hr} P{hr} i j r) (perfect_table_pure P{hr} r j (s{hr} j i)),
-              (hh s{hr} P{hr} i j r) +++ perfect_table_pure P{hr} r j (s{hr} j i)))
-          (true, 2 ^ w *** (gg s{hr} P{hr} i r))).`1).
+              xdiff (hh args argP i j r) (perfect_table_pure argP r j (args j i)),
+              (hh args argP i j r) +++ perfect_table_pure argP r j (args j i)))
+          (true, 2 ^ w *** (gg args argP i r))).`1).
 apply fun_ext. move => r.
  rewrite   (iteriG (fun (x : bool * R) => x.`1) (fun (x : bool * R) => x.`2)
    (fun (j : int) (acc1 : bool) (acc2 : R) =>
-        (acc1 /\ xdiff acc2 (perfect_table_pure P{hr} r j (s{hr} j i)),
-         acc2 +++ perfect_table_pure P{hr} r j (s{hr} j i))) l _ (true, 2 ^ w *** gg s{hr} P{hr} i r)  ). smt(param_pos). simplify. 
+        (acc1 /\ xdiff acc2 (perfect_table_pure argP r j (args j i)),
+         acc2 +++ perfect_table_pure argP r j (args j i))) l _ (true, 2 ^ w *** gg args argP i r)  ). smt(param_pos). simplify.
 
  pose f1 := (fun (i0 : int) (acc : bool * R) =>
          (acc.`1 /\
@@ -175,57 +166,57 @@ apply fun_ext. move => r.
             (iteri i0
                (fun (i1 : int) (acc0 : bool * R) =>
                   (acc0.`1 /\
-                   xdiff acc0.`2 (perfect_table_pure P{hr} r i1 (s{hr} i1 i)),
-                   acc0.`2 +++ perfect_table_pure P{hr} r i1 (s{hr} i1 i)))
-               (true, 2 ^ w *** gg s{hr} P{hr} i r)).`2
-            (perfect_table_pure P{hr} r i0 (s{hr} i0 i)),
+                   xdiff acc0.`2 (perfect_table_pure argP r i1 (args i1 i)),
+                   acc0.`2 +++ perfect_table_pure argP r i1 (args i1 i)))
+               (true, 2 ^ w *** gg args argP i r)).`2
+            (perfect_table_pure argP r i0 (args i0 i)),
           (iteri i0
              (fun (i1 : int) (acc0 : bool * R) =>
                 (acc0.`1 /\
-                 xdiff acc0.`2 (perfect_table_pure P{hr} r i1 (s{hr} i1 i)),
-                 acc0.`2 +++ perfect_table_pure P{hr} r i1 (s{hr} i1 i)))
-             (true, 2 ^ w *** gg s{hr} P{hr} i r)).`2 +++
-          perfect_table_pure P{hr} r i0 (s{hr} i0 i))).
+                 xdiff acc0.`2 (perfect_table_pure argP r i1 (args i1 i)),
+                 acc0.`2 +++ perfect_table_pure argP r i1 (args i1 i)))
+             (true, 2 ^ w *** gg args argP i r)).`2 +++
+          perfect_table_pure argP r i0 (args i0 i))).
 
   pose f2 := (fun (j : int) (acc : bool * R) =>
-        (acc.`1 /\ xdiff (hh s{hr} P{hr} i j r) (perfect_table_pure P{hr} r j (s{hr} j i)),
-         (hh s{hr} P{hr} i j r) +++ perfect_table_pure P{hr} r j (s{hr} j i))).
+        (acc.`1 /\ xdiff (hh args argP i j r) (perfect_table_pure argP r j (args j i)),
+         (hh args argP i j r) +++ perfect_table_pure argP r j (args j i))).
      
  rewrite (eq_iteri f1 f2 l _ _).
 progress. rewrite /f1 /f2.
 
  have -> : (iteri i0
     (fun (i1 : int) (acc0 : bool * R) =>
-       (acc0.`1 /\ xdiff acc0.`2 (perfect_table_pure P{hr} r i1 (s{hr} i1 i)),
-        acc0.`2 +++ perfect_table_pure P{hr} r i1 (s{hr} i1 i)))
-    (true, 2 ^ w *** gg s{hr} P{hr} i r)).`2
-   =  (hh s{hr} P{hr} i i0 r) .
+       (acc0.`1 /\ xdiff acc0.`2 (perfect_table_pure argP r i1 (args i1 i)),
+        acc0.`2 +++ perfect_table_pure argP r i1 (args i1 i)))
+    (true, 2 ^ w *** gg args argP i r)).`2
+   =  (hh args argP i i0 r) .
 rewrite comeqsimp. auto.
 auto. auto. auto.
 move => condi.
-apply  (iteri_ub3 (fun (x : R) => 2 ^ w *** (gg s{hr} P{hr} i x)) 
-   (fun r j => (xdiff (hh s{hr} P{hr} i j r) (perfect_table_pure P{hr} r j (s{hr} j i)) , (hh s{hr} P{hr} i j r) +++ perfect_table_pure P{hr} r j (s{hr} j i))  )
+apply  (iteri_ub3 (fun (x : R) => 2 ^ w *** (gg args argP i x))
+   (fun r j => (xdiff (hh args argP i j r) (perfect_table_pure argP r j (args j i)) , (hh args argP i j r) +++ perfect_table_pure argP r j (args j i))  )
    r_distr l (p1 + p1) _). smt(param_pos).
 progress.
 
 have oo : (fun (r : R) =>
-     ! xdiff (hh s{hr} P{hr} i i0 r)
-         (perfect_table_pure P{hr} r i0 (s{hr} i0 i)))
+     ! xdiff (hh args argP i i0 r)
+         (perfect_table_pure argP r i0 (args i0 i)))
        <= (fun (r : R) =>
-        ((hh s{hr} P{hr} i i0 r) =
-         (perfect_table_pure P{hr} r i0 (s{hr} i0 i)) 
-           \/         (hh s{hr} P{hr} i i0 r) =
-         (- perfect_table_pure P{hr} r i0 (s{hr} i0 i)))).
+        ((hh args argP i i0 r) =
+         (perfect_table_pure argP r i0 (args i0 i))
+           \/         (hh args argP i i0 r) =
+         (- perfect_table_pure argP r i0 (args i0 i)))).
 
 move => r. progress.
      apply notxdiff. auto.
   apply (RealOrder.ler_trans  
            (mu r_distr
     (fun (r : R) =>
-        ((hh s{hr} P{hr} i i0 r) =
-         (perfect_table_pure P{hr} r i0 (s{hr} i0 i)) 
-           \/         (hh s{hr} P{hr} i i0 r) =
-         (- perfect_table_pure P{hr} r i0 (s{hr} i0 i))))
+        ((hh args argP i i0 r) =
+         (perfect_table_pure argP r i0 (args i0 i))
+           \/         (hh args argP i i0 r) =
+         (- perfect_table_pure argP r i0 (args i0 i))))
    )).
 rewrite (mu_sub r_distr _ _ oo).       
 
@@ -233,60 +224,60 @@ apply mu_or_leq_param.
 rewrite /hh. rewrite /perfect_table_pure. rewrite /gg.
 
 have ->: (fun (x : R) =>
-     2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l +++ l *** x) +++
+     2 ^ w *** (multiScalarMul_Simpl args argP i l +++ l *** x) +++
      iteri i0
        (fun (j : int) (acc : R) =>
-          acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR =
-     s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x)
+          acc +++ (args j i *** argP j +++ - (2 ^ w - 1) *** x)) idR =
+     args i0 i *** argP i0 +++ - (2 ^ w - 1) *** x)
 
    = (fun (x : R) =>
-     2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l +++ l *** x) +++
+     2 ^ w *** (multiScalarMul_Simpl args argP i l +++ l *** x) +++
      (iteri i0
        (fun (j : int) (acc : R) =>
-          acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR)
-     +++  - (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x) = idR).
+          acc +++ (args j i *** argP j +++ - (2 ^ w - 1) *** x)) idR)
+     +++  - (args i0 i *** argP i0 +++ - (2 ^ w - 1) *** x) = idR).
 apply fun_ext. move => r. smt(const_add_inj op_inv).
 have ->: (fun (x : R) =>
-     2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l +++ l *** x) +++
+     2 ^ w *** (multiScalarMul_Simpl args argP i l +++ l *** x) +++
      iteri i0
        (fun (j : int) (acc : R) =>
-          acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR +++
-     - (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x) = idR)
+          acc +++ (args j i *** argP j +++ - (2 ^ w - 1) *** x)) idR +++
+     - (args i0 i *** argP i0 +++ - (2 ^ w - 1) *** x) = idR)
  = (fun (x : R) =>
-     2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l) +++ (2 ^ w *** (l *** x)) +++
+     2 ^ w *** (multiScalarMul_Simpl args argP i l) +++ (2 ^ w *** (l *** x)) +++
      iteri i0
        (fun (j : int) (acc : R) =>
-          acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR +++
-     - (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x)  = idR).
+          acc +++ (args j i *** argP j +++ - (2 ^ w - 1) *** x)) idR +++
+     - (args i0 i *** argP i0 +++ - (2 ^ w - 1) *** x)  = idR).
      apply fun_ext. move => r.
 smt.
 have ->: (fun (x : R) =>
-     2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l) +++ (2 ^ w *** (l *** x)) +++
+     2 ^ w *** (multiScalarMul_Simpl args argP i l) +++ (2 ^ w *** (l *** x)) +++
      iteri i0
        (fun (j : int) (acc : R) =>
-          acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR +++
-     - (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x)  = idR)
+          acc +++ (args j i *** argP j +++ - (2 ^ w - 1) *** x)) idR +++
+     - (args i0 i *** argP i0 +++ - (2 ^ w - 1) *** x)  = idR)
   = (fun (x : R) =>
-     2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l) +++ (2 ^ w *** (l *** x)) +++
+     2 ^ w *** (multiScalarMul_Simpl args argP i l) +++ (2 ^ w *** (l *** x)) +++
      iteri i0
        (fun (j : int) (acc : R) =>
-          acc +++ (s{hr} j i *** P{hr} j)) idR +++ i0 *** - (2 ^ w - 1) *** x +++
-     - (s{hr} i0 i *** P{hr} i0) +++ (2 ^ w - 1) *** x  = idR).
+          acc +++ (args j i *** argP j)) idR +++ i0 *** - (2 ^ w - 1) *** x +++
+     - (args i0 i *** argP i0) +++ (2 ^ w - 1) *** x  = idR).
      apply fun_ext. move => r.
-       pose k := 2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++ 2 ^ w *** (l *** r).
+       pose k := 2 ^ w *** multiScalarMul_Simpl args argP i l +++ 2 ^ w *** (l *** r).
 
  
-     rewrite  (iteriZZZZ (fun j => s{hr} j i *** P{hr} j) i0 _ (- (2 ^ w - 1) *** r)) . smt(). simplify. rewrite op_neg_add neg_neg_id. smt(op_assoc).
+     rewrite  (iteriZZZZ (fun j => args j i *** argP j) i0 _ (- (2 ^ w - 1) *** r)) . smt(). simplify. rewrite op_neg_add neg_neg_id. smt(op_assoc).
  
 
 have ->: (fun (x : R) =>
-     2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++ 2 ^ w *** (l *** x) +++
-     iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j) idR +++
-     i0 *** - (2 ^ w - 1) *** x +++ - s{hr} i0 i *** P{hr} i0 +++
+     2 ^ w *** multiScalarMul_Simpl args argP i l +++ 2 ^ w *** (l *** x) +++
+     iteri i0 (fun (j : int) (acc : R) => acc +++ args j i *** argP j) idR +++
+     i0 *** - (2 ^ w - 1) *** x +++ - args i0 i *** argP i0 +++
      (2 ^ w - 1) *** x = idR)
    = (fun (x : R) =>
-     (2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l  +++
-     iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j) idR     +++ - s{hr} i0 i *** P{hr} i0) +++
+     (2 ^ w *** multiScalarMul_Simpl args argP i l  +++
+     iteri i0 (fun (j : int) (acc : R) => acc +++ args j i *** argP j) idR     +++ - args i0 i *** argP i0) +++
 
      ((2 ^ w - 1) *** x +++
      i0 *** - (2 ^ w - 1) *** x  +++
@@ -294,27 +285,27 @@ have ->: (fun (x : R) =>
 apply fun_ext. move => r. smt(op_assoc op_comm).
 
 have ->: (fun (x : R) =>
-     2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
-     iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j) idR +++
-     - s{hr} i0 i *** P{hr} i0 +++
+     2 ^ w *** multiScalarMul_Simpl args argP i l +++
+     iteri i0 (fun (j : int) (acc : R) => acc +++ args j i *** argP j) idR +++
+     - args i0 i *** argP i0 +++
      ((2 ^ w - 1) *** x +++ i0 *** - (2 ^ w - 1) *** x +++
       2 ^ w *** (l *** x)) =
      idR)
      =  (fun (x : R) =>
-     2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
-     iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j) idR +++
-     - s{hr} i0 i *** P{hr} i0 +++ x = idR) \o (fun  x => ((2 ^ w - 1) *** x +++ i0 *** - (2 ^ w - 1) *** x +++
+     2 ^ w *** multiScalarMul_Simpl args argP i l +++
+     iteri i0 (fun (j : int) (acc : R) => acc +++ args j i *** argP j) idR +++
+     - args i0 i *** argP i0 +++ x = idR) \o (fun  x => ((2 ^ w - 1) *** x +++ i0 *** - (2 ^ w - 1) *** x +++
       2 ^ w *** (l *** x)) ). smt().
      rewrite - dmapE. simplify.
 
 have ->: (fun (x : R) =>
-     2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
-     iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j) idR +++
-     - s{hr} i0 i *** P{hr} i0 +++ x = idR)
+     2 ^ w *** multiScalarMul_Simpl args argP i l +++
+     iteri i0 (fun (j : int) (acc : R) => acc +++ args j i *** argP j) idR +++
+     - args i0 i *** argP i0 +++ x = idR)
      = (fun x => x = idR) \o (fun (x : R) =>
-     2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
-     iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j) idR +++
-     - s{hr} i0 i *** P{hr} i0 +++ x). smt().
+     2 ^ w *** multiScalarMul_Simpl args argP i l +++
+     iteri i0 (fun (j : int) (acc : R) => acc +++ args j i *** argP j) idR +++
+     - args i0 i *** argP i0 +++ x). smt().
      rewrite - dmapE.
 
 have ->: (dmap r_distr
@@ -355,15 +346,15 @@ rewrite invertmeP. rewrite /A. smt(completeness_constraints). auto.
    
 have ->: (dmap r_distr
      (fun (x : R) =>
-        2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
-        iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j)
+        2 ^ w *** multiScalarMul_Simpl args argP i l +++
+        iteri i0 (fun (j : int) (acc : R) => acc +++ args j i *** argP j)
           idR +++
-        - s{hr} i0 i *** P{hr} i0 +++ x))
+        - args i0 i *** argP i0 +++ x))
    = r_distr.
-apply (dmap_bij r_distr r_distr _ (fun (x : R) =>   -  (2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
-        iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j)
+apply (dmap_bij r_distr r_distr _ (fun (x : R) =>   -  (2 ^ w *** multiScalarMul_Simpl args argP i l +++
+        iteri i0 (fun (j : int) (acc : R) => acc +++ args j i *** argP j)
           idR +++
-        - s{hr} i0 i *** P{hr} i0)  +++ x )).
+        - args i0 i *** argP i0)  +++ x )).
 progress. apply r_distr_full.
 progress. apply r_distr_funi.
 progress. apply op_cancel_left.
@@ -373,59 +364,59 @@ auto.
 rewrite /hh. rewrite /perfect_table_pure. rewrite /gg.
 
 have ->: (fun (x : R) =>
-     2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l +++ l *** x) +++
+     2 ^ w *** (multiScalarMul_Simpl args argP i l +++ l *** x) +++
      iteri i0
        (fun (j : int) (acc : R) =>
-          acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR =
-     - (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x))
+          acc +++ (args j i *** argP j +++ - (2 ^ w - 1) *** x)) idR =
+     - (args i0 i *** argP i0 +++ - (2 ^ w - 1) *** x))
 
    = (fun (x : R) =>
-     2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l +++ l *** x) +++
+     2 ^ w *** (multiScalarMul_Simpl args argP i l +++ l *** x) +++
      (iteri i0
        (fun (j : int) (acc : R) =>
-          acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR)
-     +++  (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x) = idR).
+          acc +++ (args j i *** argP j +++ - (2 ^ w - 1) *** x)) idR)
+     +++  (args i0 i *** argP i0 +++ - (2 ^ w - 1) *** x) = idR).
 apply fun_ext. move => r. apply op_eq_neg.
 have ->: (fun (x : R) =>
-     2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l +++ l *** x) +++
+     2 ^ w *** (multiScalarMul_Simpl args argP i l +++ l *** x) +++
      iteri i0
        (fun (j : int) (acc : R) =>
-          acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR +++
-      (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x) = idR)
+          acc +++ (args j i *** argP j +++ - (2 ^ w - 1) *** x)) idR +++
+      (args i0 i *** argP i0 +++ - (2 ^ w - 1) *** x) = idR)
  = (fun (x : R) =>
-     2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l) +++ (2 ^ w *** (l *** x)) +++
+     2 ^ w *** (multiScalarMul_Simpl args argP i l) +++ (2 ^ w *** (l *** x)) +++
      iteri i0
        (fun (j : int) (acc : R) =>
-          acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR +++
-      (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x)  = idR).
+          acc +++ (args j i *** argP j +++ - (2 ^ w - 1) *** x)) idR +++
+      (args i0 i *** argP i0 +++ - (2 ^ w - 1) *** x)  = idR).
      apply fun_ext. move => r.
 smt.
 have ->: (fun (x : R) =>
-     2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l) +++ (2 ^ w *** (l *** x)) +++
+     2 ^ w *** (multiScalarMul_Simpl args argP i l) +++ (2 ^ w *** (l *** x)) +++
      iteri i0
        (fun (j : int) (acc : R) =>
-          acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR +++
-      (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x)  = idR)
+          acc +++ (args j i *** argP j +++ - (2 ^ w - 1) *** x)) idR +++
+      (args i0 i *** argP i0 +++ - (2 ^ w - 1) *** x)  = idR)
   = (fun (x : R) =>
-     2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l) +++ (2 ^ w *** (l *** x)) +++
+     2 ^ w *** (multiScalarMul_Simpl args argP i l) +++ (2 ^ w *** (l *** x)) +++
      iteri i0
        (fun (j : int) (acc : R) =>
-          acc +++ (s{hr} j i *** P{hr} j)) idR +++ i0 *** - (2 ^ w - 1) *** x +++
-     (s{hr} i0 i *** P{hr} i0) +++  - (2 ^ w - 1) *** x  = idR).
+          acc +++ (args j i *** argP j)) idR +++ i0 *** - (2 ^ w - 1) *** x +++
+     (args i0 i *** argP i0) +++  - (2 ^ w - 1) *** x  = idR).
      apply fun_ext. move => r.
-       pose k := 2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++ 2 ^ w *** (l *** r).
+       pose k := 2 ^ w *** multiScalarMul_Simpl args argP i l +++ 2 ^ w *** (l *** r).
 
  
-     rewrite  (iteriZZZZ (fun j => s{hr} j i *** P{hr} j) i0 _ (- (2 ^ w - 1) *** r)) . smt(). smt(op_assoc op_comm).
+     rewrite  (iteriZZZZ (fun j => args j i *** argP j) i0 _ (- (2 ^ w - 1) *** r)) . smt(). smt(op_assoc op_comm).
 
 have ->: (fun (x : R) =>
-     2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++ 2 ^ w *** (l *** x) +++
-     iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j) idR +++
-     i0 *** - (2 ^ w - 1) *** x +++ s{hr} i0 i *** P{hr} i0 +++
+     2 ^ w *** multiScalarMul_Simpl args argP i l +++ 2 ^ w *** (l *** x) +++
+     iteri i0 (fun (j : int) (acc : R) => acc +++ args j i *** argP j) idR +++
+     i0 *** - (2 ^ w - 1) *** x +++ args i0 i *** argP i0 +++
      - (2 ^ w - 1) *** x = idR)
    = (fun (x : R) =>
-     (2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l  +++
-     iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j) idR     +++  s{hr} i0 i *** P{hr} i0) +++
+     (2 ^ w *** multiScalarMul_Simpl args argP i l  +++
+     iteri i0 (fun (j : int) (acc : R) => acc +++ args j i *** argP j) idR     +++  args i0 i *** argP i0) +++
 
      (- (2 ^ w - 1) *** x +++
      i0 *** - (2 ^ w - 1) *** x  +++
@@ -433,27 +424,27 @@ have ->: (fun (x : R) =>
 apply fun_ext. move => r. smt(op_assoc op_comm).
 
 have ->: (fun (x : R) =>
-     2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
-     iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j) idR +++
-      s{hr} i0 i *** P{hr} i0 +++
+     2 ^ w *** multiScalarMul_Simpl args argP i l +++
+     iteri i0 (fun (j : int) (acc : R) => acc +++ args j i *** argP j) idR +++
+      args i0 i *** argP i0 +++
      (- (2 ^ w - 1) *** x +++ i0 *** - (2 ^ w - 1) *** x +++
       2 ^ w *** (l *** x)) =
      idR)
      =  (fun (x : R) =>
-     2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
-     iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j) idR +++
-     s{hr} i0 i *** P{hr} i0 +++ x = idR) \o (fun  x => (-(2 ^ w - 1) *** x +++ i0 *** - (2 ^ w - 1) *** x +++
+     2 ^ w *** multiScalarMul_Simpl args argP i l +++
+     iteri i0 (fun (j : int) (acc : R) => acc +++ args j i *** argP j) idR +++
+     args i0 i *** argP i0 +++ x = idR) \o (fun  x => (-(2 ^ w - 1) *** x +++ i0 *** - (2 ^ w - 1) *** x +++
       2 ^ w *** (l *** x)) ). smt().
      rewrite - dmapE. simplify.
 
 have ->: (fun (x : R) =>
-     2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
-     iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j) idR +++
-     s{hr} i0 i *** P{hr} i0 +++ x = idR)
+     2 ^ w *** multiScalarMul_Simpl args argP i l +++
+     iteri i0 (fun (j : int) (acc : R) => acc +++ args j i *** argP j) idR +++
+     args i0 i *** argP i0 +++ x = idR)
      = (fun x => x = idR) \o (fun (x : R) =>
-     2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
-     iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j) idR +++
-      s{hr} i0 i *** P{hr} i0 +++ x). smt().
+     2 ^ w *** multiScalarMul_Simpl args argP i l +++
+     iteri i0 (fun (j : int) (acc : R) => acc +++ args j i *** argP j) idR +++
+      args i0 i *** argP i0 +++ x). smt().
      rewrite - dmapE.
 
 have ->: (dmap r_distr
@@ -488,20 +479,34 @@ smt(completeness_constraints).    auto.
   
 have ->: (dmap r_distr
      (fun (x : R) =>
-        2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
-        iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j)
+        2 ^ w *** multiScalarMul_Simpl args argP i l +++
+        iteri i0 (fun (j : int) (acc : R) => acc +++ args j i *** argP j)
           idR +++
-        s{hr} i0 i *** P{hr} i0 +++ x))
+        args i0 i *** argP i0 +++ x))
    = r_distr.
-apply (dmap_bij r_distr r_distr _ (fun (x : R) =>   -  (2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
-        iteri i0 (fun (j : int) (acc : R) => acc +++ s{hr} j i *** P{hr} j)
+apply (dmap_bij r_distr r_distr _ (fun (x : R) =>   -  (2 ^ w *** multiScalarMul_Simpl args argP i l +++
+        iteri i0 (fun (j : int) (acc : R) => acc +++ args j i *** argP j)
           idR +++
-         s{hr} i0 i *** P{hr} i0)  +++ x )).
+         args i0 i *** argP i0)  +++ x )).
 progress. apply r_distr_full.
 progress. apply r_distr_funi.
 progress. apply op_cancel_left.
 progress. apply op_cancel_right.
 auto.
+qed.
+
+lemma MSM_completeness_functional argP args :
+  phoare [ MSM.multiScalarMul_Functional :
+      arg = (argP , args) ==> !res.`1 ]
+            <= ((p2 argP args) + (T%r * (l%r * (p1 + p1)))).
+proc.
+wp. rnd. skip. progress.
+simplify.
+rewrite mu_split. simplify.
+apply mu_split_q.
+apply kkkk. smt().
+auto.
+apply MSM_loop_failure_bound.
 progress. rewrite /p1 /p2. smt(ge0_mu param_pos).
 qed.
 

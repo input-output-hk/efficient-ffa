@@ -4,7 +4,9 @@ Status: 2026-10-21, following the axiom repair in commit c0ed96d.
 Cleanup, a full local proof check and the abstract sampler-normalization
 repair are implemented. Guarded table construction and its composition
 with MSM are now checked at the abstract group level. Environment
-provisioning/CI, quantitative bounds and concrete instantiations remain open.
+provisioning/CI and concrete instantiations remain open. The constructed
+algorithm now has a checked symbolic rejection bound. Circuit instantiation
+is outside the requested scope.
 The paper and Lean artifact have not been changed.
 
 ## Cleanup completed
@@ -102,45 +104,44 @@ Regressions check rejection for V = 2P and zero P, acceptance and exact row
 contents under row_admissible, and expected rejection of the old weak
 sufficient-condition claim. scripts/check-local.sh includes these files.
 
-Still open: this is a proposed guarded algorithm in the abstract group
-model. Match its checks to the actual circuit and account for their cost;
-instantiate coordinate operations and the complete operations used for
-initial offsets/doubling/final correction. The new rejection condition is
-not yet covered by a quantitative probability bound.
+This remains a guarded algorithm in the abstract group model. Its rejection
+condition is now covered by step 4. Coordinate operations and complete
+operations for offsets/doubling/correction retain their stated assumptions.
+Circuit instantiation is outside the requested scope.
 
 ## 4. Prove a useful completeness bound
 
-The implemented valid_windows predicate requires, for all 0 <= j < l and
-0 <= i < T, that 0 <= s j i < 2^w. Invalid windows currently force
-rejection, so a small rejection bound cannot quantify over arbitrary s.
+Implemented in MSM_RejectionBound.ec:
 
-First bound rejection for SampledConstructedMSM, including its guarded
-table builder. The old p2 term describes the original selected-entry check
-and is not automatically a bound for this new program. Count forbidden U
-values by proving the relevant maps injective or bijective, with explicit scalar invertibility hypotheses.
-For the CURRENT selected-entry condition only, a candidate intermediate
-bound is p2 <= (1 + l*T)*p1 when multiplication by l and 2^w-1 is invertible.
-Combined with the existing loop bound this would give (1 + 3*l*T)*p1.
-These are proof targets, not established results. For the new guarded
-builder, assuming all base points are nonzero and multiplication by 2^w-1
-is invertible, the proved sufficient exclusion set suggests
-Pr[table rejection] <= l*(2^w+1)*p1. Establish the finite union bound and
-the point-mass calculation formally. Combining that with the old bound
-would first give a conservative bound; a tighter target is
-(1 + l*(2^w+1) + 2*T*l)*p1 if multiplication by l is also invertible.
-That tighter target requires separating main-loop failure from the old
-selected-entry rejection term rather than adding p2 again. None of these
-new numerical bounds is proved yet.
+- A finite-interval union bound with no independence premise.
+- Exact point-event mass under invertible scalar multiplication.
+- Guarded table rejection at most l*(2^w+1)*p1 for nonzero base points.
+- Initialization rejection at most p1.
+- A shared main-loop bound 2*T*l*p1, extracted from the existing completeness
+  proof as MSM_loop_failure_bound without changing its assumptions.
+- A probability-one flag specification and construction_event_equiv linking
+  the mathematical acceptance event to SampledConstructedMSM.run.
+- The actual program rejection bound (1+l*(2^w+1)+2*T*l)*p1 and its success
+  lower bound, under valid windows and explicit invertibility hypotheses.
+- A finite, unique enumeration covering all of R, positive group cardinality
+  q, and p1=1/q derived from the existing distribution assumptions. Thus the
+  final bound is (1+l*(2^w+1)+2*T*l)/q, with no unresolved p2 term.
 
-Relate the group cardinality to the intended subgroup order, prove
-p1 = 1/cardinality for the normalized finite sampler, and instantiate the
-parameter inequalities. Include any randomness and rejection introduced by
-the actual builder. State the resulting success bound with valid inputs,
-termination and all setup assumptions visible.
+The main-loop parameter assumptions remain completeness_constraints; the
+new scalar-invertibility premises can be discharged using invertmeP when
+0 < abs(n) < order. The cardinality q is not assumed equal to that separate
+order parameter. The theorem is conditional on the existing algebraic and
+coordinate axioms and on the full, uniform, normalized sampler.
 
-Acceptance: the composed algorithm has an explicit, nonvacuous numerical
-failure bound for the paper's concrete parameter set, with no unbounded p2
-term hidden in the conclusion.
+Regressions show why nonzero bases, valid windows and invertibility matter:
+zero bases and invalid encodings reject with probability one, and the zero
+scalar is not invertible on a nontrivial group. No new axioms or admissions
+were added for this bound.
+
+Remaining optional specialization: choose concrete parameters, establish
+the stated inequalities and invertibility conditions, and evaluate the
+bound numerically. The symbolic abstract rejection-bound task is complete;
+this does not require circuit instantiation.
 
 ## 5. Discharge the concrete algebra and arithmetic assumptions
 
@@ -159,13 +160,10 @@ all limb widths, field moduli, auxiliary moduli and range/product bounds.
 Show precisely which conclusions are modular equalities and which require
 canonical representatives.
 
-Finally connect the FFA constraints and range checks to the curve formulas,
-then to the builder and MSM loop. Account for lookup constraints, witness
-bounds and exceptional branches present in the actual circuit.
-
-Acceptance: concrete instances discharge the abstract interfaces; a composed
-statement covers the intended circuit/procedure and parameters. Publish an
-explicit list of any assumptions intentionally retained.
+Circuit instantiation is outside the current scope. A concrete curve model
+would be separate work to discharge the abstract interfaces, rather than a
+prerequisite for the conditional MSM bound proved in step 4. Publish an
+explicit list of assumptions intentionally retained.
 
 ## Paper synchronization
 
@@ -178,5 +176,5 @@ exposed inconsistent assumptions, which exposed an unverified algorithm
 stage, and which were merely unused library defects.
 
 Suggested review units: build/CI; sampler normalization and instantiation;
-table builder; quantitative rejection bound; concrete curve; concrete FFA
-parameters and CRT; circuit composition and final paper claims.
+table builder; quantitative rejection bound; optional concrete curve and FFA
+parameters/CRT; final paper claims. Circuit composition is out of scope.
