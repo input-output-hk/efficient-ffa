@@ -2,8 +2,10 @@
 
 Status: 2026-10-21, following the axiom repair in commit c0ed96d.
 Cleanup, a full local proof check and the abstract sampler-normalization
-repair are implemented. Environment provisioning/CI and steps 3–5 remain
-open. The paper and Lean artifact have not been changed.
+repair are implemented. Guarded table construction and its composition
+with MSM are now checked at the abstract group level. Environment
+provisioning/CI, quantitative bounds and concrete instantiations remain open.
+The paper and Lean artifact have not been changed.
 
 ## Cleanup completed
 
@@ -79,41 +81,56 @@ establish a small failure probability or verify concrete table construction.
 
 ## 3. Verify table construction before finalizing rejection bounds
 
-Write an executable table-building procedure matching the intended
-implementation. The current perfect_table_pure uses total group operations,
-and u_check only protects entries actually selected by scalar windows.
-Neither proves that intermediate incomplete additions in table construction
-are defined. The small-group example in ../formalization-audit/table_gap.py
-exhibits this distinction; it is a model of the table mechanism, not a
-concrete elliptic-curve instantiation of all axioms.
+Implemented in MSM_TableConstruction.ec: a guarded imperative row builder
+and a complete multirow builder. Each incomplete addition is preceded by
+nonidentity and unequal-x checks. Zero base points are explicitly rejected.
+The probability-one specifications prove termination, exact acceptance
+according to row_safe/table_safe, and correctness of all returned table
+entries on acceptance. row_admissible_safe proves the corrected sufficient
+exclusion set V != jP for -1 <= j <= b-1, with P nonzero and b positive.
 
-Specify and prove the preconditions for every construction step, including
-nonidentity operands and unequal x-coordinates. Decide explicitly how zero
-input points and exceptional intermediate results are handled: reject them,
-handle them with complete formulas, or establish adequate input assumptions.
-Show that a successful build equals the mathematical table at every required
-index. Include the example that previously passed the selected-entry check
-but failed during construction as a regression. Compose the builder with MSM
-so its rejection and exceptional cases appear in the final theorem.
+Implemented in MSM_WithTable.ec: ConstructedMSM.run consumes the returned
+table, rejecting failed construction and invalid windows. The optimized
+loop is equivalent to the original ideal-table loop when the builder
+succeeds. Table safety reduces its initial admissibility check to l*U != O;
+the new execution path does not consult perfect_table_pure or u_check.
+Both fixed-U and sampled executions have checked probability-one soundness
+statements, including termination. The legacy ideal-table entry points
+remain available for the existing completeness proof.
 
-Acceptance: there is a checked procedure-to-table equivalence, a proof that
-all executed incomplete additions meet their preconditions, and a theorem
-covering the actual composed algorithm rather than an ideal table oracle.
+Regressions check rejection for V = 2P and zero P, acceptance and exact row
+contents under row_admissible, and expected rejection of the old weak
+sufficient-condition claim. scripts/check-local.sh includes these files.
+
+Still open: this is a proposed guarded algorithm in the abstract group
+model. Match its checks to the actual circuit and account for their cost;
+instantiate coordinate operations and the complete operations used for
+initial offsets/doubling/final correction. The new rejection condition is
+not yet covered by a quantitative probability bound.
 
 ## 4. Prove a useful completeness bound
 
-Introduce a named valid-window predicate: for all 0 <= j < l and
-0 <= i < T, require 0 <= s j i < 2^w. Invalid windows currently force
+The implemented valid_windows predicate requires, for all 0 <= j < l and
+0 <= i < T, that 0 <= s j i < 2^w. Invalid windows currently force
 rejection, so a small rejection bound cannot quantify over arbitrary s.
 
-First bound the rejection probability p2 for the chosen construction and
-admissibility condition. Count forbidden U values by proving the relevant
-maps injective or bijective, with explicit scalar invertibility hypotheses.
+First bound rejection for SampledConstructedMSM, including its guarded
+table builder. The old p2 term describes the original selected-entry check
+and is not automatically a bound for this new program. Count forbidden U
+values by proving the relevant maps injective or bijective, with explicit scalar invertibility hypotheses.
 For the CURRENT selected-entry condition only, a candidate intermediate
 bound is p2 <= (1 + l*T)*p1 when multiplication by l and 2^w-1 is invertible.
 Combined with the existing loop bound this would give (1 + 3*l*T)*p1.
-These are proof targets, not established results; a stronger condition for
-whole-table construction changes the forbidden set and its bound.
+These are proof targets, not established results. For the new guarded
+builder, assuming all base points are nonzero and multiplication by 2^w-1
+is invertible, the proved sufficient exclusion set suggests
+Pr[table rejection] <= l*(2^w+1)*p1. Establish the finite union bound and
+the point-mass calculation formally. Combining that with the old bound
+would first give a conservative bound; a tighter target is
+(1 + l*(2^w+1) + 2*T*l)*p1 if multiplication by l is also invertible.
+That tighter target requires separating main-loop failure from the old
+selected-entry rejection term rather than adding p2 again. None of these
+new numerical bounds is proved yet.
 
 Relate the group cardinality to the intended subgroup order, prove
 p1 = 1/cardinality for the normalized finite sampler, and instantiate the

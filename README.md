@@ -12,7 +12,7 @@ Install those tools, register Alt-Ergo and Z3 with Why3, then run:
 EASYCRYPT=/path/to/easycrypt ./scripts/check-local.sh -why3 /path/to/why3.conf
 ```
 
-The script checks all 13 retained local theories independently, including
+The script checks all 15 retained local theories independently, including
 all FFA dependencies, then the positive and negative regression files.
 It rejects explicit admissions and weak/report proof modes, accounting for
 nested comments. Standard-library proofs are trusted as supplied rather
@@ -103,10 +103,10 @@ as supplied. The checker warns about the OCaml 5.2.1 garbage collector.
 - Group, coordinate, scalar-inversion, distribution and parameter
   assumptions remain explicit axioms. This repair does not establish a
   model of every remaining axiom or instantiate a concrete elliptic curve.
-- `perfect_table_pure` still uses total mathematical group operations.
-  Construction of this table with incomplete additions is not verified;
-  the table-construction counterexample discussed in the paper review
-  still needs a separate precondition and proof.
+- The original MSM theorems use the ideal mathematical table. A separate
+  guarded table builder and a composed MSM path are now verified under the
+  same abstract group assumptions; see below. This does not yet verify
+  concrete coordinate formulas or circuit wiring.
 - The completeness bound is still
   `p2 P s + T * l * (p1 + p1)`, where `p2` is the rejection probability
   of the newly defined admissibility condition. No small numerical bound
@@ -145,6 +145,44 @@ Pr[MultiScalarMul(UniformU).run(P,s) returns an accepted result]
 ```
 
 This is a conditional abstract guarantee. Normalization still needs to be
-discharged by a concrete finite sampler; `p2` remains unbounded, and table
-construction remains idealized. In particular, this is not yet a small
-numerical failure bound for the implemented circuit.
+discharged by a concrete finite sampler; `p2` remains unbounded. This
+completeness theorem still concerns the original ideal-table program. It
+does not yet give a small numerical failure bound for the implemented circuit.
+
+## Guarded table construction and composition
+
+`MSM_TableConstruction.ec` now defines an imperative builder for all
+`2^w` entries of each row. It rejects zero base points, a zero initial
+entry, and any step whose operands are zero or have equal x-coordinates.
+It executes an incomplete addition only after checking these conditions.
+A failed row makes the whole table unsuccessful.
+
+The checked specifications establish termination, exact acceptance according
+to `row_safe`/`table_safe`, and agreement of every accepted entry with
+`perfect_table_pure`. For nonzero P and positive row width b,
+`row_admissible_safe` proves the sufficient condition:
+
+```text
+V != j*P for every -1 <= j <= b-1.
+```
+
+`MSM_WithTable.ec` defines `ConstructedMSM.run`, which builds the table,
+rejects construction failures and invalid windows, then runs the optimized
+MSM using the returned entries. Its execution path does not read the ideal
+table or call the ideal-table admissibility check. The initialization check
+reduces to `l*U != identity` because table safety and valid windows establish
+the other admissibility conditions.
+
+`constructed_msm_soundness` and `sampled_constructed_msm_soundness` prove
+probability-one termination and correctness of accepted results for this
+composed path. Regressions prove that V = 2P and zero base points are
+rejected, and admissible rows are constructed correctly. The former claim
+that x(P) != x(V) suffices is an expected-failure regression.
+
+Remaining limits: scalar multiplication for V and the initial offset,
+doubling, final correction and coordinate properties still use the abstract
+group interface. The guarded builder is a proposed repair, not evidence that
+the paper's circuit already implements these checks. No failure-probability
+bound for `SampledConstructedMSM` is claimed yet: the old completeness bound
+must be extended to include table rejection, with nonzero-point and scalar
+invertibility assumptions made explicit.
