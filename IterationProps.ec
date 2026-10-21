@@ -67,7 +67,12 @@ iteri n
  = iteri n
    (fun (j : int) (acc : R) =>
       acc +++ (f j)) idR +++ n *** z.
-admitted.
+proof.
+apply intind.
++ move=> z. rewrite !iteri0 // zero_mul op_id. reflexivity.
++ move=> n hn ih z. rewrite !iteriS // /= ih nplus_dist one_mul.
+  smt(op_assoc op_comm).
+qed.
 
 
 lemma iteriZZZZZ (f : int -> R)  start : 
@@ -78,7 +83,12 @@ iteri n
  = iteri n
    (fun (j : int) (acc : R) =>
       acc +++ (f j)) idR +++ start.
-admitted.
+proof.
+apply intind.
++ simplify. rewrite !iteri0 //; smt(op_id op_comm).
++ move=> n hn ih. simplify. rewrite !iteriS // /= ih.
+  smt(op_assoc op_comm).
+qed.
 
 
 (* lemma iteri_ub ['a 'b] (g : 'a -> 'b) (f : 'a -> int -> 'b -> (bool * 'b)) (a_distr : 'a distr) (p : real)  : *)
@@ -217,6 +227,7 @@ qed.
 
 
 lemma iteri_ub3 ['a 'b] (g : 'a -> 'b) (f : 'a -> int -> (bool * 'b)) (a_distr : 'a distr) (N : int) (p : real)  :
+  0 <= N =>
   (forall i, 0 <= i < N => mu a_distr
     (fun (r : 'a) => !(f r i ).`1) <= p)
 
@@ -225,7 +236,7 @@ lemma iteri_ub3 ['a 'b] (g : 'a -> 'b) (f : 'a -> int -> (bool * 'b)) (a_distr :
    (fun (x : 'a) => 
       !(iteri N (fun j (acc : bool * 'b) 
         => let r = f x j in  (acc.`1 /\ r.`1, r.`2)) (true,  g x)).`1 ) <= N%r * p.
-progress.
+move=> hN H.
   have -> : (fun (x : 'a) =>
      ! (iteri N
           (fun (j : int) (acc : bool * 'b) =>
@@ -237,8 +248,8 @@ progress.
         =>
    let r = f x j  in(acc.`1 \/ !r.`1, r.`2)) (false,  g x)).`1 ).
 
-   apply   (iteri_ub2 g f N).  admit. simplify.
-   apply (iteri_ub1 g f a_distr).  admit.
+   apply   (iteri_ub2 g f N). exact hN. simplify.
+   apply (iteri_ub1 g f a_distr). exact hN.
 apply H.
 qed.  
 

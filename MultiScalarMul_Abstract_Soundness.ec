@@ -20,7 +20,7 @@ lemma MSM_soundness_param_u_ph argP args  argU :
      ==>  res.`1 => res.`2 = (multiScalarMul_Simpl args argP T l) ] = 1%r.
 proof.
 bypr.
-progress.
+move=> &m Harg.
 have ih: 1%r = Pr[MSM.completeMain(P{m}, s{m}, U{m}) @ &m 
   : res.`2 = multiScalarMul_Simpl args argP T l].
 byphoare (_: arg = (argP, args, argU) ==> _).

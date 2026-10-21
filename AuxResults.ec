@@ -8,44 +8,44 @@ require import BitEncoding StdBigop Bigalg.
 (* Chinese Reminder Theorem  *)
 op LCM (M : int -> int) (size : int) : int.
 
-axiom nosmt LCM_pos M n :  0 <= LCM M n.
+axiom LCM_pos M n :  0 <= LCM M n.
 
-axiom nosmt chinese_reminder_theorem x M size : 
+axiom chinese_reminder_theorem x M size :
    (forall i, 0 <= i < size => x %% M i = 0)
     <=>
     x %% LCM M size = 0.
 
 
-lemma nosmt mul_weaken6 (b a c : int) : 0 < b => a * b <= c * b => a <= c.
+lemma mul_weaken6 (b a c : int) : 0 < b => a * b <= c * b => a <= c.
 smt().
 qed.    
     
-lemma nosmt wekenq a q : a = 0 => a %% q = 0.
+lemma wekenq a q : a = 0 => a %% q = 0.
 move => h. rewrite h.
 smt(@Int).
 qed.
 
-lemma nosmt add_weaken1 (a b c d : int) : a <= c => b <= d => a + b <= c + d.
+lemma add_weaken1 (a b c d : int) : a <= c => b <= d => a + b <= c + d.
 smt().
 qed.    
 
 
-lemma nosmt mul_weaken4 (a b c : int) : 0 < b => a < c => a * b < c * b.
+lemma mul_weaken4 (a b c : int) : 0 < b => a < c => a * b < c * b.
 smt().
 qed.    
 
 
-lemma nosmt sub_weaken3 (a b c : int) : b <= 0 => c <= b => a - b <= a - c.
+lemma sub_weaken3 (a b c : int) : b <= 0 => c <= b => a - b <= a - c.
 smt().
 qed.    
 
 
-lemma nosmt sub_weaken2 (a b : int) : b <= 0 => a <= a - b.
+lemma sub_weaken2 (a b : int) : b <= 0 => a <= a - b.
 smt().
 qed.    
 
 
-lemma nosmt mulnegpos (a b : int) : a <= 0 => 0 <= b => a * b <= 0.
+lemma mulnegpos (a b : int) : a <= 0 => 0 <= b => a * b <= 0.
 smt().
 qed.    
 
@@ -53,57 +53,57 @@ lemma leq_sub_weak (a b c : int) : a <= b => c <= 0 => a <= b - c.
 smt().
 qed.    
 
-lemma nosmt mul_leq (a b c : int) : 0 <= b =>  a <= c => a * b <= c * b.
+lemma mul_leq (a b c : int) : 0 <= b =>  a <= c => a * b <= c * b.
 smt().
 qed.    
 
 
-lemma nosmt add_weaken (a b c : int) : 0 <= b => a + b < c => a < c.
+lemma add_weaken (a b c : int) : 0 <= b => a + b < c => a < c.
 smt().
 qed.    
 
 
-lemma nosmt sub_weaken (b a c : int) : 0 <= b => a < c => a - b < c.
+lemma sub_weaken (b a c : int) : 0 <= b => a < c => a - b < c.
 smt().
 qed.    
 
 
-lemma nosmt mul_pos (a b : int) : 0 <= a => 0 <= b => 0 <= a * b .
+lemma mul_pos (a b : int) : 0 <= a => 0 <= b => 0 <= a * b .
 smt().
 qed.    
 
-lemma nosmt hjhjj (a b c d e : int) :
+lemma hjhjj (a b c d e : int) :
      a - b - c <= d - b - e <=> a - c <= d - e.
 smt().
 qed.
 
-lemma nosmt hhelp (a b k x : int) :
+lemma hhelp (a b k x : int) :
      x - (a + b) * k = x - a * k - b * k.
 smt().
 qed.    
 
 
-lemma nosmt ltr_weaken (c a b : int) : 0 <= c => a <= b => a - c <= b.
+lemma ltr_weaken (c a b : int) : 0 <= c => a <= b => a - c <= b.
 smt().
 qed.    
 
 
-lemma nosmt lhsub1 (a b : int) : a <= b <=> -b <= -a.
+lemma lhsub1 (a b : int) : a <= b <=> -b <= -a.
 smt().
 qed.    
 
 
-lemma nosmt lhsub2 (a b : int) : - (a - b) = (b - a).
+lemma lhsub2 (a b : int) : - (a - b) = (b - a).
 smt().
 qed.    
 
 
-lemma nosmt passoc (a b c : int) : a + (b + c) =  a + b + c.
+lemma passoc (a b c : int) : a + (b + c) =  a + b + c.
 smt().
 qed.    
 
 
-lemma nosmt ltr_weaken2 (a b c d : int) :
+lemma ltr_weaken2 (a b c d : int) :
       a <= c
    => b <= d
    => a + b <= c + d.
@@ -111,46 +111,46 @@ smt().
 qed.   
 
 
-lemma nosmt ltr_turnaround (a b : int) : a < b <=> - b < - a.
+lemma ltr_turnaround (a b : int) : a < b <=> - b < - a.
 smt().
 qed.    
 
-lemma nosmt ltr_plusc (a b c : int) : a + c <= b + c <=> a <= b.
+lemma ltr_plusc (a b c : int) : a + c <= b + c <=> a <= b.
 smt().
 qed.    
 
 
-lemma nosmt ltr_plusc2 (a b c : int) : c + a <= c + b <=> a <= b.
+lemma ltr_plusc2 (a b c : int) : c + a <= c + b <=> a <= b.
 smt().
 qed.  
 
-lemma nosmt neg_neg (a  : int) : - - a = a.
+lemma neg_neg (a  : int) : - - a = a.
 smt().
 qed.    
 
-lemma nosmt min_out_in (a b c : int) : - (a - b - c) = (b + c) - a.
+lemma min_out_in (a b c : int) : - (a - b - c) = (b + c) - a.
 smt().
 qed.    
 
-lemma nosmt hjhj (a b c : int) : a < c => 0 <= b < c => 0 <= c => a - b < c.   
+lemma hjhj (a b c : int) : a < c => 0 <= b < c => 0 <= c => a - b < c.
 smt(@Int).
 qed.
     
 
-lemma nosmt qqqqq a b c :  0 <= a < c => 0 <= b < c => -c < a - b < c.
+lemma qqqqq a b c :  0 <= a < c => 0 <= b < c => -c < a - b < c.
     smt(@Int).
 qed.
 
-lemma nosmt jkjk (a b c : int) : (a - b - c) = (a - c - b).
+lemma jkjk (a b c : int) : (a - b - c) = (a - c - b).
     smt().
     qed.
 
 
-lemma nosmt kk (x y m : int) : 0 <= m => x <= y => x * m <= y * m.
+lemma kk (x y m : int) : 0 <= m => x <= y => x * m <= y * m.
 smt(@Int).
 qed.    
 
-lemma nosmt qq (x y l m : int) : 
+lemma qq (x y l m : int) :
   0 <= x => 
   0 <= y =>  
   x <= l => 
@@ -160,7 +160,7 @@ smt (ler_pmul).
 qed.    
 
 
-lemma nosmt bb (a b c x y : int)  : 
+lemma bb (a b c x y : int)  :
      0 <= a < c 
   => 0 <= b < c  
   => 0 <= x < a 
@@ -170,44 +170,44 @@ proof.     smt (@Int).
 qed.
 
 
-lemma nosmt min_min_plus (a b c : int)  :  
+lemma min_min_plus (a b c : int)  :
   a - b - c = a - (b + c).
 proof. smt(@Int). qed.
 
 
-lemma nosmt eq_mod (a b q : int)  :  
+lemma eq_mod (a b q : int)  :
   a = b => a %% q = b %% q.
 proof. smt(). qed.
 
-lemma nosmt qqq x m :  0 <= x < m => x %% m = 0 => x = 0.
+lemma qqq x m :  0 <= x < m => x %% m = 0 => x = 0.
 smt(@Int).
 qed.
 
-lemma nosmt ooo (x m : int) :   - m < x <= 0 => x %% m = 0 => x = 0.
-  smt(modzE @Int).
+lemma ooo (x m : int) :   - m < x <= 0 => x %% m = 0 => x = 0.
+  smt(dvdzE dvdz_le).
 qed.
 
 
-lemma nosmt grand (x m : int) :  - m < x < m => x %% m = 0 => x = 0.
+lemma grand (x m : int) :  - m < x < m => x %% m = 0 => x = 0.
 smt (qqq ooo).
 qed.
 
 
-lemma nosmt jjjj (c a b : int) :  a <= b => a - c <= b - c.
+lemma jjjj (c a b : int) :  a <= b => a - c <= b - c.
 smt().
 qed.
 
 
-lemma nosmt muldiv (k q : int) : 0 < q => k = (k * q) %/ q.
+lemma muldiv (k q : int) : 0 < q => k = (k * q) %/ q.
     smt(@Int).
 qed.    
 
 lemma eqmodP0:
  forall (m a : int), a %% m = 0 <=> exists (c : int), a = c * m.
-admitted.
+proof. move=> m a. by rewrite -dvdzE dvdzP. qed.
 
     
-lemma nosmt bounds x (k: int) q a b :
+lemma bounds x (k: int) q a b :
   0 < q =>
   x = k * q => 
   a <= x <= b => 
@@ -220,14 +220,14 @@ apply leq_div2r => /#.
 qed.
 
 
-lemma nosmt bounds2 (q a b : int) :
+lemma bounds2 (q a b : int) :
   0 < q =>
   a <= b => 
   a  %/ q <= b %/ q.
 smt().
 qed.    
 
-lemma nosmt big_mod m F  : forall nlimbs, (bigi predT F 0 nlimbs) %% m 
+lemma big_mod m F  : forall nlimbs, (bigi predT F 0 nlimbs) %% m
   = (bigi predT  (fun x => (F x) %% m) 0 nlimbs) %% m.
 apply natind. 
 progress. congr. congr.
@@ -283,7 +283,7 @@ have h2 : (a%r / b%r) * b%r <= a%r. smt().
 have z : (floor (a%r / b%r))%r <= a%r  / b%r.     smt.
 have : (floor (a%r / b%r))%r * b%r <= a%r. 
     smt.
-smt.    
+smt(Real.fromintM Real.le_fromint).
 have h1 : a%r < (floor (a%r / b%r) + 1)%r * b%r.
 smt (floor_bound).
 progress. 
@@ -321,22 +321,22 @@ qed.
 (* proof. timeout 20. smt.     *)
 (* qed. *)
 
-lemma nosmt ltemul (a b q : int)  :  0 < q => 
+lemma ltemul (a b q : int)  :  0 < q =>
   a * q <= b * q  => a <= b.
 proof. progress. smt().
 qed.
 
-lemma nosmt muldivaux (a k q : int)  :  0 < q =>
+lemma muldivaux (a k q : int)  :  0 < q =>
   a  = k * q  => k = a %/ q.
 proof.   smt (eqz_div @Int). qed.
 
 
-lemma nosmt min_eq (a b : int)  :  
+lemma min_eq (a b : int)  :
   a - b = 0 <=> a = b.
 proof. smt(@Int). qed.
 
 
-lemma nosmt modzBml:
+lemma modzBml:
   forall (m n d : int), (m %% d - n %% d) %% d = (m %% d - n) %% d.
 progress.
     rewrite modzBm.
@@ -346,7 +346,7 @@ rewrite modz_mod. auto.
 qed.
 
 
-lemma nosmt modzBmr2:
+lemma modzBmr2:
   forall (m n d : int), (m - n %% d) %% d = (m - n ) %% d.
 progress.
 rewrite - modzDml.
@@ -354,7 +354,7 @@ rewrite modzBm. auto.
 qed.    
 
     
-lemma nosmt modzBmr:
+lemma modzBmr:
   forall (m n d : int), (m %% d - n %% d) %% d = (m - n %% d) %% d.
 progress.
 rewrite  modzBm.
@@ -363,7 +363,7 @@ rewrite - modzDm. auto.
 qed.
 
 
-lemma nosmt min_min a b c m : (a %% m - b %% m - c %% m) %% m = (a - b - c %% m) %% m.
+lemma min_min a b c m : (a %% m - b %% m - c %% m) %% m = (a - b - c %% m) %% m.
 rewrite modzBmr2.
 rewrite modzBmr2.        
 rewrite - modzDm.
@@ -373,34 +373,34 @@ auto.
 qed.    
 
 
-lemma nosmt min_min2 (a b c m : int) : (a - b - c) %% m = (a %% m - b %% m - c %% m) %% m.
+lemma min_min2 (a b c m : int) : (a - b - c) %% m = (a %% m - b %% m - c %% m) %% m.
 rewrite -     modzBmr2.
 smt( min_min).
 qed.    
 
 
 
-lemma nosmt popop (a b : int) : - (a - b) = b - a.
+lemma popop (a b : int) : - (a - b) = b - a.
 smt().
 qed.
 
 
-lemma nosmt popop2 (a b c : int) : a + (b - c) = (a + b) - c.
+lemma popop2 (a b c : int) : a + (b - c) = (a + b) - c.
 smt().
 qed.
 
 
-lemma nosmt popop3 (a b c d : int) : a <= c => b <= d => a + b <= c + d.
+lemma popop3 (a b c d : int) : a <= c => b <= d => a + b <= c + d.
 smt().
 qed.
 
 
-lemma nosmt popop4 (a b c : int) : a + b - c = a + (b - c).
+lemma popop4 (a b c : int) : a + b - c = a + (b - c).
 smt().
 qed.
 
 
-lemma nosmt popop5 (c a b : int) : a <= c => a - b <= c - b.
+lemma popop5 (c a b : int) : a <= c => a - b <= c - b.
 smt().
 qed.
 
@@ -447,9 +447,9 @@ apply RealOrder.ler_trans. apply mu_or_leq.
 qed.    
 
 
-lemma nosmt addass (a b c : int) : a + (b + c) = (a + b) + c.    by smt(). qed.
-lemma nosmt muldist (a b c : int) : a * (b + c) = a * b + a * c. by smt(). qed.
-lemma nosmt eqsym ['a] (a b : 'a) : a = b => b = a.              by smt(). qed.
+lemma addass (a b c : int) : a + (b + c) = (a + b) + c.    by smt(). qed.
+lemma muldist (a b c : int) : a * (b + c) = a * b + a * c. by smt(). qed.
+lemma eqsym ['a] (a b : 'a) : a = b => b = a.              by smt(). qed.
 
 
 lemma kkkk (a b c d : real) : a <= c => b <= d => a + b <= c + d.

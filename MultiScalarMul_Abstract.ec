@@ -8,8 +8,8 @@ require import MultiScalarMul_Abstract_Setup IterationProps.
 
 (*
 1/ w: Computing MSM with w-bits window.
-2/ T: Scalars are encoded as T little-endian integer windows in the range 
- [0, 2^w]
+2/ T: Scalars are encoded as T big-endian integer windows in the range
+ [0, 2^w)
 3/ l: the number of base points
 *)
 
@@ -17,17 +17,27 @@ op w, T, l : int.
 (* all params are positive  *)
 axiom param_pos : 0 < w /\ 0 < T /\ 0 < l.
 
-(* uninstantiated check which is supposed to verify that given
-particular u, P, and s the MSM computation can be performed *) 
-op u_check (u : R) (P : int -> R) (s : int -> int -> int) : bool.
-
-(* precomputed table  *)
-op perfect_table_pure parg (varg : R) = 
- (fun (j i : int) =>  (i *** (parg j)) 
+(* precomputed mathematical table *)
+op perfect_table_pure parg (varg : R) =
+ (fun (j i : int) => (i *** (parg j))
             +++ - (2 ^ w - 1) *** varg).
-(* if the u_check was TRUE then no identities are in the table  *)
-axiom u_check_for_table U P s : u_check U P s =>
-  forall i j, perfect_table_pure P U i j <> idR.
+
+(* Check only the windows that the algorithm actually reads.  The table is
+   still a mathematical function: this does not verify its construction
+   with incomplete additions. *)
+op u_check (u : R) (P : int -> R) (s : int -> int -> int) : bool =
+  l *** u <> idR /\
+  forall j i, 0 <= j < l => 0 <= i < T =>
+    0 <= s j i < 2 ^ w /\
+    perfect_table_pure P u j (s j i) <> idR.
+
+lemma u_check_initial U P s : u_check U P s => l *** U <> idR.
+proof. by rewrite /u_check; smt(). qed.
+
+lemma u_check_for_table U P s j i :
+  u_check U P s => 0 <= j < l => 0 <= i < T =>
+  perfect_table_pure P U j (s j i) <> idR.
+proof. by rewrite /u_check; smt(). qed.
 
 (* full and uniform distribution of points  *)
 op r_distr : R distr.
@@ -340,7 +350,9 @@ rewrite iteriZ. smt(param_pos). congr.
       have ->: 2 ^ w *** (2 ^ (w * (ic{hr} - 1 - i)) * s{hr} j i *** P{hr} j)
                 = 2 ^ w * 2 ^ (w * (ic{hr} - 1 - i)) * s{hr} j i *** P{hr} j .
   rewrite mulsc. smt. smt().
-        rewrite - exprD_nneg. smt(param_pos). smt(param_pos). smt().
+        rewrite - exprD_nneg. smt(param_pos). apply mulr_ge0; smt().
+        have -> : w + w * (ic{hr} - 1 - i) = w * (ic{hr} - i) by ring.
+        reflexivity.
 pose v := (2 ^ w - 1) *** U{hr}.
 have -> : iteri l
   (fun (j : int) (acc0 : R) => acc0 +++ (s{hr} j ic{hr} *** P{hr} j +++ -v))
@@ -366,11 +378,10 @@ smt().
 wp. 
 skip. progress.  
 rewrite iteri0. auto. smt.
-rewrite /multiScalarMulInt.
+rewrite /multiScalarMul_Simpl.
 have -> : ic0 = Targ{hr}. smt().
 simplify. 
-rewrite /multiScalarMul_Simpl.
-    reflexivity.
+trivial.
 qed.
 
 
@@ -379,7 +390,7 @@ lemma multiscalarR_helper_spec_ph argP args argU argT : 0 <= argT
   arg = (argP, args, argU, argT)  
      ==>  res.`2 = (multiScalarMul_Simpl args argP argT l) +++ l *** argU ] = 1%r.
 move => pp.
-phoare split ! 1%r 0%r. auto.
+conseq (_: _ ==> true : =1%r) (multiscalarR_helper_spec argP args argU argT pp); first 2 by auto.
    proc. wp.
 while true (argT - ic). progress.
 wp.
@@ -393,8 +404,7 @@ progress.
 smt().
 wp. 
 skip. progress. smt().
-hoare. simplify.   
-conseq (multiscalarR_helper_spec argP args argU argT _). auto.
+
 qed.
 
 
@@ -481,16 +491,13 @@ lemma completeMainLoop_spec_ph2 argP args argU argT : 0 <= argT =>
  phoare [ MSM.completeMainLoop : arg = (argP, args, argU, argT)   
   ==>  res = (multiScalarMulLoop argT l (perfect_table_pure argP argU) args (l *** argU) w)   ] = 1%r.
 move => pp.
-phoare split ! 1%r 0%r. auto.
+conseq (_: _ ==> true : =1%r) (completeMainLoop_spec_h argP args argU argT pp); first 2 by auto.
 proc. while true (argT - ic). auto.
 call completeAddLoop_total.
 call doubleLoop_total.
 skip. smt().
 wp. skip. smt().
-hoare.
-proc*. 
-call (completeMainLoop_spec_h argP args argU argT pp).
-auto.
+
 qed.
 
 
@@ -574,43 +581,31 @@ lemma complete_optimized_equiv argP args argU  :
      ==>  (res{2}.`1 => (res{1} = res{2})) /\ (res{1}.`1 => res{2}.`1)   ].
 proc.
 wp.
-inline MSM.multiScalarMulMain_Opt.
-inline   MSM.completeMainLoop.
-       wp.
-while ((flag0{2} /\ u_check U{2} P{2} s{2} =>  ={table,acc,U,s,flag0} /\ (forall i j, table{2} i j <> idR)) /\ (flag0{2} => flagaux{2}) /\ ={ic} /\ s0{1} = s0{2}
- /\ table{2} = perfect_table_pure P{2} U{2} /\ Targ{1} = T /\ (flag0{1} /\ u_check U{2} P{2} s{2} => flag0{2})  ).
+inline MSM.multiScalarMulMain_Opt MSM.completeMainLoop.
 wp.
-inline MSM.completeAddLoop.
-inline MSM.incompleteAddLoop.   
-wp.
-while ((flag0{2} /\ flag1{2} /\ u_check U{2} P{2} s{2} =>  ={flag1, vahe, acc0,table0,aux0,ic0} /\ (forall i j, table0{2} i j <> idR) /\ vahe{2} <> idR) /\ ={jc0} /\ s1{1} = s1{2} /\ table{2} = table0{2} 
- /\ table{2} = perfect_table_pure P{2} U{2}  /\ Targ{1} = T  /\ (flag0{2} /\ flag1{1} /\ u_check U{2} P{2} s{2} => flag1{2})).
- wp. skip. progress.  smt().  
-       have -> : vahe{2} = vahe{1}. smt(). 
-rewrite same_res. 
-  smt().
-  smt().
-  smt().
-  smt().
-  smt().
-     smt().
-     smt().
-     smt().
-     smt().
-apply opt_never_id. smt(). smt().
-smt(). smt(). smt().
-wp.
-ecall {1} (doubleLoop_spec_ph acc{1} w).
-ecall {2} (doubleLoop_spec_ph acc{2} w).
-skip. progress. 
-smt(param_pos). smt(). smt(). smt().
-smt().  
-apply no_order_two_elems. smt(param_pos). 
-smt(). smt(). smt().
-       smt(). smt().
-apply (u_check_for_table U{2} P{2} s{2} _ i j).        auto. smt(). smt().
-       wp. 
- skip. progress.
-   apply (u_check_for_table U{2} P{2} s{2} H i j).       
-smt(). smt(). smt().
+while (
+  ={P,s,U,s0,table,ic} /\ s0{2} = s{2} /\
+  table{2} = perfect_table_pure P{2} U{2} /\ Targ{1} = T /\
+  0 <= ic{2} <= T /\
+  (u_check U{2} P{2} s{2} =>
+    ={flag0} /\ (flag0{2} => ={acc} /\ acc{2} <> idR))).
+  wp.
+  inline MSM.completeAddLoop MSM.incompleteAddLoop.
+  wp.
+  while (
+    ={P,s,U,s0,table,ic} /\ s0{2} = s{2} /\
+    table{2} = perfect_table_pure P{2} U{2} /\ Targ{1} = T /\
+    0 <= ic{2} < T /\
+    ={table0,s1,ic0,jc0} /\ table0{2} = table{2} /\
+    s1{2} = s{2} /\ ic0{2} = ic{2} /\ 0 <= jc0{2} <= l /\
+    (u_check U{2} P{2} s{2} =>
+      ={flag0} /\ (flag0{2} =>
+        ={flag1} /\ (flag1{2} => ={vahe} /\ vahe{2} <> idR)))).
+    wp. skip. progress;
+      smt(same_res opt_never_id u_check_for_table).
+  wp.
+  ecall {1} (doubleLoop_spec_ph acc{1} w).
+  ecall {2} (doubleLoop_spec_ph acc{2} w).
+  skip. progress; smt(param_pos no_order_two_elems).
+wp. skip. progress; smt(param_pos u_check_initial).
 qed.

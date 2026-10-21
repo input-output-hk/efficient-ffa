@@ -34,7 +34,8 @@ axiom same_res (a b : R) :  a <> idR => b <> idR => xof a <> xof b
   => a %%% b = a +++ b.
 axiom opt_never_id (a b : R) :  a <> idR => b <> idR => xof a <> xof b 
   => a %%% b <> idR.
-axiom no_order_two_elems x n : 0 < n => 2 ^ n *** x <> idR.
+(* Doubling preserves nonidentity only for nonidentity inputs. *)
+axiom no_order_two_elems x n : x <> idR => 0 < n => 2 ^ n *** x <> idR.
 
 
 (* op properties  *)
@@ -94,7 +95,7 @@ lemma kik  (a b c d : R) :  a +++ b +++ (c +++ d) = a +++ c +++ (b +++ d).
  by smt(op_assoc op_comm). qed.
 
 
-lemma nosmt mulsc : forall (a : int), 0 <= a => forall b r,  a *** (b *** r) = (a * b) *** r.
+lemma mulsc : forall (a : int), 0 <= a => forall b r,  a *** (b *** r) = (a * b) *** r.
 apply intind.
     progress.
 rewrite zero_mul. rewrite zero_mul. auto.
@@ -104,3 +105,18 @@ have ->: (i + 1) * b = i * b + b. smt().
 rewrite H0.    
 rewrite nplus_dist. smt.
 qed.    
+
+lemma op_neg_add (a b : R) : - (a +++ b) = -a +++ -b.
+proof.
+rewrite - (const_add_inj (- (a +++ b)) (-a +++ -b) (a +++ b)).
+smt(op_assoc op_comm op_inv op_id).
+qed.
+
+lemma op_cancel_left (a b : R) : -a +++ (a +++ b) = b.
+proof. by rewrite -op_assoc (op_comm (-a) a) op_inv op_id'. qed.
+
+lemma op_cancel_right (a b : R) : a +++ (-a +++ b) = b.
+proof. by rewrite -op_assoc op_inv op_id'. qed.
+
+lemma op_eq_neg (a b : R) : (a = -b) = (a +++ b = idR).
+proof. smt(const_add_inj op_inv op_comm). qed.

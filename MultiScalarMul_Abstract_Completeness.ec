@@ -135,7 +135,7 @@ rewrite (spec_equiv_fun_impl i s{hr} x P{hr}).  auto.
       auto. auto. auto.
 apply (iteri_ub3 (fun (x : R) => l *** x)   
         (fun x i => completeAddLoop l (perfect_table_pure P{hr} x) s{hr} i
-               (2 ^ w *** (gg s{hr} P{hr} i x) )) r_distr T (l%r * (p1 + p1)) _ ).  
+               (2 ^ w *** (gg s{hr} P{hr} i x) )) r_distr T (l%r * (p1 + p1)) _ ). smt(param_pos).
 simplify.
 move => i.
 rewrite /completeAddLoop. simplify.            
@@ -196,7 +196,7 @@ auto. auto. auto.
 move => condi.
 apply  (iteri_ub3 (fun (x : R) => 2 ^ w *** (gg s{hr} P{hr} i x)) 
    (fun r j => (xdiff (hh s{hr} P{hr} i j r) (perfect_table_pure P{hr} r j (s{hr} j i)) , (hh s{hr} P{hr} i j r) +++ perfect_table_pure P{hr} r j (s{hr} j i))  )
-   r_distr l (p1 + p1) _).  
+   r_distr l (p1 + p1) _). smt(param_pos).
 progress.
 
 have oo : (fun (r : R) =>
@@ -236,7 +236,7 @@ have ->: (fun (x : R) =>
        (fun (j : int) (acc : R) =>
           acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR)
      +++  - (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x) = idR).
-apply fun_ext. move => r. timeout 10. smt.
+apply fun_ext. move => r. smt(const_add_inj op_inv).
 have ->: (fun (x : R) =>
      2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l +++ l *** x) +++
      iteri i0
@@ -267,7 +267,7 @@ have ->: (fun (x : R) =>
        pose k := 2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++ 2 ^ w *** (l *** r).
 
  
-     rewrite  (iteriZZZZ (fun j => s{hr} j i *** P{hr} j) i0 _ (- (2 ^ w - 1) *** r)) . smt(). timeout 10. smt.
+     rewrite  (iteriZZZZ (fun j => s{hr} j i *** P{hr} j) i0 _ (- (2 ^ w - 1) *** r)) . smt(). simplify. rewrite op_neg_add neg_neg_id. smt(op_assoc).
  
 
 have ->: (fun (x : R) =>
@@ -282,7 +282,7 @@ have ->: (fun (x : R) =>
      ((2 ^ w - 1) *** x +++
      i0 *** - (2 ^ w - 1) *** x  +++
      2 ^ w *** (l *** x)) = idR).
-apply fun_ext. move => r. timeout 15. smt.
+apply fun_ext. move => r. smt(op_assoc op_comm).
 
 have ->: (fun (x : R) =>
      2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
@@ -357,8 +357,8 @@ apply (dmap_bij r_distr r_distr _ (fun (x : R) =>   -  (2 ^ w *** multiScalarMul
         - s{hr} i0 i *** P{hr} i0)  +++ x )).
 progress. apply r_distr_full.
 progress. apply r_distr_funi.
-progress. timeout 15. smt.
-progress. timeout 15. smt.
+progress. apply op_cancel_left.
+progress. apply op_cancel_right.
 auto.
 (* second symmetrical case *)
 rewrite /hh. rewrite /perfect_table_pure. rewrite /gg.
@@ -376,7 +376,7 @@ have ->: (fun (x : R) =>
        (fun (j : int) (acc : R) =>
           acc +++ (s{hr} j i *** P{hr} j +++ - (2 ^ w - 1) *** x)) idR)
      +++  (s{hr} i0 i *** P{hr} i0 +++ - (2 ^ w - 1) *** x) = idR).
-apply fun_ext. move => r. timeout 20. smt.
+apply fun_ext. move => r. apply op_eq_neg.
 have ->: (fun (x : R) =>
      2 ^ w *** (multiScalarMul_Simpl s{hr} P{hr} i l +++ l *** x) +++
      iteri i0
@@ -407,7 +407,7 @@ have ->: (fun (x : R) =>
        pose k := 2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++ 2 ^ w *** (l *** r).
 
  
-     rewrite  (iteriZZZZ (fun j => s{hr} j i *** P{hr} j) i0 _ (- (2 ^ w - 1) *** r)) . smt(). timeout 10. smt.
+     rewrite  (iteriZZZZ (fun j => s{hr} j i *** P{hr} j) i0 _ (- (2 ^ w - 1) *** r)) . smt(). smt(op_assoc op_comm).
 
 have ->: (fun (x : R) =>
      2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++ 2 ^ w *** (l *** x) +++
@@ -421,7 +421,7 @@ have ->: (fun (x : R) =>
      (- (2 ^ w - 1) *** x +++
      i0 *** - (2 ^ w - 1) *** x  +++
      2 ^ w *** (l *** x)) = idR).
-apply fun_ext. move => r. timeout 10. smt.
+apply fun_ext. move => r. smt(op_assoc op_comm).
 
 have ->: (fun (x : R) =>
      2 ^ w *** multiScalarMul_Simpl s{hr} P{hr} i l +++
@@ -490,9 +490,10 @@ apply (dmap_bij r_distr r_distr _ (fun (x : R) =>   -  (2 ^ w *** multiScalarMul
          s{hr} i0 i *** P{hr} i0)  +++ x )).
 progress. apply r_distr_full.
 progress. apply r_distr_funi.
-progress. timeout 10. smt.
-progress. timeout 10. smt.
+progress. apply op_cancel_left.
+progress. apply op_cancel_right.
 auto.
+progress. rewrite /p1 /p2. smt(ge0_mu param_pos).
 qed.
 
 
