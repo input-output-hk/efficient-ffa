@@ -12,7 +12,7 @@ Install those tools, register Alt-Ergo and Z3 with Why3, then run:
 EASYCRYPT=/path/to/easycrypt ./scripts/check-local.sh -why3 /path/to/why3.conf
 ```
 
-The script checks all 16 retained local theories independently, including
+The script checks all 17 retained local theories independently, including
 all FFA dependencies, then the positive and negative regression files.
 It rejects explicit admissions and weak/report proof modes, accounting for
 nested comments. Standard-library proofs are trusted as supplied rather
@@ -176,13 +176,17 @@ the other admissibility conditions.
 `constructed_msm_soundness` and `sampled_constructed_msm_soundness` prove
 probability-one termination and correctness of accepted results for this
 composed path. Regressions prove that V = 2P and zero base points are
-rejected, and admissible rows are constructed correctly. The former claim
-that x(P) != x(V) suffices is an expected-failure regression.
+rejected, and admissible rows are constructed correctly. The claim
+that x(P) != x(V) alone guarantees successful construction is an
+expected-failure regression.
 
 Remaining limits: scalar multiplication for V and the initial offset,
 doubling, final correction and coordinate properties still use the abstract
-group interface. The guarded builder is a proposed repair, not evidence that
-the paper's circuit already implements these checks. The rejection bound below now covers `SampledConstructedMSM`, including
+group interface. The guarded builder models safe witness construction.
+As proved below,
+accepting table constraints already imply its per-step guards, so these
+guards need not become additional circuit assertions. The rejection bound
+below covers `SampledConstructedMSM`, including
 table construction. Circuit instantiation is outside the current scope.
 
 ## Rejection probability of the constructed algorithm
@@ -231,3 +235,51 @@ invertible must be rejected by the checker.
 This is a symbolic bound under explicit assumptions. It is useful when
 1 + l*(2^w+1) + 2*T*l is small relative to q; no particular curve or parameter
 set is instantiated here.
+
+## Table constraints imply the per-step guards
+
+`MSM_TableConstraints.ec` models Figure 2's three modular coordinate
+equations and nonidentity output, without an explicit unequal-x guard in
+an addition step. An accepted row includes the paper's single initial
+check x(P) != x(V), nonidentity P and V, the initial entry -V, and the
+addition equations at each successive entry. Every step adds the same P.
+
+The two slope equations prevent any step from outputting P: that would
+imply 2*y(P)=0. The first slope equation also rejects input -P. Together
+with the initial check and the coordinate-collision property, these facts
+prove that every accepting row satisfies all incomplete-addition guards.
+This argument is specific to a repeated-base table; it does not remove
+Figure 4's guards for the main MSM loop, whose addends vary.
+
+- `constraints_output_not_base` and `constraints_inverse_impossible`
+  prove the modular contradictions.
+- `accepted_step_safe` and `accepted_step_distinct_x` prove the implied
+  abstract and modular coordinate guards.
+- `accepted_table_row_safe` and `accepted_table_entries` establish row
+  safety and agreement with the mathematical table.
+- `accepted_table_builder_succeeds` shows that the guarded builder accepts
+  and reproduces any accepted witnessed row.
+- `constraint_table_msm_soundness` connects witnessed tables directly to
+  MSM soundness, without executing the guarded builder.
+
+No new global axioms or admissions are added. The theorems explicitly
+require `coordinate_laws` (nonzero 2*y for nonidentity points, coordinate
+negation and agreement with the abstract x-coordinate comparison) and,
+for result correctness, `safe_constraint_correct`: the standard correctness
+of the coordinate equations when addition inputs are safe. These are
+interface obligations, not a concrete elliptic-curve or circuit instance.
+Witnessed points are represented by the existing abstract group type R.
+
+This corrects the earlier implication that extra per-step circuit checks
+were required. V=2P still refutes the claim that the initial check alone
+guarantees successful construction, but the existing equations reject
+that exceptional choice. The paper should distinguish soundness of
+accepting constraints from statistical completeness under random offsets.
+The rejection bound above remains a theorem about the guarded sampled
+program; this new one-way soundness connection does not itself prove
+existence of coordinate witnesses for every safe execution.
+
+Regressions check that the V=2P row has no accepting witnesses under the
+interface hypotheses, and that isolated addition equations can accept
+equal inputs. The latter explains why the table-chain argument and its
+initial check matter.

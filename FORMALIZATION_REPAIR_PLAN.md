@@ -7,6 +7,8 @@ with MSM are now checked at the abstract group level. Environment
 provisioning/CI and concrete instantiations remain open. The constructed
 algorithm now has a checked symbolic rejection bound. Circuit instantiation
 is outside the requested scope.
+An equation-level table proof now shows that accepting witnesses imply
+the per-step guards, using only the paper's initial unequal-x check.
 The paper and Lean artifact have not been changed.
 
 ## Cleanup completed
@@ -104,7 +106,17 @@ Regressions check rejection for V = 2P and zero P, acceptance and exact row
 contents under row_admissible, and expected rejection of the old weak
 sufficient-condition claim. scripts/check-local.sh includes these files.
 
-This remains a guarded algorithm in the abstract group model. Its rejection
+Implemented in MSM_TableConstraints.ec: the modular slope equations rule
+out output P and input -P. Consequently, a repeated-base table satisfying
+the existing equations and the single initial x(P) != x(V) check satisfies
+row_safe; its entries match the mathematical table and can be passed
+directly to the verified MSM loop. No extra per-step circuit guards are
+needed for this soundness argument. The proof uses explicit coordinate
+laws and safe-input coordinate-addition correctness hypotheses, with no
+new global axioms. It does not instantiate a concrete curve or prove
+coordinate-witness existence from row_safe.
+
+The guarded builder remains a witness-construction model. Its rejection
 condition is now covered by step 4. Coordinate operations and complete
 operations for offsets/doubling/correction retain their stated assumptions.
 Circuit instantiation is outside the requested scope.
@@ -169,8 +181,12 @@ explicit list of assumptions intentionally retained.
 
 After each step, update the formalization-status claims and theorem
 hypotheses in the paper. Describe the present artifact as conditional
-abstract MSM correctness plus range-bounded FFA constraint proofs until the
-concrete composition is established. Keep scalar-window ordering consistent
+abstract MSM correctness,
+including the table-constraint soundness connection, plus range-bounded
+FFA constraint proofs. Explain that accepting table constraints imply
+the per-step guards; the initial check does not guarantee that every
+choice of random offset allows successful construction. Keep scalar-window
+ordering consistent
 with the big-endian traversal. Explain separately which counterexamples
 exposed inconsistent assumptions, which exposed an unverified algorithm
 stage, and which were merely unused library defects.
