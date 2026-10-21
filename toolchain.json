@@ -1,0 +1,11 @@
+{
+  "easycrypt": {
+    "repository": "https://github.com/EasyCrypt/easycrypt",
+    "revision": "a2cd7bf1e18d2b0c299f2b13d6004343dd1bf1ca"
+  },
+  "why3": "1.8.2",
+  "alt_ergo": "2.6.3",
+  "z3": "4.8.12",
+  "ocaml": "5.2.1",
+  "note": "Versions used for local validation. OCaml 5.2.1 triggers an EasyCrypt GC warning. This manifest records the tested toolchain; it is not a transitive dependency lock or an installer."
+}

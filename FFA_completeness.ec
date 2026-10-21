@@ -11,7 +11,7 @@ require import FFA FFA_soundness AuxResults.
 import BN.
 import Word.
 
-lemma nosmt multiplication_completeness (M : int -> int) 
+lemma multiplication_completeness (M : int -> int)
     (M_size p t1 t2 : int) (x y z : Word.t A.t) : 
 
     (forall i,  0 < M i)
@@ -269,8 +269,6 @@ auto.
 rewrite kprop.
 smt(@Int).
         
-print dvdzP.          
-print eqmodP0.
 (* apply  eqmodP0.  apply h. *)
 have : exists V, (sigma
             (fun (i0 : int) =>
@@ -344,7 +342,7 @@ apply ltr_weaken.
 
 rewrite mulr_sumr.
 apply ler_sum_seq => /=.
-move => iz iin _.
+move => iz iin.
 apply ler_pmul => //.
    + smt(@Word).
    + apply modz_ge0 => //.

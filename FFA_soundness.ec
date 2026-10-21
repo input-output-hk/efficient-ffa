@@ -11,7 +11,7 @@ require import FFA AuxResults.
 import BN.
 import Word.
 
-lemma nosmt first_step x y : (bn x) * (bn y) 
+lemma first_step x y : (bn x) * (bn y)
  = sigma (fun (i : int) => 
      sigma (fun (j : int) => 
        to_uint x.[i]  * to_uint y.[j] * B ^ (i + j))).
@@ -24,7 +24,7 @@ by rewrite exprD_nneg ; smt(mem_range gt0_nlimbs).
 qed.
 
 
-lemma nosmt upper_bound (x y :  Word.t A.t) : 
+lemma upper_bound (x y :  Word.t A.t) :
  q <> 0 =>
     sigma (fun (i : int) => 
        sigma (fun (j : int)=> 
@@ -48,7 +48,7 @@ apply ler_pmul; smt(@Word).
 qed.
 
 
-lemma nosmt lower_bound (x : Word.t A.t) (m : int) : m <> 0 =>
+lemma lower_bound (x : Word.t A.t) (m : int) : m <> 0 =>
   sigma (fun (i : int) => 
      to_uint x.[i] * (B ^ i %% m))
     <= (B - 1) * sigma (fun (i : int) => 
@@ -56,7 +56,7 @@ lemma nosmt lower_bound (x : Word.t A.t) (m : int) : m <> 0 =>
 move => m_not_zero.   
 rewrite mulr_sumr.
 apply ler_sum_seq => /=.
-move => i iin _.
+move => i iin.
 apply ler_pmul => //.
    + smt(@Word).
    + apply modz_ge0 => //.
@@ -64,7 +64,7 @@ apply ler_pmul => //.
 qed.   
 
 
-lemma nosmt lhsub (m_k v_k k_min l_min u : int) x y z :
+lemma lhsub (m_k v_k k_min l_min u : int) x y z :
        0 < m_k
     => 0 <= v_k
     => 0 <= u
@@ -97,7 +97,7 @@ qed.
 
 
 
-lemma nosmt lhslb (m_k k_min l_min u_max v_max v_k u 
+lemma lhslb (m_k k_min l_min u_max v_max v_k u
  : int) x y z :
      0 < m_k 
   => v_k <= v_max
@@ -140,13 +140,13 @@ apply ltr_weaken.
   + smt(@Word).
 rewrite mulr_sumr.
 apply ler_sum_seq => /=.
-move => i iin _.
+move => i iin.
 apply ler_pmul; smt(@Word modz_ge0).
 qed.   
 
 
 
-lemma nosmt multiplication_soundness (M V : int -> int) 
+lemma multiplication_soundness (M V : int -> int)
     (M_size p k t1 t2 : int) (x y z : Word.t A.t) : 
 
       (forall i,  0 < M i)
@@ -416,7 +416,9 @@ have R5 :
   apply sumr_ge0.
   progress.
   rewrite /B.
-  timeout 15. smt(@Int @Word).
+  apply mulr_ge0.
+  + apply mulr_ge0; smt(to_uint_cmp).
+  + apply modz_ge0; smt().
   move => _.
   apply (ler_lt_trans _ _ _ _ H13).
   apply leq_sub_weak.

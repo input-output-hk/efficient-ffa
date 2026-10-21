@@ -43,6 +43,8 @@ proof. by rewrite /u_check; smt(). qed.
 op r_distr : R distr.
 axiom r_distr_full : is_full r_distr.
 axiom r_distr_uni : is_uniform r_distr.
+(* Full support and uniform point masses do not imply total mass one. *)
+axiom r_distr_ll : is_lossless r_distr.
 
 
 lemma r_distr_funi : is_funiform r_distr.

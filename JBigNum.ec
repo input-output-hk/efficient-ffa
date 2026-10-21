@@ -3,28 +3,33 @@ require import BitEncoding StdBigop Bigalg.
 (*---*) import Ring.IntID IntOrder BS2Int.
 (*---*) import Bigint BIA.
 
-(* from Jasmin require import JWord JUtils JArray JWord_array. *)
-
-require import JWord JUtils JArray JWord_array.
+require import JWord JUtils JArray.
 
 (** TO BE MOVED ELSEWHERE... *)
 
 lemma lex_lt x1 x2 m y1 y2:
  0 < m => 0 <= x1 < m => 0 <= x2 < m => 0 <= y1 => 0 <= y2 =>
- (y1*m + x1 < y2*m + x2) = (y1 < y2 \/ y1=y2 /\ x1 < x2)
-by smt().
-(*proof. by move=> /> *; rewrite (divzU (y1 * m + x1) m y1 x1) /#. qed.*)
+ (y1*m + x1 < y2*m + x2) = (y1 < y2 \/ y1=y2 /\ x1 < x2).
+proof.
+move=> Hm Hx1 Hx2 Hy1 Hy2.
+have Hstep: forall a b, a < b => a*m + m <= b*m.
+  move=> a b Hab.
+  have Hle: (a+1)*m <= b*m by rewrite ler_pmul2r //; smt().
+  smt().
+have H12 := Hstep y1 y2.
+have H21 := Hstep y2 y1.
+smt().
+qed.
 
 lemma lex_le x1 x2 m y1 y2:
  0 < m => 0 <= x1 < m => 0 <= x2 < m => 0 <= y1 => 0 <= y2 =>
  (y1*m + x1 <= y2*m + x2) = (y1 < y2 \/ y1=y2 /\ x1 <= x2)
-by smt().
-(*proof. by move=> /> *; rewrite (divzU (y1 * m + x1) m y1 x1) /#. qed.*)
+by smt(lex_lt).
 
 lemma lex_eq x1 x2 m y1 y2:
  0 < m => 0 <= x1 < m => 0 <= x2 < m => 0 <= y1 => 0 <= y2 =>
  (y1*m + x1 = y2*m + x2) = (y1 = y2 /\ x1 = x2)
-by smt().
+by smt(lex_lt lex_le).
 
 lemma modz_pow (a b d: int):
  0 <= b => a ^ b %% d = (a %% d) ^ b %% d.
@@ -48,7 +53,6 @@ axiom gt0_wsize: 0 < wsize.
 clone import BitWord as Word with
   op size <- wsize.
   (* proof gt0_size by apply gt0_wsize. *)
-(* import W64.  *)
 
 (** Number of limbs *)
 op nlimbs : int.

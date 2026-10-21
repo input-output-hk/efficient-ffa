@@ -7,6 +7,7 @@ require import BitEncoding StdBigop Bigalg.
 
 require import MultiScalarMul_Abstract MultiScalarMul_Abstract_Setup AuxResults IterationProps.
 require import Distr.
+require import MultiScalarMul_Abstract_Soundness.
 
 
 module UniformU : OutCalls = {
@@ -17,6 +18,14 @@ module UniformU : OutCalls = {
    }
 }.
 
+
+lemma UniformU_lossless : islossless UniformU.getU.
+proof. proc. rnd. skip. smt(r_distr_ll). qed.
+
+lemma MSM_uniform_soundness P s &m :
+ Pr[MultiScalarMul(UniformU).run(P, s) @ &m :
+   res.`1 => res.`2 = multiScalarMul_Simpl s P T l] = 1%r.
+proof. apply (MSM_soundness UniformU UniformU_lossless). qed.
 
 (* extra assumption on the algorithm parameters  *)
 axiom completeness_constraints :   forall i, 0 <= i < l
@@ -505,3 +514,22 @@ rewrite - MSM_completeness_func_perfect_equiv.
 byphoare (_: arg = (argP , args) ==> _).
 apply MSM_completeness_functional. auto. auto.
 qed.  
+
+
+(* Normalization makes returned success complementary to returned failure. *)
+lemma MSM_uniform_lossless : islossless MultiScalarMul(UniformU).run.
+proof.
+proc.
+ecall (MSM_soundness_param_u_ph UniformU UniformU_lossless P s u_cand); call UniformU_lossless; auto.
+qed.
+
+lemma MSM_uniform_success P s &m :
+ 1%r - (p2 P s + T%r * (l%r * (p1 + p1)))
+ <= Pr[MultiScalarMul(UniformU).run(P,s) @ &m : res.`1].
+proof.
+have Hfail := MSM_completeness P s &m.
+have Htotal : Pr[MultiScalarMul(UniformU).run(P,s) @ &m : true] = 1%r
+ by byphoare MSM_uniform_lossless.
+move: Hfail. rewrite Pr [mu_not] Htotal.
+smt().
+qed.

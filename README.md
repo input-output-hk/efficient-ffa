@@ -3,15 +3,26 @@ Formalization of proofs for efficient foreign field arithmetic (FFA) and multi-s
 
 See more in the associated [paper](https://eprint.iacr.org/2025/695).
 
-## Requirements
+## Toolchain and checks
 
+The validated versions are recorded in [toolchain.json](toolchain.json).
+Install those tools, register Alt-Ergo and Z3 with Why3, then run:
+
+```bash
+EASYCRYPT=/path/to/easycrypt ./scripts/check-local.sh -why3 /path/to/why3.conf
 ```
-EASYCRYPT_REVISION =  a214a56
-JASMIN_VERSION     =  2023.06.1
-ALT-ERGO           >= v2.5.1
-CVC4               >= 1.8
-Z3                 >= 4.8.7
-```
+
+The script checks all 13 retained local theories independently, including
+all FFA dependencies, then the positive and negative regression files.
+It rejects explicit admissions and weak/report proof modes, accounting for
+nested comments. Standard-library proofs are trusted as supplied rather
+than rechecked. Python 3 and Bash are needed for the check scripts.
+
+The toolchain manifest records tested versions; automated environment
+provisioning and CI integration remain to be added. The original upstream
+requirements were EasyCrypt a214a56, Jasmin 2023.06.1, Alt-Ergo >= 2.5.1,
+CVC4 >= 1.8 and Z3 >= 4.8.7. The current scripts target the newer recorded
+EasyCrypt revision.
 
 ## Contents
 * `FFA_soundness.ec` the proof that whenever the system of constraints is satisfied then we have correctly multipled foreign field elements.
@@ -100,5 +111,40 @@ as supplied. The checker warns about the OCaml 5.2.1 garbage collector.
   `p2 P s + T * l * (p1 + p1)`, where `p2` is the rejection probability
   of the newly defined admissibility condition. No small numerical bound
   on `p2` is proved here. Invalid scalar windows force rejection.
-- The separate FFA/Jasmin proofs have not been checked with this newer
-  toolchain, and the paper and Lean artifact are unchanged.
+- All retained local FFA dependencies and theorem files now check directly
+  with the recorded toolchain. This establishes the proofs under their
+  stated assumptions; concrete field parameters and circuit composition
+  remain open. The paper and Lean artifact are unchanged.
+
+## Audit cleanup and next steps
+
+Unused `WhileApprox.eca`, `JWord_array.ec` and the processor-specific portion
+of `JWord.ec` have been removed. The generic word theory and limb arithmetic
+needed by FFA remain. This removes an unsound admitted loop bound and an
+incorrect SIMD comparison from code outside the FFA/MSM dependency paths.
+
+See [the formalization repair plan](FORMALIZATION_REPAIR_PLAN.md) for the
+validation status and concrete steps covering distribution normalization,
+table construction, rejection bounds and concrete curve/field instances.
+
+## Sampler normalization repair
+
+The abstract random-point distribution now explicitly assumes
+`is_lossless r_distr`. Full support and uniform point masses alone do not
+imply normalization. `tests/DistributionSemantics.ec` proves that a half-mass
+singleton distribution is full and uniform but not lossless;
+`tests/NonLosslessSamplerMustFail.ec` must fail to prove its sampler lossless.
+
+The completeness theory proves `UniformU_lossless`, instantiates soundness
+as `MSM_uniform_soundness`, and proves termination of the corresponding MSM
+run as `MSM_uniform_lossless`. The new `MSM_uniform_success` theorem gives:
+
+```text
+Pr[MultiScalarMul(UniformU).run(P,s) returns an accepted result]
+  >= 1 - (p2 P s + 2*T*l*p1).
+```
+
+This is a conditional abstract guarantee. Normalization still needs to be
+discharged by a concrete finite sampler; `p2` remains unbounded, and table
+construction remains idealized. In particular, this is not yet a small
+numerical failure bound for the implemented circuit.
