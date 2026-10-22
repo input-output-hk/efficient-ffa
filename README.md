@@ -3,6 +3,28 @@ Formalization of proofs for efficient foreign field arithmetic (FFA) and multi-s
 
 See more in the associated [paper](https://eprint.iacr.org/2025/695).
 
+## Current status
+
+The agreed formalization work is complete through small concrete MSM and
+FFA instances. The generic theorems retain explicit assumptions; the small
+instances discharge their project algebra, representation, sampler and
+parameter obligations. The LCM properties are proved from integer arithmetic.
+
+- [SmallCurve.ec](SmallCurve.ec) and [SmallMSM.ec](SmallMSM.ec) instantiate
+  the full coordinate-witness proofs on a seven-point curve over F_5,
+  with w=T=l=1 and a checked rejection upper bound of 6/7.
+- [SmallFFA.ec](SmallFFA.ec) instantiates multiplication soundness and
+  completeness with two 2-bit limbs, q=13, p=127 and auxiliary modulus 2.
+- The last full strict check passed for 32 root theories and 26 regression
+  files, including every expected proof failure. The supplied EasyCrypt
+  standard library remains trusted.
+
+Automated provisioning/CI and larger or production instances are skipped
+for the current scope. Paper synchronization is deferred. Circuit wiring,
+gate counts and comparison with a production implementation are outside
+scope. See [the repair status record](FORMALIZATION_REPAIR_PLAN.md) for the
+completed work and precise validation limits.
+
 ## Toolchain and checks
 
 The validated versions are recorded in [toolchain.json](toolchain.json).
@@ -19,19 +41,25 @@ nested comments. Standard-library proofs are trusted as supplied rather
 than rechecked. Python 3 and Bash are needed for the check scripts.
 
 The toolchain manifest records tested versions; automated environment
-provisioning and CI integration remain to be added. The original upstream
-requirements were EasyCrypt a214a56, Jasmin 2023.06.1, Alt-Ergo >= 2.5.1,
+provisioning and CI integration are skipped for this scope. The original
+upstream requirements were EasyCrypt a214a56, Jasmin 2023.06.1, Alt-Ergo >= 2.5.1,
 CVC4 >= 1.8 and Z3 >= 4.8.7. The current scripts target the newer recorded
 EasyCrypt revision.
 
 ## Contents
-* `FFA_soundness.ec` the proof that whenever the system of constraints is satisfied then we have correctly multipled foreign field elements.
+
+* `FFA_soundness.ec` the proof that whenever the system of constraints is satisfied then we have correctly multiplied foreign field elements.
 * `FFA_completeness.ec` the converse of the above.
 * `FFA.ec` some common definitions.
 * `MultiScalarMul_Abstract_Setup.ec` abstract setup for MSM algorithms.
 * `MultiScalarMul_Abstract.ec` correctness of unoptimized (perfect) MSM algorithm.
 * `MultiScalarMul_Abstract_Completeness.ec` statistical completeness of optimized MSM.
 * `MultiScalarMul_Abstract_Soundness.ec` perfect soundness of optimized MSM.
+* `MSM_FullCoordinates.ec` full coordinate-witness soundness and completeness.
+* `MSM_WindowOrder.ec` verified little-endian interfaces to the big-endian core.
+* `SmallCurve.ec`, `SmallMSM.ec` and `SmallFFA.ec` concrete instances.
+* `IntegerLCM.ec` concrete LCM construction and divisibility proofs.
+* `MSM_Instance.ec` and `FFA_Instance.ec` generated packages for specialization.
 
 
 ## Local MSM axiom repair
@@ -57,12 +85,12 @@ it is not merely a change to a proof script.
 The loop equivalence proof now maintains nonidentity of the accumulator
 on accepted executions and proves the new doubling premise at each
 iteration. The two admitted group-iteration lemmas and the admitted
-divisibility lemma also have proofs. There are no active admissions in the
-six local files checked below. The core scalar-window comment now says
-**big-endian**, matching its specification and forward loop. The little-endian interface described below
+divisibility lemma also have proofs. The full local proof-policy check finds
+no active admissions or weak/report proof modes. The core scalar-window comment says **big-endian**, matching
+its specification and forward loop. The little-endian interface below
 provides a verified index reversal for the paper and Lean convention.
 
-### Reproducing the checks
+### Historical MSM repair checks
 
 The MSM repair was checked with:
 
@@ -86,9 +114,11 @@ EASYCRYPT=/path/to/easycrypt ./scripts/check-msm.sh -why3 /path/to/why3.conf
 ```
 
 Omit `-why3` when the default configuration already registers both solvers.
-The script checks every local file in the MSM dependency chain as a
-top-level file, plus acceptance regression lemmas. It then requires both
-deliberately invalid theorems in `tests/*MustFail.ec` to be rejected.
+This narrower script checks the six theories in the original MSM repair
+and tests/MSM_Regression.ec. It also requires tests/LegacyAxiomMustFail.ec
+and tests/NegativeIterationsMustFail.ec to be rejected. It does not cover
+the later coordinate proofs or concrete instances; use scripts/check-local.sh
+above for the complete current artifact.
 In temporary copies restoring the corresponding original declaration,
 each negative test successfully proved `false`; both fail after repair.
 These tests detect the two known contradictions, not arbitrary
@@ -99,35 +129,15 @@ library, failed in that library's `List.ec` at line 2687 before reaching
 the project. The local check script therefore uses the standard library
 as supplied. The checker warns about the OCaml 5.2.1 garbage collector.
 
-### Remaining scope
-
-- The generic MSM theories retain explicit assumptions. SmallCurve.ec
-  realizes all of their group, scalar, sampler and parameter axioms and
-  proves the coordinate representation model for a seven-point curve.
-  Production-curve instantiation remains separate work.
-- Table construction and the complete MSM coordinate trace are verified,
-  including offset calculations, window processing and final correction.
-  These mathematical relations do not instantiate circuit wiring.
-- The full rejection bound is
-  (1+l*(2^w+1)+2*T*l)/group_cardinality. The small instance proves a
-  numerical bound of 6/7 and checks exact probabilities for both scalar
-  values. Invalid scalar windows force rejection.
-- SmallFFA.ec instantiates the FFA soundness and completeness proofs with
-  concrete bit/limb representations and checked numerical bounds. The LCM
-  assumptions have been replaced by proved integer-arithmetic lemmas.
-  Production parameter instances and pinned CI provisioning remain open.
-  Paper work is deferred; the earlier local source correction is described below.
-
-## Audit cleanup and next steps
+## Audit cleanup
 
 Unused `WhileApprox.eca`, `JWord_array.ec` and the processor-specific portion
 of `JWord.ec` have been removed. The generic word theory and limb arithmetic
 needed by FFA remain. This removes an unsound admitted loop bound and an
 incorrect SIMD comparison from code outside the FFA/MSM dependency paths.
 
-See [the formalization repair plan](FORMALIZATION_REPAIR_PLAN.md) for the
-validation status and concrete steps covering distribution normalization,
-table construction, rejection bounds and concrete curve/field instances.
+See [the repair status record](FORMALIZATION_REPAIR_PLAN.md) for the completed
+sampler, table-construction, rejection-bound and concrete-instance work.
 
 ## Sampler normalization repair
 
@@ -146,10 +156,12 @@ Pr[MultiScalarMul(UniformU).run(P,s) returns an accepted result]
   >= 1 - (p2 P s + 2*T*l*p1).
 ```
 
-This is a conditional abstract guarantee. Normalization still needs to be
-discharged by a concrete finite sampler; `p2` remains unbounded. This
-completeness theorem still concerns the original ideal-table program. It
-does not yet give a small numerical failure bound for the implemented circuit.
+This theorem concerns the original ideal-table program and retains the
+symbolic p2 term. MSM_RejectionBound.ec supplies the explicit bound for
+the constructed-table program, and MSM_FullCoordinates.ec transfers it to
+full coordinate-witness existence. SmallCurve.ec discharges normalization
+with a concrete finite uniform sampler; SmallMSM.ec specializes the bound
+to 6/7. These results concern the mathematical model.
 
 ## Guarded table construction and composition
 
@@ -182,10 +194,10 @@ rejected, and admissible rows are constructed correctly. The claim
 that x(P) != x(V) alone guarantees successful construction is an
 expected-failure regression.
 
-Remaining limits: scalar multiplication for V and the initial offset,
-doubling, final correction and coordinate properties still use the abstract
-group interface. The guarded builder models safe witness construction.
-As proved below,
+This program uses the abstract group interface for offsets, doubling and
+final correction. The full coordinate-witness proofs below supply the
+operation traces, and SmallCurve.ec realizes the representation model.
+The guarded builder models safe witness construction. As proved below,
 accepting table constraints already imply its per-step guards, so these
 guards need not become additional circuit assertions. The rejection bound
 below covers `SampledConstructedMSM`, including
@@ -234,9 +246,10 @@ that multiplication by zero has a probability-one identity event and
 cannot be invertible on a nontrivial group. A claim that zero is
 invertible must be rejected by the checker.
 
-This is a symbolic bound under explicit assumptions. It is useful when
-1 + l*(2^w+1) + 2*T*l is small relative to q; no particular curve or parameter
-set is instantiated here.
+The generic bound retains explicit assumptions and is useful when
+1 + l*(2^w+1) + 2*T*l is small relative to q. SmallMSM.ec specializes the
+full-coordinate version to 6/7. Its regressions also compute exact rejection
+masses of 3/7 and 4/7 for the two scalar values at the chosen base.
 
 ## Table constraints imply the per-step guards
 
@@ -270,8 +283,9 @@ negation and agreement with the abstract x-coordinate comparison) and,
 for result correctness, `safe_constraint_correct`: correctness of the
 coordinate equations when addition inputs are safe. The coordinate-witness
 extension below now derives that property from a more explicit affine
-representation model. A concrete curve instance remains open. Witnessed
-points in this group-level connection are represented by the abstract type R.
+representation model, realized by SmallCurve.ec. Witnessed points in this
+group-level connection are represented by the abstract type R; the later
+full-coordinate relation uses raw coordinate tuples.
 
 This corrects the earlier implication that extra per-step circuit checks
 were required. V=2P still refutes the claim that the initial check alone
@@ -330,9 +344,10 @@ and windows [1,2] give 6P without reversal and 9P with reversal. It also
 proves these differ for nonzero P under the existing inversion hypothesis
 with order>3, so the regression cannot be hidden by small-order equality.
 
-No Halo2/Rust implementation is present in this workspace. Its window
-extraction and traversal still need comparison with this explicit interface;
-these proof and paper edits make no claim to change that implementation.
+No Halo2/Rust implementation is present in this workspace. Comparison of
+its window extraction and traversal with this interface is outside the
+current scope; these proof and paper edits make no claim to change that
+implementation.
 
 ## Affine addition and coordinate-table completeness
 
@@ -376,8 +391,9 @@ No new global axioms or admissions are introduced. This completes the
 coordinate-addition arithmetic and table-witness connection at the explicit
 representation-model boundary. The following sections supply doubling,
 complete addition, and composition through offset computations, the loop
-and final correction. Production-curve subgroup/representation instances remain open.
-The paper is deferred and was not modified for this step.
+and final correction. SmallCurve.ec discharges the representation model
+for the small instance. Larger instances are skipped for the current scope;
+paper synchronization is deferred.
 
 ## Doubling and complete coordinate addition
 
@@ -456,14 +472,15 @@ This is a mathematical constraint relation. Complete-operation branch
 selection is explicit logical case splitting; lookup indexing is a function
 application; l*U uses a repeated-addition witness schedule. These choices
 do not instantiate PLONK gates, prove a circuit cost, or assert a particular
-implementation of public-scalar multiplication. The small instance below discharges subgroup, coordinate, sampler and MSM
-parameter obligations. Production-curve/FFA parameter instances and pinned CI provisioning remain open. The supplied standard library remains trusted.
+implementation of public-scalar multiplication. The small instance below
+discharges subgroup, coordinate, sampler and MSM parameter obligations.
+The supplied standard library remains trusted.
 
 `tests/FullCoordinates.ec` constructs complete F_17 witness traces at
 w=T=l=1 for scalars one and zero, checks rejection of a width-three V=2P
 row, and shows why final correction cannot be omitted. The zero-scalar
-trace ends at infinity. The full local check includes these regressions and the concrete instances
-below, with no admissions or weak proof modes.
+trace ends at infinity. The full local check includes these regressions
+and the concrete instances below, with no admissions or weak proof modes.
 
 ## Small concrete MSM instance
 
@@ -525,7 +542,7 @@ original sources and regenerate the package rather than editing it by hand.
 
 ## Concrete integer LCM
 
-IntegerLCM.ec replaces the remaining abstract LCM operation with a fold
+IntegerLCM.ec replaces the former abstract LCM operation with a fold
 of the binary definition abs(a * (b / gcd(a,b))), using integer division.
 Bézout's identity and the standard library's proved gcd laws establish
 that this binary result divides x exactly when both inputs divide x.
@@ -550,8 +567,9 @@ tests/LCMRegression.ec checks empty, negative-length, signed, repeated,
 zero and noncoprime inputs. It also proves LCM(4,6,5)=60 and reconstructs
 equal integers in [0,60) from equal residues modulo 4, 6 and 5. Negative
 regressions reject replacing LCM(4,6) with 24 and asserting strict positivity
-when a modulus is zero. These examples exercise the LCM layer; the small FFA instance below also
-uses it to discharge both combined-modulus inequalities.
+when a modulus is zero. These examples exercise the LCM layer; the small
+FFA instance below also uses it to discharge both combined-modulus inequalities.
+
 ## Small concrete FFA instance
 
 SmallFFA.ec instantiates both original multiplication proofs with the following

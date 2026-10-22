@@ -1,373 +1,212 @@
-# Repair plan for the FFA and MSM formalization
-
-Status: 2026-10-22, following the axiom repair in commit c0ed96d.
-Small concrete MSM and FFA instances now discharge their project assumptions;
-the LCM layer is proved. Production instances and pinned CI remain open.
-The sections below retain the staged implementation history.
-Cleanup, a full local proof check and the abstract sampler-normalization
-repair are implemented. Guarded table construction and its composition
-with MSM are now checked at the abstract group level. Environment
-provisioning/CI and concrete instantiations remain open. The constructed
-algorithm now has a checked symbolic rejection bound. Circuit instantiation
-is outside the requested scope.
-An equation-level table proof now shows that accepting witnesses imply
-the per-step guards, using only the paper's initial unequal-x check.
-The original paper PDF and Lean proofs have not been changed. The local
-extracted LaTeX copy now has the endianness correction described below.
-
-## Cleanup completed
-
-- Removed unused WhileApprox.eca, including its unsound admitted loop bound.
-- Reduced JWord.ec to the generic BitWord theory used by JBigNum. Removed
-  unused processor flags, ALU, fixed-width words, SIMD and instruction models,
-  including the incorrect signed comparison implementation.
-- Removed unused JWord_array.ec and its import, a commented-out admitted
-  iteration lemma, stale Jasmin import comments and two debug print commands.
-- Retained the limb arithmetic, abstract MSM assumptions and contradiction
-  regression tests: these support the actual proofs and must be addressed
-  explicitly rather than deleted to make the audit look clean.
-
-The historical audit runner in ../formalization-audit/run_audit.py now reads
-its inputs from c0ed96d by default, so probes for deleted code remain
-reproducible without bringing that code back into the live formalization.
-
-## 1. Establish a reproducible full local build
-
-The tested toolchain is recorded in toolchain.json. Compatibility repairs
-are now in the checkout: obsolete nosmt annotations are removed, FFA
-sum-bound proof binders are updated, and nonlinear arithmetic steps are
-made explicit. In particular, lex_lt uses multiplication monotonicity;
-lex_le and lex_eq follow from the comparison lemmas. No theorem statements
-were weakened and no axioms were added to repair these proof failures.
-
-scripts/check-local.sh checks every retained local theory as a top-level
-file, plus all positive regressions and expected failures. This closes the
-previous JBigNum failure and the isolated-copy limitation. The proof-policy
-guard rejects explicit admissions and weak/report modes while ignoring
-nested comments. A prior full standard-library recheck stopped in
-EasyCrypt's List.ec; the script trusts the supplied standard library.
-
-Still open: provide automated environment provisioning and integrate the
-command into CI. toolchain.json records tested versions but is not a
-transitive dependency lock or an installer. The tested OCaml 5.2.1 emits
-a GC-regression warning; a move to a newer OCaml needs its own validation.
-
-Acceptance: the local command now checks the complete project proof chain.
-The remaining build work is a pinned, provisioned CI environment running
-that same command, including the admission guard and negative regressions.
-
-## 2. Normalize the random sampler and connect the theorems
-
-In EasyCrypt a214a56, theories/distributions/Distr.ec defines:
-
-- is_full d: every value belongs to the support of d.
-- is_uniform d: any two support values have equal point mass.
-- is_lossless d: weight d = 1.
-
-The first two predicates do not imply the third. A distribution assigning
-mass 1/2 to the sole value of unit is full and uniform with weight 1/2.
-../formalization-audit/PartialUniform.ec checks this example on the newer
-toolchain; the predicate definitions were also inspected in the original
-pinned revision. Scaling a normalized finite uniform distribution by 1/2
-illustrates the same distinction on a larger finite type.
-
-Implemented: r_distr_ll explicitly requires losslessness in the abstract
-interface. UniformU_lossless proves the sampler terminates;
-MSM_uniform_soundness instantiates the existing soundness theorem with it.
-MSM_uniform_lossless proves termination of the sampled MSM run, and
-MSM_uniform_success complements the existing failure bound to give a
-success lower bound for that same program and inputs.
-
-Regression coverage now includes tests/DistributionSemantics.ec (full,
-uniform, half mass, not lossless) and tests/NonLosslessSamplerMustFail.ec
-(the half-mass sampler cannot satisfy a losslessness obligation). The
-complete local check includes both.
-
-Still open in step 5: discharge r_distr_ll using a concrete finite uniform
-sampler. The new abstract success bound still contains p2; it does not
-establish a small failure probability or verify concrete table construction.
-
-## 3. Verify table construction before finalizing rejection bounds
-
-Implemented in MSM_TableConstruction.ec: a guarded imperative row builder
-and a complete multirow builder. Each incomplete addition is preceded by
-nonidentity and unequal-x checks. Zero base points are explicitly rejected.
-The probability-one specifications prove termination, exact acceptance
-according to row_safe/table_safe, and correctness of all returned table
-entries on acceptance. row_admissible_safe proves the corrected sufficient
-exclusion set V != jP for -1 <= j <= b-1, with P nonzero and b positive.
-
-Implemented in MSM_WithTable.ec: ConstructedMSM.run consumes the returned
-table, rejecting failed construction and invalid windows. The optimized
-loop is equivalent to the original ideal-table loop when the builder
-succeeds. Table safety reduces its initial admissibility check to l*U != O;
-the new execution path does not consult perfect_table_pure or u_check.
-Both fixed-U and sampled executions have checked probability-one soundness
-statements, including termination. The legacy ideal-table entry points
-remain available for the existing completeness proof.
-
-Regressions check rejection for V = 2P and zero P, acceptance and exact row
-contents under row_admissible, and expected rejection of the old weak
-sufficient-condition claim. scripts/check-local.sh includes these files.
-
-Implemented in MSM_TableConstraints.ec: the modular slope equations rule
-out output P and input -P. Consequently, a repeated-base table satisfying
-the existing equations and the single initial x(P) != x(V) check satisfies
-row_safe; its entries match the mathematical table and can be passed
-directly to the verified MSM loop. No extra per-step circuit guards are
-needed for this soundness argument. The initial proof uses explicit coordinate laws and a safe-input
-coordinate-addition correctness hypothesis, with no new global axioms.
-The coordinate-witness extension below now derives this hypothesis from
-an affine representation model and proves the reverse witness-existence
-direction for row widths >=2. No concrete curve is instantiated.
-
-The guarded builder remains a witness-construction model. Its rejection
-condition is now covered by step 4. Coordinate operations and complete
-operations for offsets/doubling/correction retain their stated assumptions.
-Circuit instantiation is outside the requested scope.
-
-## 4. Prove a useful completeness bound
-
-Implemented in MSM_RejectionBound.ec:
-
-- A finite-interval union bound with no independence premise.
-- Exact point-event mass under invertible scalar multiplication.
-- Guarded table rejection at most l*(2^w+1)*p1 for nonzero base points.
-- Initialization rejection at most p1.
-- A shared main-loop bound 2*T*l*p1, extracted from the existing completeness
-  proof as MSM_loop_failure_bound without changing its assumptions.
-- A probability-one flag specification and construction_event_equiv linking
-  the mathematical acceptance event to SampledConstructedMSM.run.
-- The actual program rejection bound (1+l*(2^w+1)+2*T*l)*p1 and its success
-  lower bound, under valid windows and explicit invertibility hypotheses.
-- A finite, unique enumeration covering all of R, positive group cardinality
-  q, and p1=1/q derived from the existing distribution assumptions. Thus the
-  final bound is (1+l*(2^w+1)+2*T*l)/q, with no unresolved p2 term.
-
-The main-loop parameter assumptions remain completeness_constraints; the
-new scalar-invertibility premises can be discharged using invertmeP when
-0 < abs(n) < order. The cardinality q is not assumed equal to that separate
-order parameter. The theorem is conditional on the existing algebraic and
-coordinate axioms and on the full, uniform, normalized sampler.
-
-Regressions show why nonzero bases, valid windows and invertibility matter:
-zero bases and invalid encodings reject with probability one, and the zero
-scalar is not invertible on a nontrivial group. No new axioms or admissions
-were added for this bound.
-
-Remaining optional specialization: choose concrete parameters, establish
-the stated inequalities and invertibility conditions, and evaluate the
-bound numerically. The symbolic abstract rejection-bound task is complete;
-this does not require circuit instantiation.
-
-## 5. Discharge the concrete algebra and arithmetic assumptions
-
-Build a concrete elliptic-curve subgroup instance. Derive same_res and
-opt_never_id from the actual incomplete coordinate formulas; prove the
-coordinate-collision, scalar-inversion and nonzero-doubling properties.
-Handle the identity explicitly in the coordinate representation, since the
-current notxdiff axiom quantifies over it too. Establish on-curve and subgroup
-membership of inputs and outputs. A small abstract group example is useful
-for testing but does not establish this curve instance.
-
-For FFA, replace the abstract LCM/Chinese remainder assumptions with a
-concrete finite least-common-multiple construction and proved divisibility
-properties, or instantiate them from a checked arithmetic library. Instantiate
-all limb widths, field moduli, auxiliary moduli and range/product bounds.
-Show precisely which conclusions are modular equalities and which require
-canonical representatives.
-
-Circuit instantiation is outside the current scope. A concrete curve model
-would be separate work to discharge the abstract interfaces, rather than a
-prerequisite for the conditional MSM bound proved in step 4. Publish an
-explicit list of assumptions intentionally retained.
-
-## Paper synchronization
-
-After each step, update the formalization-status claims and theorem
-hypotheses in the paper. Describe the present artifact as conditional
-abstract MSM correctness,
-including the table-constraint soundness connection, plus range-bounded
-FFA constraint proofs. Explain that accepting table constraints imply
-the per-step guards; the initial check does not guarantee that every
-choice of random offset allows successful construction. Keep the external
-little-endian convention consistent with descending traversal and the
-verified EasyCrypt reversal interface. Explain separately which counterexamples
-exposed inconsistent assumptions, which exposed an unverified algorithm
-stage, and which were merely unused library defects.
-
-Suggested review units: build/CI; sampler normalization and instantiation;
-table builder; quantitative rejection bound; optional concrete curve and FFA
-parameters/CRT; final paper claims. Circuit composition is out of scope.
-
-## Window-order correction implemented
-
-The paper and Lean artifact use little-endian scalar windows. Preserve that
-interface and process indices in descending order. The local extracted
-LaTeX source now corrects Figure 4 and its surrounding prose, with the
-post-window invariant acc = l*U + sum_j sum_(r=i..T) 2^(w*(r-i))*s[j,r]*P[j].
-The reviewable changes are retained in paper/endianness.patch; the original
-PDF is unchanged.
-
-MSM_WindowOrder.ec implements little-endian adapters for fixed-offset,
-sampled, and supplied-table execution. A group-sum reindexing proof shows
-that reversing the input view gives the independent little-endian weighted
-sum. All soundness connections and the rejection/success bounds transfer.
-The established core still explicitly accepts big-endian windows.
-
-The new regression checks [1,2] in base 4 against both actual specifications
-and proves 6P != 9P under nontriviality/inversion premises. No new axioms
-are introduced. The remaining implementation check needs the Halo2 source,
-which is absent from this workspace; no production convention is inferred.
-
-## Execution status: coordinate witnesses
-
-Paper work is deferred at the user's request. This stage changes only the
-formalization, its regressions and repository documentation.
-
-Completed in AffineAddition.ec: prime-field slope existence, unique output
-coordinates for safe addition, curve closure without an output-membership
-premise, and bounded representative witnesses. These proofs use integer
-modular arithmetic and library inversion results, without group axioms.
-
-Completed in MSM_CoordinateWitnesses.ec: derive safe_constraint_correct
-from coordinate injectivity and the standard affine representation of the
-group law; construct row/table slopes in [0,m); prove table safety iff
-coordinate-table witnesses exist; transfer the table failure bound, and
-combine it with the existing abstract loop bound for little-endian inputs.
-The model obligation affine_group_model is explicit and uninstantiated;
-this has not silently discharged the concrete group/curve representation.
-
-Completed in the next stage (2026-10-22): `AffineDoubling.ec` proves
-bounded tangent witnesses, uniqueness under a nonzero tangent denominator,
-and curve closure. `AffineComplete.ec` supplies a complete coordinate
-relation with explicit infinity, identity/inverse/zero-y branches, bounded
-witness existence, unique output, and closure for on-curve inputs.
-`MSM_CompleteCoordinates.ec` connects this relation to abstract group
-addition under explicit canonical-coordinate and tangent-formula model
-obligations. These obligations remain uninstantiated; no group axioms or
-output-membership assumptions were added to the raw arithmetic proofs.
-The case-split relation is not a PLONK encoding or a circuit-cost claim.
-
-Next proof stage:
-
-1. Discharge concrete subgroup/coordinate, sampler and FFA CRT assumptions,
-   and check concrete parameter instances.
-2. Provision and pin the checker environment in CI.
-
-Validation adds actual numeric and boundary regressions, including a
-composite-modulus counterexample to uniqueness. No paper files are edited.
-
-The complete-coordinate stage adds numerical/boundary regressions and two
-expected proof failures for missing tangent-denominator and on-curve input
-premises. The full-trace extension below brings the local check to 26 theories and
-19 regression files.
-
-## Full coordinate-trace composition completed (2026-10-22)
-
-`MSM_CoordinateTrace.ec` proves raw-coordinate chain, doubling, inner-loop
-and outer-loop correspondence. `MSM_CoordinateTables.ec` proves that raw
-accepted table entries have the intended group encodings and imply table
-safety. Table rows still have only the initial unequal-x check.
-
-`MSM_FullCoordinates.ec` defines a full raw-coordinate relation, including
-complete offset calculations, all table and loop witnesses, and complete
-final correction. Accepted outputs coincide exactly with abstract
-construction acceptance and the encoded MSM result. The little-endian
-failure bound now concerns absence of these full witnesses; its event
-has exactly the sampled program's rejection probability. No intermediate
-output-group-membership premise or new global axiom was introduced.
-
-The representation model remains conditional and uninstantiated. Logical
-complete-operation branches and function-valued table lookups are not a
-PLONK/circuit instantiation. Computing l*U by repeated complete addition
-is a witness schedule, not an efficiency or gate-count claim. Paper work
-remains deferred.
-
-Regressions construct complete F_17 traces for scalar one (result P) and
-zero (result infinity), and reject the exceptional V=2P width-three row
-and an omitted final correction.
-
-## Small concrete instance completed (2026-10-22)
-
-SmallCurve.ec discharges every project axiom in a clone of the complete MSM
-proof chain: a seven-element group with coordinates on y^2=x^3+2x+1 over
-F_5, a full/uniform/lossless sampler, and w=T=l=1. It proves the coordinate
-laws and complete affine model, including all safe-addition and doubling
-cases. SmallMSM.ec applies the existing full-witness soundness, rejection
-bound (6/7), and sampled-program correspondence without representation
-premises. Numerical regressions establish full witnesses for zero and one,
-exact rejection masses 3/7 and 4/7, and wrong-output rejection.
-
-MSM_Instance.ec is a reproducible nested-theory package of the existing
-proof sources, needed to specialize their shared abstract types. The build
-checks both source freshness and the packaged proofs. All MSM axioms are
-realized in the concrete clone. The later LCM repair below removes the
-need to exclude FFA LCM declarations from this package.
-
-Remaining: production-curve instances if desired, concrete FFA
-parameters, and pinned CI provisioning. Paper and circuit work remain
-deferred. The small instance uses the existing trusted standard library.
-
-## LCM assumptions discharged (2026-10-22)
-
-IntegerLCM.ec defines a binary gcd-based LCM and folds it over the indexed
-moduli. It proves the full divisibility equivalence for arbitrary integers,
-without adding assumptions about positive lengths, positive moduli or
-pairwise coprimality. Empty/negative lengths give 1; zero moduli give 0;
-signed moduli are normalized by absolute value. Leastness, positivity for
-nonzero families, and equal-residue congruence are also proved.
-
-AuxResults.ec now defines LCM concretely and proves LCM_pos and
-chinese_reminder_theorem with exactly their previous statements. FFA
-callers keep the existing interface. The latter name is historical: its
-statement is a divisibility property, not a general CRT existence theorem.
-
-The MSM package generator now preserves every declaration, including these
-proved LCM definitions and lemmas. Its special exclusion block was removed.
-Regressions check noncoprime/signed/repeated/zero and empty-family cases,
-plus bounded reconstruction with moduli 4,6,5. Two negative regressions
-reject the product shortcut and unjustified strict positivity.
-
-The remaining FFA task is a concrete parameter instance satisfying the
-soundness/completeness hypotheses. Pinned CI provisioning remains open;
-paper work stays deferred.
-
-## Small concrete FFA instance completed (2026-10-22)
-
-SmallFFA.ec instantiates the existing FFA soundness and completeness proofs
-with two 2-bit limbs (B=4), foreign modulus 13, native modulus 127, one
-auxiliary modulus 2, and witness widths t1=4, t2=5. Boolean pairs implement
-words; pairs implement limb arrays. All cloned axioms are discharged,
-including the inherited definition equations. Both moduli are proved prime.
+# Repair status for the FFA and MSM formalization
+
+Status: 2026-10-22, following the concrete FFA instance in commit ef79cf5.
+The agreed formalization work is complete through small concrete MSM and
+FFA instances. This file records the completed repairs, validation limits
+and current scope; detailed theorem descriptions are in [README.md](README.md).
+
+## Current scope
+
+| Area | Status |
+|---|---|
+| Axiom repairs and unused-code cleanup | Complete |
+| Full strict local proof checks | Complete; 58 files validated |
+| Sampler normalization | Explicit in the generic interface; realized in the small MSM instance |
+| Table construction and implied table guards | Complete |
+| Quantitative rejection bound and full coordinate witnesses | Complete |
+| Little-endian MSM interface | Complete |
+| Concrete curve, sampler and MSM parameters | Complete for the seven-point instance over F_5 |
+| Integer LCM and divisibility properties | Complete |
+| Concrete FFA representation and parameters | Complete for two 2-bit limbs, q=13, p=127, M(0)=2 |
+| Automated provisioning and CI | Skipped for the current scope |
+| Larger or production curve/FFA instances | Skipped for the current scope |
+| Paper synchronization | Deferred |
+| Circuit wiring, gate counts and production implementation comparison | Outside scope |
+
+The generic interfaces retain explicit assumptions. The small instances
+discharge their project algebra, representation, distribution and numerical
+obligations. They establish concrete mathematical models, with the supplied
+EasyCrypt standard library still trusted. They do not establish production
+parameters or a correspondence with an implementation absent from this repository.
+
+## Completed repairs
+
+### Axioms and unused code
+
+The repair began against upstream commit
+08504b2d13f40bd219be13e8b3522e14bae595b4. The two known contradictions were
+removed: no_order_two_elems now excludes the identity, and iteri_ub3 now
+requires a nonnegative iteration count. The former admitted iteration and
+divisibility lemmas are proved. Acceptance uses a defined, bounded u_check.
+
+Unused WhileApprox.eca and JWord_array.ec were removed. JWord.ec retains
+the generic word theory needed by FFA; unrelated processor, SIMD and
+instruction models were removed. This cleanup removed an admitted loop
+bound and an incorrect signed comparison outside the retained proof paths.
+
+The historical audit runner in the sibling formalization-audit directory
+uses commit c0ed96d by default so probes of deleted code remain reproducible.
+That audit directory is a workspace artifact, not part of this repository.
+LegacyAxiomMustFail.ec and NegativeIterationsMustFail.ec check the two known
+contradictions. These regressions do not detect every possible inconsistency.
+
+### Local checking and sampler normalization
+
+Compatibility repairs allow every retained local theory to be checked
+independently with the versions recorded in [toolchain.json](toolchain.json).
+No theorem statement was weakened or axiom added to repair those build failures.
+The full command is [documented in the README](README.md#toolchain-and-checks).
+
+The abstract random-point interface explicitly requires is_lossless r_distr.
+Full support and uniform point masses alone do not establish normalization:
+DistributionSemantics.ec proves a full, uniform half-mass example, and
+NonLosslessSamplerMustFail.ec rejects its losslessness claim.
+UniformU_lossless, MSM_uniform_lossless and MSM_uniform_success connect
+normalization to the original sampled program's termination and success.
+SmallCurve.ec realizes the distribution obligations with the uniform
+sampler on seven residues. The original p2 term is bounded in the
+constructed-program results described next.
+
+### Table construction and rejection bound
+
+MSM_TableConstruction.ec verifies guarded construction of every table row,
+including termination, exact acceptance and agreement with perfect_table_pure.
+MSM_WithTable.ec composes the builder with the optimized MSM loop.
+For nonzero P, V != jP for -1 <= j <= b-1 is a sufficient condition for
+constructing a width-b row. The initial unequal-x check alone does not
+guarantee that every offset permits successful construction.
+
+MSM_TableConstraints.ec proves that accepting repeated-base table equations
+imply all per-step incomplete-addition guards, using the paper's single
+initial unequal-x check. Extra per-step table circuit guards are unnecessary
+for this soundness argument. The guarded builder models witness construction.
+The main loop retains its own guards because its addends vary.
+
+MSM_RejectionBound.ec bounds actual sampled rejection by
+(1+l*(2^w+1)+2*T*l)/group_cardinality. The proof combines initialization,
+table-construction and loop failure events without assuming independence.
+It requires nonzero bases, valid windows and the stated scalar-invertibility
+and parameter hypotheses. Group cardinality is derived from the normalized
+uniform distribution; it is not assumed equal to the abstract order parameter.
+SmallMSM.ec specializes the full-coordinate bound to 6/7. Regressions compute
+exact rejection masses of 3/7 and 4/7 for the two scalar values at the chosen base.
+
+### Coordinate witnesses and window order
+
+AffineAddition.ec, AffineDoubling.ec and AffineComplete.ec prove the modular
+coordinate arithmetic, including witness existence, uniqueness under the
+required denominator premises, curve closure and explicit identity handling.
+The complete relation uses logical case splitting and canonical outputs.
+
+MSM_CoordinateWitnesses.ec and MSM_CompleteCoordinates.ec connect this
+arithmetic to explicit affine representation models. MSM_CoordinateTrace.ec,
+MSM_CoordinateTables.ec and MSM_FullCoordinates.ec compose raw-coordinate
+witnesses through offset calculations, table construction, all window
+operations and final correction. No intermediate output-group-membership
+premise is assumed. Full accepting witnesses agree with the encoded MSM
+result, and their absence has the same probability as sampled-program rejection.
+SmallCurve.ec realizes the coordinate laws and complete affine model.
+
+MSM_WindowOrder.ec exposes little-endian entry points by reversing the
+window index view before calling the existing big-endian core. A reindexing
+proof connects the resulting computation to the independent little-endian
+weighted sum. Soundness and completeness bounds transfer to these entry points.
+WindowOrder.ec checks that base-4 windows [1,2] give 9P with reversal and
+6P without it, and proves these differ under the stated nontriviality premises.
+
+### Small MSM instance
+
+SmallCurve.ec realizes every project axiom in the packaged MSM theory with
+a seven-element group represented on y^2=x^3+2x+1 over F_5. Points are
+represented internally by discrete logarithms in Z/7Z. Checked coordinate
+cases establish the affine representation, including safe addition,
+doubling and negation. Sampling is uniform on the seven residues and w=T=l=1.
+
+SmallMSM.ec applies the full-coordinate soundness, rejection bound and
+sampled-program correspondence without remaining representation premises.
+SmallCurveInstance.ec checks complete witnesses for scalars zero and one,
+exact rejection probabilities and rejection of a wrong output. The numerical
+upper bound is 6/7; it is distinct from the exact rejection probabilities.
+
+MSM_Instance.ec packages the existing sources as nested theories so their
+shared types and parameters can be specialized together. The generator
+preserves all declarations and proof bodies, adjusting imports and two
+root-qualified references. No LCM declarations are excluded.
+
+### LCM and small FFA instance
+
+IntegerLCM.ec defines a gcd-based binary LCM and folds it over the indexed
+moduli. It proves divisibility and equal-residue equivalences without
+coprimality assumptions. Empty or negative lengths give 1, zero moduli give
+0, and signed moduli are normalized by absolute value. Leastness and
+positivity for nonzero families are also proved.
+
+AuxResults.ec defines LCM concretely and proves LCM_pos and
+chinese_reminder_theorem with their previous statements. The latter name
+is historical: it denotes an LCM divisibility equivalence, not existence
+of a solution for arbitrary prescribed residues. Regressions cover empty,
+signed, repeated, zero and noncoprime families and bounded reconstruction.
+
+SmallFFA.ec specializes the original multiplication soundness and
+completeness proofs with B=4, two limbs, q=13, p=127, M(0)=2, t1=4 and t2=5.
+Boolean pairs implement words and pairs implement limb arrays. All cloned
+representation obligations and inherited definition equations are proved;
+both field moduli are proved prime.
 
 The checked values are K_min=-1, K_max=8, L_min=-10, L_max=8,
-AuxLB=-64 and AuxUB=37. The concrete LCM is 254, exceeding the two required
-bounds 210 and 121. concrete_iff proves that accepting bounded witnesses
-exist exactly when the encoded multiplication is correct modulo 13, with
-no remaining representation or numerical-parameter premises. Every foreign
-residue is representable; canonical_output identifies the integer output
-when it is additionally restricted to [0,13).
+AuxLB=-64 and AuxUB=37. LCM(2,127)=254 exceeds the two required bounds
+210 and 121. concrete_iff proves that bounded accepting witnesses exist
+exactly when the encoded multiplication is correct modulo 13. Every foreign
+residue is representable. canonical_output additionally requires an output
+in [0,13) to identify it with the canonical modular product.
 
-FFA_Instance.ec is a generated nested-theory package preserving the three
-original FFA theories and proofs. scripts/package-ffa.py adjusts their
-imports, and the full checker checks freshness and each packaged proof.
-No original FFA theorem statement or proof body is changed.
+SmallFFARegression.ec checks explicit witnesses, zero, maximal limbs,
+noncanonical representatives, all residue pairs and limb order. It also
+shows that 1*3=0 passes the native congruence with u=11 and both congruences
+with v=69, which violates the auxiliary witness bound. Every bounded witness
+for that wrong product is rejected. An expected-failure regression prevents
+it being proved acceptable in the concrete model.
 
-Regressions cover explicit multiplication witnesses, zero and maximal limbs,
-noncanonical representatives, completeness for all residue pairs, limb order,
-and rejection of every bounded witness for 1*3=0. The latter passes the
-native congruence with u=11 and both congruences with unbounded v=69;
-these examples explain the auxiliary equation and witness range requirement.
-An expected-failure regression prevents the wrong product being proved
-acceptable in the concrete model.
+FFA_Instance.ec packages the three existing FFA theories, preserving their
+statements and proof bodies while adjusting imports. The small instance
+has q<p; larger foreign-modulus examples and production parameters are
+skipped for the current scope.
 
-This is a small q<p instance, not production parameters or a demonstration
-with a larger foreign modulus. The remaining planned infrastructure task
-is pinned CI provisioning. Production curve/FFA instances are optional
-further work; paper work is deferred and circuit instantiation is out of scope.
+## Validation and maintenance
 
-Validation: the full strict local check passes for 32 root theories and
-26 regression files (58 files total), including every expected failure.
-Generated-source freshness and the admission/weak-mode guard also pass.
-The supplied standard library remains trusted as in earlier stages.
+The last full strict check passed for 32 root theories and 26 regression
+files (58 total), including 14 expected failures. scripts/check-local.sh
+checks each local source independently, because ordinary imports do not
+recheck its proofs. It also checks generated-source freshness and rejects
+admissions and weak/report proof modes, accounting for nested comments.
+
+After changing the original proof sources, regenerate the relevant package
+with scripts/package-msm.py or scripts/package-ffa.py and run the full local
+checker. Edit the original sources rather than the generated packages.
+The older scripts/check-msm.sh covers only the initial repair subset.
+
+The toolchain manifest records tested versions; it is not an installer or
+a transitive dependency lock. Automated provisioning/CI is skipped for
+this scope. OCaml 5.2.1 emits a GC-regression warning. A prior attempt to
+recheck the supplied standard library stopped in List.ec before reaching
+the project, so the local validation trusts that library.
+
+## Deferred paper synchronization
+
+Paper work remains deferred. The original PDF and Lean proofs have not
+been changed. The local extracted LaTeX copy has an earlier window-order
+correction, retained in paper/endianness.patch; the PDF has not been rebuilt.
+The extracted source contains unrelated transcription artifacts and is not
+asserted to be the original publication source.
+
+When paper work resumes, align its claims and hypotheses with the current
+artifact: generic conditional theorems plus the small concrete instances,
+the full-coordinate rejection bound, implied table guards, and little-endian
+windows processed in descending order. Distinguish contradictory assumptions,
+algorithm-stage gaps and unused-library defects. The LCM result is a
+proved divisibility equivalence, and the FFA output guarantee is modular
+unless a canonical-output range is required.
+
+No Halo2/Rust implementation is present in the workspace. Comparing its
+window convention or circuit behavior with these mathematical interfaces
+is outside the current scope. The historical release/tag remains unchanged.
