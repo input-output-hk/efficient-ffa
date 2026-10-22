@@ -1,6 +1,9 @@
 # Repair plan for the FFA and MSM formalization
 
-Status: 2026-10-21, following the axiom repair in commit c0ed96d.
+Status: 2026-10-22, following the axiom repair in commit c0ed96d.
+Small concrete MSM and FFA instances now discharge their project assumptions;
+the LCM layer is proved. Production instances and pinned CI remain open.
+The sections below retain the staged implementation history.
 Cleanup, a full local proof check and the abstract sampler-normalization
 repair are implemented. Guarded table construction and its composition
 with MSM are now checked at the abstract group level. Environment
@@ -329,3 +332,42 @@ reject the product shortcut and unjustified strict positivity.
 The remaining FFA task is a concrete parameter instance satisfying the
 soundness/completeness hypotheses. Pinned CI provisioning remains open;
 paper work stays deferred.
+
+## Small concrete FFA instance completed (2026-10-22)
+
+SmallFFA.ec instantiates the existing FFA soundness and completeness proofs
+with two 2-bit limbs (B=4), foreign modulus 13, native modulus 127, one
+auxiliary modulus 2, and witness widths t1=4, t2=5. Boolean pairs implement
+words; pairs implement limb arrays. All cloned axioms are discharged,
+including the inherited definition equations. Both moduli are proved prime.
+
+The checked values are K_min=-1, K_max=8, L_min=-10, L_max=8,
+AuxLB=-64 and AuxUB=37. The concrete LCM is 254, exceeding the two required
+bounds 210 and 121. concrete_iff proves that accepting bounded witnesses
+exist exactly when the encoded multiplication is correct modulo 13, with
+no remaining representation or numerical-parameter premises. Every foreign
+residue is representable; canonical_output identifies the integer output
+when it is additionally restricted to [0,13).
+
+FFA_Instance.ec is a generated nested-theory package preserving the three
+original FFA theories and proofs. scripts/package-ffa.py adjusts their
+imports, and the full checker checks freshness and each packaged proof.
+No original FFA theorem statement or proof body is changed.
+
+Regressions cover explicit multiplication witnesses, zero and maximal limbs,
+noncanonical representatives, completeness for all residue pairs, limb order,
+and rejection of every bounded witness for 1*3=0. The latter passes the
+native congruence with u=11 and both congruences with unbounded v=69;
+these examples explain the auxiliary equation and witness range requirement.
+An expected-failure regression prevents the wrong product being proved
+acceptable in the concrete model.
+
+This is a small q<p instance, not production parameters or a demonstration
+with a larger foreign modulus. The remaining planned infrastructure task
+is pinned CI provisioning. Production curve/FFA instances are optional
+further work; paper work is deferred and circuit instantiation is out of scope.
+
+Validation: the full strict local check passes for 32 root theories and
+26 regression files (58 files total), including every expected failure.
+Generated-source freshness and the admission/weak-mode guard also pass.
+The supplied standard library remains trusted as in earlier stages.

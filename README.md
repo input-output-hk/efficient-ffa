@@ -12,7 +12,7 @@ Install those tools, register Alt-Ergo and Z3 with Why3, then run:
 EASYCRYPT=/path/to/easycrypt ./scripts/check-local.sh -why3 /path/to/why3.conf
 ```
 
-The script checks all 26 retained local theories independently, including
+The script checks every retained local theory independently, including
 all FFA dependencies, then the positive and negative regression files.
 It rejects explicit admissions and weak/report proof modes, accounting for
 nested comments. Standard-library proofs are trusted as supplied rather
@@ -112,10 +112,11 @@ as supplied. The checker warns about the OCaml 5.2.1 garbage collector.
   (1+l*(2^w+1)+2*T*l)/group_cardinality. The small instance proves a
   numerical bound of 6/7 and checks exact probabilities for both scalar
   values. Invalid scalar windows force rejection.
-- Retained local FFA proofs check under their stated assumptions. Concrete
-  FFA parameter instantiation and pinned CI provisioning remain open.
-  The LCM assumptions have been replaced by proved integer-arithmetic lemmas. Paper work is deferred; the earlier local source correction
-  is described below.
+- SmallFFA.ec instantiates the FFA soundness and completeness proofs with
+  concrete bit/limb representations and checked numerical bounds. The LCM
+  assumptions have been replaced by proved integer-arithmetic lemmas.
+  Production parameter instances and pinned CI provisioning remain open.
+  Paper work is deferred; the earlier local source correction is described below.
 
 ## Audit cleanup and next steps
 
@@ -456,14 +457,13 @@ selection is explicit logical case splitting; lookup indexing is a function
 application; l*U uses a repeated-addition witness schedule. These choices
 do not instantiate PLONK gates, prove a circuit cost, or assert a particular
 implementation of public-scalar multiplication. The small instance below discharges subgroup, coordinate, sampler and MSM
-parameter obligations. Production-curve instances, FFA parameter
-instances and pinned CI provisioning remain open. The supplied standard library remains trusted.
+parameter obligations. Production-curve/FFA parameter instances and pinned CI provisioning remain open. The supplied standard library remains trusted.
 
 `tests/FullCoordinates.ec` constructs complete F_17 witness traces at
 w=T=l=1 for scalars one and zero, checks rejection of a width-three V=2P
 row, and shows why final correction cannot be omitted. The zero-scalar
-trace ends at infinity. The current full local check covers 30 theories and 24 regression files,
-with no admissions or weak proof modes.
+trace ends at infinity. The full local check includes these regressions and the concrete instances
+below, with no admissions or weak proof modes.
 
 ## Small concrete MSM instance
 
@@ -550,5 +550,68 @@ tests/LCMRegression.ec checks empty, negative-length, signed, repeated,
 zero and noncoprime inputs. It also proves LCM(4,6,5)=60 and reconstructs
 equal integers in [0,60) from equal residues modulo 4, 6 and 5. Negative
 regressions reject replacing LCM(4,6) with 24 and asserting strict positivity
-when a modulus is zero. These examples exercise the LCM layer; a complete
-concrete FFA parameter instance remains separate work.
+when a modulus is zero. These examples exercise the LCM layer; the small FFA instance below also
+uses it to discharge both combined-modulus inequalities.
+## Small concrete FFA instance
+
+SmallFFA.ec instantiates both original multiplication proofs with the following
+parameters. Word values are pairs of booleans, and two-limb arrays are pairs
+of words; all cloned representation obligations and definition equations are
+proved. Both field moduli are proved prime.
+
+| Parameter | Value |
+|---|---|
+| Word width / radix | 2 bits / B=4 |
+| Number of limbs / represented integers | 2 / 0 through 15 |
+| Foreign modulus q / native modulus p | 13 / 127 |
+| Auxiliary moduli | one modulus, 2 |
+| Witness widths t1 / t2 | 4 / 5 |
+| K_min / K_max | -1 / 8 |
+| L_min / L_max | -10 / 8 |
+| Auxiliary lower / upper bounds | -64 / 37 |
+| LCM(2,127) | 254 |
+
+The witness bounds are 0 <= u < 16 and 0 <= v < 32. The auxiliary interval
+lies strictly inside (-127,127); the two global reconstruction bounds are
+210 < 254 and 121 < 254. All inequalities are discharged inside EasyCrypt.
+
+The acceptance predicate consists of these witness ranges and the existing
+native and auxiliary equations modulo 127. concrete_sound and
+concrete_complete apply the original proofs; concrete_iff combines them:
+
+~~~text
+(exists bounded u,v satisfying the constraints)
+  iff bn(x)*bn(y) mod 13 = bn(z) mod 13.
+~~~
+
+Every residue modulo 13 has a concrete limb encoding. The theorem covers
+all represented integers, including 13, 14 and 15, which are noncanonical
+foreign-field representatives. canonical_output adds bn(z)<13 to obtain
+integer equality with the canonical modular product. No canonical-input
+premise is needed for soundness.
+
+tests/SmallFFARegression.ec checks 7*8=4 modulo 13, zero, maximal limbs,
+noncanonical inputs and outputs, completeness for every residue pair, and
+the little-endian limb convention. It also proves that the wrong equation
+1*3=0 passes the native congruence with u=11: its left-hand side is -127.
+Adding v=69 makes the auxiliary left-hand side -127 too, but violates its
+range bound. With both bounds enforced, every witness for that wrong product
+is rejected. An expected-failure regression must fail to prove it acceptable.
+
+FFA_Instance.ec mechanically packages FFA.ec, FFA_soundness.ec and
+FFA_completeness.ec as nested theories so their shared parameters can be
+specialized together. The generator preserves all declarations and proof
+bodies, adjusting imports only:
+
+~~~sh
+python3 scripts/package-ffa.py
+~~~
+
+The full local checker rejects stale generated sources and checks the package,
+the concrete instance and its regressions independently. Edit the original
+proofs and regenerate the package rather than editing it by hand.
+
+This is a small mathematical instance, with q<p. It demonstrates consistency
+of the project assumptions and exercises the original FFA proof chain; it is
+not a production parameter selection, a large-foreign-modulus example, or a
+circuit implementation. The supplied EasyCrypt standard library remains trusted.

@@ -3,6 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 python3 scripts/package-msm.py --check
+python3 scripts/package-ffa.py --check
 python3 scripts/check-proof-policy.py
 checker="${EASYCRYPT:-easycrypt}"
 options=(compile -no-eco -I . -I tests -p Alt-Ergo -p Z3 -timeout 5 -pragmas Proofs:check)
