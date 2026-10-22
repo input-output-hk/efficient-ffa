@@ -112,10 +112,11 @@ out output P and input -P. Consequently, a repeated-base table satisfying
 the existing equations and the single initial x(P) != x(V) check satisfies
 row_safe; its entries match the mathematical table and can be passed
 directly to the verified MSM loop. No extra per-step circuit guards are
-needed for this soundness argument. The proof uses explicit coordinate
-laws and safe-input coordinate-addition correctness hypotheses, with no
-new global axioms. It does not instantiate a concrete curve or prove
-coordinate-witness existence from row_safe.
+needed for this soundness argument. The initial proof uses explicit coordinate laws and a safe-input
+coordinate-addition correctness hypothesis, with no new global axioms.
+The coordinate-witness extension below now derives this hypothesis from
+an affine representation model and proves the reverse witness-existence
+direction for row widths >=2. No concrete curve is instantiated.
 
 The guarded builder remains a witness-construction model. Its rejection
 condition is now covered by step 4. Coordinate operations and complete
@@ -215,3 +216,71 @@ The new regression checks [1,2] in base 4 against both actual specifications
 and proves 6P != 9P under nontriviality/inversion premises. No new axioms
 are introduced. The remaining implementation check needs the Halo2 source,
 which is absent from this workspace; no production convention is inferred.
+
+## Execution status: coordinate witnesses
+
+Paper work is deferred at the user's request. This stage changes only the
+formalization, its regressions and repository documentation.
+
+Completed in AffineAddition.ec: prime-field slope existence, unique output
+coordinates for safe addition, curve closure without an output-membership
+premise, and bounded representative witnesses. These proofs use integer
+modular arithmetic and library inversion results, without group axioms.
+
+Completed in MSM_CoordinateWitnesses.ec: derive safe_constraint_correct
+from coordinate injectivity and the standard affine representation of the
+group law; construct row/table slopes in [0,m); prove table safety iff
+coordinate-table witnesses exist; transfer the table failure bound, and
+combine it with the existing abstract loop bound for little-endian inputs.
+The model obligation affine_group_model is explicit and uninstantiated;
+this has not silently discharged the concrete group/curve representation.
+
+Completed in the next stage (2026-10-22): `AffineDoubling.ec` proves
+bounded tangent witnesses, uniqueness under a nonzero tangent denominator,
+and curve closure. `AffineComplete.ec` supplies a complete coordinate
+relation with explicit infinity, identity/inverse/zero-y branches, bounded
+witness existence, unique output, and closure for on-curve inputs.
+`MSM_CompleteCoordinates.ec` connects this relation to abstract group
+addition under explicit canonical-coordinate and tangent-formula model
+obligations. These obligations remain uninstantiated; no group axioms or
+output-membership assumptions were added to the raw arithmetic proofs.
+The case-split relation is not a PLONK encoding or a circuit-cost claim.
+
+Next proof stage:
+
+1. Discharge concrete subgroup/coordinate, sampler and FFA CRT assumptions,
+   and check concrete parameter instances.
+2. Provision and pin the checker environment in CI.
+
+Validation adds actual numeric and boundary regressions, including a
+composite-modulus counterexample to uniqueness. No paper files are edited.
+
+The complete-coordinate stage adds numerical/boundary regressions and two
+expected proof failures for missing tangent-denominator and on-curve input
+premises. The full-trace extension below brings the local check to 26 theories and
+19 regression files.
+
+## Full coordinate-trace composition completed (2026-10-22)
+
+`MSM_CoordinateTrace.ec` proves raw-coordinate chain, doubling, inner-loop
+and outer-loop correspondence. `MSM_CoordinateTables.ec` proves that raw
+accepted table entries have the intended group encodings and imply table
+safety. Table rows still have only the initial unequal-x check.
+
+`MSM_FullCoordinates.ec` defines a full raw-coordinate relation, including
+complete offset calculations, all table and loop witnesses, and complete
+final correction. Accepted outputs coincide exactly with abstract
+construction acceptance and the encoded MSM result. The little-endian
+failure bound now concerns absence of these full witnesses; its event
+has exactly the sampled program's rejection probability. No intermediate
+output-group-membership premise or new global axiom was introduced.
+
+The representation model remains conditional and uninstantiated. Logical
+complete-operation branches and function-valued table lookups are not a
+PLONK/circuit instantiation. Computing l*U by repeated complete addition
+is a witness schedule, not an efficiency or gate-count claim. Paper work
+remains deferred.
+
+Regressions construct complete F_17 traces for scalar one (result P) and
+zero (result infinity), and reject the exceptional V=2P width-three row
+and an omitted final correction.

@@ -12,7 +12,7 @@ Install those tools, register Alt-Ergo and Z3 with Why3, then run:
 EASYCRYPT=/path/to/easycrypt ./scripts/check-local.sh -why3 /path/to/why3.conf
 ```
 
-The script checks all 18 retained local theories independently, including
+The script checks all 26 retained local theories independently, including
 all FFA dependencies, then the positive and negative regression files.
 It rejects explicit admissions and weak/report proof modes, accounting for
 nested comments. Standard-library proofs are trusted as supplied rather
@@ -267,19 +267,22 @@ Figure 4's guards for the main MSM loop, whose addends vary.
 No new global axioms or admissions are added. The theorems explicitly
 require `coordinate_laws` (nonzero 2*y for nonidentity points, coordinate
 negation and agreement with the abstract x-coordinate comparison) and,
-for result correctness, `safe_constraint_correct`: the standard correctness
-of the coordinate equations when addition inputs are safe. These are
-interface obligations, not a concrete elliptic-curve or circuit instance.
-Witnessed points are represented by the existing abstract group type R.
+for result correctness, `safe_constraint_correct`: correctness of the
+coordinate equations when addition inputs are safe. The coordinate-witness
+extension below now derives that property from a more explicit affine
+representation model. A concrete curve instance remains open. Witnessed
+points in this group-level connection are represented by the abstract type R.
 
 This corrects the earlier implication that extra per-step circuit checks
 were required. V=2P still refutes the claim that the initial check alone
 guarantees successful construction, but the existing equations reject
 that exceptional choice. The paper should distinguish soundness of
 accepting constraints from statistical completeness under random offsets.
-The rejection bound above remains a theorem about the guarded sampled
-program; this new one-way soundness connection does not itself prove
-existence of coordinate witnesses for every safe execution.
+The original rejection bound above concerns the guarded sampled program.
+The coordinate-witness extension below now supplies the reverse connection
+for tables and transfers that part of completeness to actual witness
+existence. The full-coordinate extension below now supplies the remaining
+operation traces and transfers the complete rejection bound.
 
 Regressions check that the V=2P row has no accepting witnesses under the
 interface hypotheses, and that isolated addition equations can accept
@@ -330,3 +333,135 @@ with order>3, so the regression cannot be hidden by small-order equality.
 No Halo2/Rust implementation is present in this workspace. Its window
 extraction and traversal still need comparison with this explicit interface;
 these proof and paper edits make no claim to change that implementation.
+
+## Affine addition and coordinate-table completeness
+
+`AffineAddition.ec` is independent of the abstract group assumptions. With
+an explicit prime modulus and nonzero x-coordinate difference, it proves:
+
+- the modular inverse yields a slope satisfying the input slope equation;
+- the affine formulas produce witnesses for all three addition equations;
+- the equations uniquely determine slope and output coordinates modulo m;
+- on-curve inputs give on-curve outputs, without assuming output membership;
+- witnesses can be chosen in the canonical ranges 0 <= x,y,lambda < m.
+
+`MSM_CoordinateWitnesses.ec` connects this arithmetic to the group/table
+proofs. Its `affine_group_model` is an explicit representation obligation:
+nonidentity points have injective coordinate pairs modulo m, and safe group
+addition has the standard affine coordinates. This model is not yet
+instantiated for a concrete curve. It does not assume constraint soundness
+or witness existence. Under this model and the existing coordinate laws:
+
+- `safe_constraint_correct_from_model` derives the earlier correctness
+  hypothesis from the proved coordinate uniqueness result;
+- `safe_constraint_witness` constructs the slope for safe group additions;
+- `safe_row_has_witnesses` and `safe_table_has_witnesses` construct table
+  witnesses, with slopes in [0,m), without additional per-step guards;
+- `table_constraints_iff_safe` proves equivalence of abstract table safety
+  and existence of satisfying coordinate-table witnesses;
+- `table_witness_failure_bound` bounds the probability that such table
+  witnesses do not exist by l*(2^w+1)/group_cardinality;
+- `little_endian_table_witness_failure_bound` transfers the full previously
+  proved bound to the event combining coordinate-table witness existence
+  with the existing abstract initialization and loop acceptance conditions;
+- `modeled_little_endian_table_soundness` reuses the same representation
+  model instead of assuming the coordinate constraint correctness theorem.
+
+The row equivalence requires width >=2; the actual width 2^w satisfies this
+because w>0. A regression shows why a one-entry row is a genuine boundary.
+Other regressions check a concrete addition over F_17, nonuniqueness over a
+composite modulus, equal-input degeneracy, and inverse-pair rejection.
+
+No new global axioms or admissions are introduced. This completes the
+coordinate-addition arithmetic and table-witness connection at the explicit
+representation-model boundary. The following sections supply doubling,
+complete addition, and composition through offset computations, the loop
+and final correction. Concrete subgroup/representation instances remain open.
+The paper is deferred and was not modified for this step.
+
+## Doubling and complete coordinate addition
+
+`AffineDoubling.ec` proves bounded tangent-slope witnesses, uniqueness of
+slope/output modulo a prime, and curve closure. Existence and uniqueness
+require a nonzero denominator 2*y; curve closure follows from the tangent
+equations without that extra premise.
+
+`AffineComplete.ec` represents a point by an explicit infinity flag and
+two integer coordinates. Its complete constraint relation handles either
+identity input, unequal-x addition, inverse pairs, and equal-point doubling.
+It requires canonical output coordinates and encodes infinity as (true,0,0).
+For prime moduli and on-curve inputs, the file proves witness existence,
+unique output equal to the case-split affine formula, and output curve
+membership. In particular, a zero-y point doubles to infinity. These are
+arithmetic results independent of the abstract group axioms, not a proof
+that a nonsingular curve forms a group. The relation is a mathematical
+case split, not a claimed PLONK encoding or a constraint-count result.
+
+`MSM_CompleteCoordinates.ec` connects these raw coordinate tuples to the
+existing abstract group. Its explicit `complete_affine_model` extends the
+safe-addition representation model with canonical on-curve coordinates
+and the tangent formula for group doubling. Under that model and the
+existing coordinate laws, `complete_add_group` proves agreement with
+group addition. `complete_group_witness` gives bounded witnesses and
+`complete_group_sound` identifies any accepted raw output tuple with the
+encoded group sum, without assuming the output already represents a group
+element. The representation obligations are not yet instantiated.
+
+Regressions exercise F_17 doubling and addition, both identity branches,
+inverse-pair cancellation, zero-y doubling, noncanonical representatives,
+and invalid equal-x inputs. Expected failures ensure that tangent
+uniqueness cannot omit its nonzero-denominator premise and that complete
+witness existence cannot omit on-curve input premises.
+
+These primitives are now composed through the full MSM trace as described
+below. No new global axioms or admissions were added. Paper work remains
+deferred.
+
+## Full MSM coordinate witnesses
+
+`MSM_CoordinateTrace.ec` defines finite traces whose intermediate values
+are raw coordinate tuples. Each edge provides an existential bounded slope
+witness. It proves correspondence for complete-addition chains, repeated
+doubling, guarded inner-loop additions and the complete window loop.
+
+`MSM_CoordinateTables.ec` lifts the table proof to raw coordinate rows.
+Only the initial unequal-x check is present in each row: accepting later
+row equations imply the remaining safety conditions. Induction proves that
+every entry equals the encoded mathematical table value, without assuming
+that the supplied entry already represents a group element.
+
+`MSM_FullCoordinates.ec` composes these relations into
+`full_msm_constraints`. Its existential intermediates include:
+
+- a complete-addition chain computing l*U;
+- w doublings and a subtraction computing (2^w-1)*U;
+- all table entries and their incomplete-addition witnesses;
+- all window doublings and guarded table additions;
+- complete final subtraction of l*U, including an identity output.
+
+Under the explicit `coordinate_laws` and `complete_affine_model` premises,
+`full_msm_constraints_iff` proves that an output is accepted exactly when
+`construction_accepts` holds and the output is the encoded mathematical
+MSM result. `full_witness_iff` gives the corresponding existence equivalence.
+The little-endian entry point uses the already verified window reversal.
+
+`little_endian_full_failure_bound` now bounds failure to obtain the entire
+coordinate witness by (1+l*(2^w+1)+2*T*l)/group_cardinality, under the same
+nonzero-base, valid-window and scalar-invertibility premises as the abstract
+bound. `little_endian_full_rejection_mass` proves equality with rejection
+probability of `SampledLittleEndianMSM.run`. Thus completeness no longer
+stops at coordinate tables combined with abstract loop acceptance.
+
+This is a mathematical constraint relation. Complete-operation branch
+selection is explicit logical case splitting; lookup indexing is a function
+application; l*U uses a repeated-addition witness schedule. These choices
+do not instantiate PLONK gates, prove a circuit cost, or assert a particular
+implementation of public-scalar multiplication. Concrete subgroup,
+coordinate, sampler and FFA CRT/parameter instances remain open, as does
+pinned CI provisioning. The supplied standard library remains trusted.
+
+`tests/FullCoordinates.ec` constructs complete F_17 witness traces at
+w=T=l=1 for scalars one and zero, checks rejection of a width-three V=2P
+row, and shows why final correction cannot be omitted. The zero-scalar
+trace ends at infinity. The full local check covers 26 theories and 19
+regression files, with no admissions or weak proof modes.
