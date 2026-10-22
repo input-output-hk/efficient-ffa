@@ -101,22 +101,21 @@ as supplied. The checker warns about the OCaml 5.2.1 garbage collector.
 
 ### Remaining scope
 
-- Group, coordinate, scalar-inversion, distribution and parameter
-  assumptions remain explicit axioms. This repair does not establish a
-  model of every remaining axiom or instantiate a concrete elliptic curve.
-- The original MSM theorems use the ideal mathematical table. A separate
-  guarded table builder and a composed MSM path are now verified under the
-  same abstract group assumptions; see below. This does not yet verify
-  concrete coordinate formulas or circuit wiring.
-- The completeness bound is still
-  `p2 P s + T * l * (p1 + p1)`, where `p2` is the rejection probability
-  of the newly defined admissibility condition. No small numerical bound
-  on `p2` is proved here. Invalid scalar windows force rejection.
-- All retained local FFA dependencies and theorem files now check directly
-  with the recorded toolchain. This establishes the proofs under their
-  stated assumptions; concrete field parameters and circuit composition
-  remain open. The original paper PDF and Lean proofs are unchanged; the
-  local paper source correction is described below.
+- The generic MSM theories retain explicit assumptions. SmallCurve.ec
+  realizes all of their group, scalar, sampler and parameter axioms and
+  proves the coordinate representation model for a seven-point curve.
+  Production-curve instantiation remains separate work.
+- Table construction and the complete MSM coordinate trace are verified,
+  including offset calculations, window processing and final correction.
+  These mathematical relations do not instantiate circuit wiring.
+- The full rejection bound is
+  (1+l*(2^w+1)+2*T*l)/group_cardinality. The small instance proves a
+  numerical bound of 6/7 and checks exact probabilities for both scalar
+  values. Invalid scalar windows force rejection.
+- Retained local FFA proofs check under their stated assumptions. Concrete
+  FFA parameters and CRT/LCM instantiation remain open, as does pinned CI
+  provisioning. Paper work is deferred; the earlier local source correction
+  is described below.
 
 ## Audit cleanup and next steps
 
@@ -348,8 +347,8 @@ an explicit prime modulus and nonzero x-coordinate difference, it proves:
 `MSM_CoordinateWitnesses.ec` connects this arithmetic to the group/table
 proofs. Its `affine_group_model` is an explicit representation obligation:
 nonidentity points have injective coordinate pairs modulo m, and safe group
-addition has the standard affine coordinates. This model is not yet
-instantiated for a concrete curve. It does not assume constraint soundness
+addition has the standard affine coordinates. SmallCurve.ec now instantiates this model for a seven-point curve, as
+described below. It does not assume constraint soundness
 or witness existence. Under this model and the existing coordinate laws:
 
 - `safe_constraint_correct_from_model` derives the earlier correctness
@@ -376,7 +375,7 @@ No new global axioms or admissions are introduced. This completes the
 coordinate-addition arithmetic and table-witness connection at the explicit
 representation-model boundary. The following sections supply doubling,
 complete addition, and composition through offset computations, the loop
-and final correction. Concrete subgroup/representation instances remain open.
+and final correction. Production-curve subgroup/representation instances remain open.
 The paper is deferred and was not modified for this step.
 
 ## Doubling and complete coordinate addition
@@ -405,7 +404,7 @@ existing coordinate laws, `complete_add_group` proves agreement with
 group addition. `complete_group_witness` gives bounded witnesses and
 `complete_group_sound` identifies any accepted raw output tuple with the
 encoded group sum, without assuming the output already represents a group
-element. The representation obligations are not yet instantiated.
+element. The representation obligations are discharged for the small instance below.
 
 Regressions exercise F_17 doubling and addition, both identity branches,
 inverse-pair cancellation, zero-y doubling, noncanonical representatives,
@@ -456,12 +455,70 @@ This is a mathematical constraint relation. Complete-operation branch
 selection is explicit logical case splitting; lookup indexing is a function
 application; l*U uses a repeated-addition witness schedule. These choices
 do not instantiate PLONK gates, prove a circuit cost, or assert a particular
-implementation of public-scalar multiplication. Concrete subgroup,
-coordinate, sampler and FFA CRT/parameter instances remain open, as does
-pinned CI provisioning. The supplied standard library remains trusted.
+implementation of public-scalar multiplication. The small instance below discharges subgroup, coordinate, sampler and MSM
+parameter obligations. Production-curve instances, FFA CRT/parameter
+instances and pinned CI provisioning remain open. The supplied standard library remains trusted.
 
 `tests/FullCoordinates.ec` constructs complete F_17 witness traces at
 w=T=l=1 for scalars one and zero, checks rejection of a width-three V=2P
 row, and shows why final correction cannot be omitted. The zero-scalar
-trace ends at infinity. The full local check covers 26 theories and 19
-regression files, with no admissions or weak proof modes.
+trace ends at infinity. The current full local check covers 29 theories and 21 regression files,
+with no admissions or weak proof modes.
+
+## Small concrete MSM instance
+
+SmallCurve.ec instantiates the entire MSM proof chain on the nonsingular
+curve y^2=x^3+2x+1 over F_5. Its generator G=(0,1) has order seven:
+
+| n | nG |
+|---|---|
+| 0 | infinity |
+| 1 | (0,1) |
+| 2 | (1,3) |
+| 3 | (3,3) |
+| 4 | (3,2) |
+| 5 | (1,2) |
+| 6 | (0,4) |
+
+Points are represented internally by their discrete logarithms in Z/7Z.
+The additive group and scalar laws come from EasyCrypt's prime-field
+library. Exhaustive checked cases verify that the coordinate table agrees
+with affine addition, tangent doubling, negation and coordinate
+injectivity. Thus the table supplies a concrete curve representation;
+coordinate correctness is proved. The optimized abstract operation is
+totalized as group addition; its safe-input behavior is connected to the
+raw affine constraints by the verified model.
+
+All project axioms of the cloned MSM theory are discharged, including
+nonzero repeated doubling, scalar inversion, the full/uniform/lossless
+sampler and completeness parameter inequalities. Sampling uses the
+library's uniform distribution on the seven residues. The parameters are
+w=T=l=1. This is a small mathematical instance, not a cryptographic curve
+or a circuit implementation. The supplied standard library remains trusted.
+
+SmallMSM.ec applies the existing full-coordinate theorems without any
+remaining representation premises. It proves accepted-output correctness,
+a failure-probability bound of 6/7 for every nonzero base and valid scalar
+window, and equality between missing-witness mass and sampled-program
+rejection probability.
+
+tests/SmallCurveInstance.ec verifies full witnesses for scalar zero
+(result infinity) and scalar one (result G), using U=2G. It rejects a wrong
+output, enumerates exact rejection masses 3/7 and 4/7, and proves the
+sampled little-endian program's rejection probability is 4/7 for scalar
+one. A negative regression must fail to prove the wrong output acceptable.
+
+The original files use external imports, which cannot be specialized by
+cloning a downstream theorem alone. MSM_Instance.ec therefore packages
+the existing sources as nested theories inside an abstract model. It is generated mechanically:
+
+~~~sh
+python3 scripts/package-msm.py
+~~~
+
+The generator preserves proof bodies, adjusts imports and two explicit
+root-qualified references, and omits the unrelated FFA LCM declarations
+from the copied auxiliary theory. No MSM assumption is omitted. The local
+check rejects a stale generated file and checks its proofs independently,
+then checks the concrete clone and every discharged obligation. Edit the
+original sources and regenerate the package rather than editing it by hand.

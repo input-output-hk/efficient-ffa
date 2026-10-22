@@ -284,3 +284,23 @@ remains deferred.
 Regressions construct complete F_17 traces for scalar one (result P) and
 zero (result infinity), and reject the exceptional V=2P width-three row
 and an omitted final correction.
+
+## Small concrete instance completed (2026-10-22)
+
+SmallCurve.ec discharges every project axiom in a clone of the complete MSM
+proof chain: a seven-element group with coordinates on y^2=x^3+2x+1 over
+F_5, a full/uniform/lossless sampler, and w=T=l=1. It proves the coordinate
+laws and complete affine model, including all safe-addition and doubling
+cases. SmallMSM.ec applies the existing full-witness soundness, rejection
+bound (6/7), and sampled-program correspondence without representation
+premises. Numerical regressions establish full witnesses for zero and one,
+exact rejection masses 3/7 and 4/7, and wrong-output rejection.
+
+MSM_Instance.ec is a reproducible nested-theory package of the existing
+proof sources, needed to specialize their shared abstract types. The build
+checks both source freshness and the packaged proofs. Unused FFA LCM
+declarations are excluded; all MSM axioms are realized in the concrete clone.
+
+Remaining: production-curve instances if desired, concrete FFA CRT and
+parameters, and pinned CI provisioning. Paper and circuit work remain
+deferred. The small instance uses the existing trusted standard library.
