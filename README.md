@@ -113,8 +113,8 @@ as supplied. The checker warns about the OCaml 5.2.1 garbage collector.
   numerical bound of 6/7 and checks exact probabilities for both scalar
   values. Invalid scalar windows force rejection.
 - Retained local FFA proofs check under their stated assumptions. Concrete
-  FFA parameters and CRT/LCM instantiation remain open, as does pinned CI
-  provisioning. Paper work is deferred; the earlier local source correction
+  FFA parameter instantiation and pinned CI provisioning remain open.
+  The LCM assumptions have been replaced by proved integer-arithmetic lemmas. Paper work is deferred; the earlier local source correction
   is described below.
 
 ## Audit cleanup and next steps
@@ -456,13 +456,13 @@ selection is explicit logical case splitting; lookup indexing is a function
 application; l*U uses a repeated-addition witness schedule. These choices
 do not instantiate PLONK gates, prove a circuit cost, or assert a particular
 implementation of public-scalar multiplication. The small instance below discharges subgroup, coordinate, sampler and MSM
-parameter obligations. Production-curve instances, FFA CRT/parameter
+parameter obligations. Production-curve instances, FFA parameter
 instances and pinned CI provisioning remain open. The supplied standard library remains trusted.
 
 `tests/FullCoordinates.ec` constructs complete F_17 witness traces at
 w=T=l=1 for scalars one and zero, checks rejection of a width-three V=2P
 row, and shows why final correction cannot be omitted. The zero-scalar
-trace ends at infinity. The current full local check covers 29 theories and 21 regression files,
+trace ends at infinity. The current full local check covers 30 theories and 24 regression files,
 with no admissions or weak proof modes.
 
 ## Small concrete MSM instance
@@ -516,9 +516,39 @@ the existing sources as nested theories inside an abstract model. It is generate
 python3 scripts/package-msm.py
 ~~~
 
-The generator preserves proof bodies, adjusts imports and two explicit
-root-qualified references, and omits the unrelated FFA LCM declarations
-from the copied auxiliary theory. No MSM assumption is omitted. The local
+The generator preserves all declarations and proof bodies, adjusting imports
+and two explicit root-qualified references. The auxiliary theory now includes
+the concrete LCM definition and its proved lemmas; no exclusion is needed. The local
 check rejects a stale generated file and checks its proofs independently,
 then checks the concrete clone and every discharged obligation. Edit the
 original sources and regenerate the package rather than editing it by hand.
+
+## Concrete integer LCM
+
+IntegerLCM.ec replaces the remaining abstract LCM operation with a fold
+of the binary definition abs(a * (b / gcd(a,b))), using integer division.
+Bézout's identity and the standard library's proved gcd laws establish
+that this binary result divides x exactly when both inputs divide x.
+Induction lifts the property to the indexed family 0 <= i < n.
+
+The file proves nonnegativity, the common-multiple and least-positive
+properties, and the corresponding equivalence for arbitrary equal residues.
+It handles signed and zero moduli without coprimality assumptions:
+
+- empty families, including negative lengths, have LCM 1;
+- a singleton has LCM abs(M(0));
+- an included zero modulus gives LCM 0, and this is the only way LCM is zero;
+- families of nonzero moduli have positive LCM.
+
+AuxResults.ec retains the names LCM, LCM_pos and
+chinese_reminder_theorem for existing callers. Both former axioms are now
+proved lemmas with unchanged statements. The historical Chinese-remainder
+name denotes the LCM divisibility equivalence; it does not assert existence
+of a solution for arbitrary prescribed residues.
+
+tests/LCMRegression.ec checks empty, negative-length, signed, repeated,
+zero and noncoprime inputs. It also proves LCM(4,6,5)=60 and reconstructs
+equal integers in [0,60) from equal residues modulo 4, 6 and 5. Negative
+regressions reject replacing LCM(4,6) with 24 and asserting strict positivity
+when a modulus is zero. These examples exercise the LCM layer; a complete
+concrete FFA parameter instance remains separate work.

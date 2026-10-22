@@ -12,6 +12,24 @@ require import BitEncoding StdBigop Bigalg.
 (*---*) import Bigint BIA.
 
 
+(* Concrete finite-family LCM. The historical theorem name is retained
+   for callers; its statement is the LCM divisibility law, not CRT existence. *)
+require IntegerLCM.
+
+op LCM (M : int -> int) (size : int) : int = IntegerLCM.LCM M size.
+
+lemma LCM_pos M n : 0 <= LCM M n.
+proof. exact (IntegerLCM.LCM_nonnegative M n). qed.
+
+lemma chinese_reminder_theorem x M size :
+   (forall i, 0 <= i < size => x %% M i = 0)
+    <=>
+    x %% LCM M size = 0.
+proof.
+rewrite /LCM -dvdzE IntegerLCM.LCM_divides.
+smt(dvdzE).
+qed.
+
 lemma mul_weaken6 (b a c : int) : 0 < b => a * b <= c * b => a <= c.
 smt().
 qed.    

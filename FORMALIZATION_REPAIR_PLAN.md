@@ -298,9 +298,34 @@ exact rejection masses 3/7 and 4/7, and wrong-output rejection.
 
 MSM_Instance.ec is a reproducible nested-theory package of the existing
 proof sources, needed to specialize their shared abstract types. The build
-checks both source freshness and the packaged proofs. Unused FFA LCM
-declarations are excluded; all MSM axioms are realized in the concrete clone.
+checks both source freshness and the packaged proofs. All MSM axioms are
+realized in the concrete clone. The later LCM repair below removes the
+need to exclude FFA LCM declarations from this package.
 
-Remaining: production-curve instances if desired, concrete FFA CRT and
+Remaining: production-curve instances if desired, concrete FFA
 parameters, and pinned CI provisioning. Paper and circuit work remain
 deferred. The small instance uses the existing trusted standard library.
+
+## LCM assumptions discharged (2026-10-22)
+
+IntegerLCM.ec defines a binary gcd-based LCM and folds it over the indexed
+moduli. It proves the full divisibility equivalence for arbitrary integers,
+without adding assumptions about positive lengths, positive moduli or
+pairwise coprimality. Empty/negative lengths give 1; zero moduli give 0;
+signed moduli are normalized by absolute value. Leastness, positivity for
+nonzero families, and equal-residue congruence are also proved.
+
+AuxResults.ec now defines LCM concretely and proves LCM_pos and
+chinese_reminder_theorem with exactly their previous statements. FFA
+callers keep the existing interface. The latter name is historical: its
+statement is a divisibility property, not a general CRT existence theorem.
+
+The MSM package generator now preserves every declaration, including these
+proved LCM definitions and lemmas. Its special exclusion block was removed.
+Regressions check noncoprime/signed/repeated/zero and empty-family cases,
+plus bounded reconstruction with moduli 4,6,5. Two negative regressions
+reject the product shortcut and unjustified strict positivity.
+
+The remaining FFA task is a concrete parameter instance satisfying the
+soundness/completeness hypotheses. Pinned CI provisioning remains open;
+paper work stays deferred.

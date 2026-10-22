@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Package existing MSM proofs as nested theories so their assumptions can be instantiated.
 
-Adjust imports/root-qualified names and omit the unused FFA LCM declarations.
+Preserve all declarations and adjust imports/root-qualified names.
 The generated proofs remain checked by EasyCrypt, and --check detects source drift.
 """
 from pathlib import Path
@@ -24,17 +24,6 @@ def generate():
               'abstract theory Model.\n']
     for name in NAMES:
         source = (ROOT / (name + '.ec')).read_text()
-        if name == 'AuxResults':
-            start = source.index('(* Chinese Reminder Theorem')
-            end = source.index('lemma mul_weaken6')
-            removed = re.sub(r'\(\*.*?\*\)', '', source[start:end], flags=re.S)
-            expected = '''op LCM (M : int -> int) (size : int) : int.
-                axiom LCM_pos M n : 0 <= LCM M n.
-                axiom chinese_reminder_theorem x M size :
-                (forall i, 0 <= i < size => x %% M i = 0) <=> x %% LCM M size = 0.'''
-            if removed.split() != expected.split():
-                raise ValueError('AuxResults LCM block changed; review its exclusion')
-            source = source[:start] + source[end:]
         def imports(match):
             names = match.group(1).split()
             external = [n for n in names if n not in NAMES]
