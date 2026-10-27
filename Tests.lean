@@ -2,3 +2,8 @@ import Tests.Foundations
 import Tests.Multiplication
 import Tests.LazyNormalization
 import Tests.ShiftedEncoding
+import Tests.EllipticCurve
+import Tests.Tables
+import Tests.Parameters
+import Tests.MSM
+import Tests.Trace

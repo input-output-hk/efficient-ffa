@@ -2,3 +2,5 @@ import EfficientFFA.Multiplication
 import EfficientFFA.Normalization
 import EfficientFFA.Division
 import EfficientFFA.ShiftedEncoding
+import EfficientFFA.EllipticCurve
+import EfficientFFA.MSM
