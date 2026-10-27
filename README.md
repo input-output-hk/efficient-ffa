@@ -8,10 +8,12 @@ are complete. Coordinate-level elliptic-curve operations, precomputed tables,
 and parameter-dependent table witness existence are checked. The corrected
 MSM group loop, normalized rejection bound, and full coordinate-trace
 soundness and statistical completeness are also checked, under the explicit
-parameter conditions and documented algorithm refinements below.
+parameter conditions and documented algorithm refinements below. Native limb
+encodings of the EC identities now compose with that full trace, with a small
+curve instance discharging both arithmetic and statistical parameters.
 
 The [paper-to-Lean audit](PAPER_AUDIT.md) records the claim-by-claim coverage,
-remaining representation gaps, and confirmed differences from the printed
+representation boundaries, and confirmed differences from the printed
 algorithms, including an additional Figure 3 infinity-branch overlap.
 
 ## Source policy
@@ -56,7 +58,7 @@ checkout. The local development already has that cache. The default build
 checks both the library and Tests; warnings are treated as errors. This is
 local build setup. CI and larger/production instances remain skipped.
 
-All 216 library theorems compile, and their axiom reports contain
+All 281 library theorems compile, and their axiom reports contain
 only Lean's standard propext, Classical.choice and Quot.sound. There are no
 project axioms, admissions or native_decide proofs. The build uses supplied
 mathlib artifacts; it is not a fresh rebuild of the entire standard library.
@@ -97,6 +99,12 @@ mathlib artifacts; it is not a fresh rebuild of the entire standard library.
 | [MSM/Trace.lean](EfficientFFA/MSM/Trace.lean) | Coordinate-only full trace acceptance and soundness for arbitrary supplied witnesses |
 | [MSM/TraceCompleteness.lean](EfficientFFA/MSM/TraceCompleteness.lean) | Construction of a full linked coordinate trace from every successful group execution |
 | [MSM/TraceStatistics.lean](EfficientFFA/MSM/TraceStatistics.lean) | Statistical completeness and correct-trace existence under explicit prime-group parameters |
+| [Native/Polynomial.lean](EfficientFFA/Native/Polynomial.lean) and [Native/Gate.lean](EfficientFFA/Native/Gate.lean) | Sparse polynomial bounds, signed coefficient reductions, actual native/auxiliary checks, soundness and quotient witnesses |
+| [Native/Expression.lean](EfficientFFA/Native/Expression.lean) and [Native/Activation.lean](EfficientFFA/Native/Activation.lean) | Limb compilation, foreign-field representation, native bitness, enabled and disabled gates |
+| [Native/EllipticCurve.lean](EfficientFFA/Native/EllipticCurve.lean) | Encodings of (6)–(9), checked square linkage, copies, and inverse-of-difference certificates |
+| [Native/Trace.lean](EfficientFFA/Native/Trace.lean) and [Native/Statistics.lean](EfficientFFA/Native/Statistics.lean) | Native arithmetic trace equivalence, MSM soundness, and native-witness statistical completeness |
+| [EllipticCurve/Cardinality.lean](EfficientFFA/EllipticCurve/Cardinality.lean) and [Instances/Curve17.lean](EfficientFFA/Instances/Curve17.lean) | Actual curve-group enumeration, 19-point cardinality, valid EC encoding and instantiated 8/19 bound |
+| [Native regressions](Tests/Native.lean) | Square linkage, wrong outputs, active/inactive branches, native wraparound, explicit quotient witnesses and all new theorem-axiom reports |
 | [Trace regressions](Tests/Trace.lean) | Accepted concrete curve traces, wrong output, broken initial linkage, and a nonempty execution returning infinity |
 | [MSM regressions](Tests/MSM.lean) | Unequal windows, accepted execution, exact excluded-seed counts, instantiated probability theorem, and noninvertible coefficient |
 | [Table regressions](Tests/Tables.lean) and [parameter regressions](Tests/Parameters.lean) | Accepted concrete table, known rejected offsets, prime/composite group parameters, and failure without scalar invertibility |
@@ -379,12 +387,11 @@ implications is made. An alternative design could impose canonical infinity
 coordinates, but that would be an extra representation invariant and is not
 assumed here. The paper itself has not been edited.
 
-Infinity flags are Bool values, making bitness explicit at the mathematical
-level. These results are over foreign-field coordinates; the native-field
-encodings of the four EC identities, Boolean wiring and range-check gadgets
-remain outside the current milestone. The repeated-base table and setup
-parameter results are described next, followed by the loop and group-level
-probability theorem and full supplied-coordinate-trace composition.
+Infinity flags are Bool values at the coordinate layer. The native extension
+below proves bitness and activation checks and encodes the four EC identities.
+Boolean branch-selection wiring and range-check gadget implementations remain
+outside scope. The repeated-base table and setup parameter results are
+described next, followed by the full trace composition.
 
 ## Precomputed tables and parameter selection
 
@@ -609,6 +616,85 @@ broken initial-accumulator link even though the substitute is on the curve.
 A separate nonempty zero-scalar trace verifies that final infinity is accepted.
 These kernel-checked coordinate traces supplement the group-level parameter
 and probability regressions; they are not production parameter instances.
+
+## Native EC identities and the full MSM trace
+
+The follow-up requested after the audit closes F1 at the arithmetic-constraint
+level. It was developed from the paper equations and this independent library;
+no supplied Lean artifact or new EasyCrypt proof scripts were consulted.
+
+Expression.compile expands each expression into a sparse polynomial in
+little-endian bounded limbs. Polynomial.reduce replaces each coefficient c by
+its sign times (abs(c) mod modulus), first modulo the foreign modulus and then
+modulo each auxiliary modulus. Reduction preserves the corresponding
+congruence. The lower and upper bounds sum each signed coefficient against
+(B-1)^degree; duplicate terms are not collected or canceled. These are proved
+conservative bounds, not claims about optimal parameter sizes or gate costs.
+
+Native.Parameters defines the shifted quotient ranges and actual native and
+auxiliary congruences. Its sound theorem derives auxiliary integer equalities
+by no-wrap, reconstructs the main residual with the finite LCM, and concludes
+the foreign identity. witnesses_accept constructs the quotients and proves
+their ranges. The numerical Valid bundle and the representation capacity
+q <= B^n are explicit, independently checkable obligations.
+
+The concrete expression templates encode:
+
+- Equation (6): y*y-x*z-a*x-b, together with a separate checked x*x-z identity.
+- Equation (7): both yQ-yP-(xQ-xP)*s and -yQ-yP-(xQ-xP)*s.
+- Equation (8): 3*xP*xP+a-2*yP*s.
+- Equation (9): xP+xQ+xR-s*s.
+- Coordinate copies, negation links, and (x-y)*inverse-1 for disequality.
+
+The public check_iff, onCurve_iff, add_iff and double_iff theorems prove both
+soundness and witness existence for these encodings. The inverse-of-difference
+endpoint distinct_iff requires the foreign field's prime modulus; it does not
+add checks to internal repeated-base table steps.
+
+Native activation is multiplication of both residual checks by a selector.
+bit_cases proves that a canonical native lift satisfying s*(s-1)=0 is zero or
+one when the native modulus is prime. activated_sound distinguishes disabled
+from enabled checks; activated_zero and activated_one provide witnesses.
+ECEncoding.Check contains the enabled form with selector one, and inactive
+branches can use activated_zero. Flag checks enforce the supplied Boolean
+tag natively. This is arithmetic semantics for selected ordered branches,
+not a compiled flat selector circuit or a proof of branch-selection wiring.
+
+ECEncoding.Trace replaces coordinate arithmetic premises throughout the seed,
+constant chains, tables, loop, copies, and final complete addition by these
+native checks. trace_iff proves equivalence to the audited coordinate trace.
+trace_sound_littleEndian therefore proves the MSM result from the native
+constraint contract. TraceWitnesses, uniform_littleEndian_failure_bound and
+exists_correct_trace transfer the witness-existence and quantitative
+completeness results to this same contract.
+
+Each gate carries bounded integer limb witnesses and explicit relations to
+its foreign semantic ports. Shared ports, function-index table lookups, and
+window ranges remain mathematical relations. The witness choices can be
+noncanonical; soundness is about their common residue. The stored-residue
+transport theorem accepts_of_rep handles native representatives congruent to
+the tracked limbs. We do not certify a concrete wire layout, permutation or
+lookup argument, range-check gadget, sampler implementation, or witness-generator
+runtime. These boundaries are not assumptions of the EC group law.
+
+The small instance uses y^2=x^3+2*x+2 over F_17. pointEquiv identifies the actual
+mathlib group with its affine solutions plus infinity; cardinality enumerates
+18 affine solutions and proves total group order 19. The encoding uses two
+radix-5 limbs, native prime 65537, auxiliary modulus 101, and 7-bit native and
+auxiliary shifted quotients. All nine gate templates satisfy Valid. With
+w=l=1 and T=2, the full native-trace failure bound is 8/19 and a correct native
+trace exists for every in-range input. This demonstrates jointly satisfiable
+premises; 8/19 is not a negligible-error or production-parameter claim.
+
+The original supplied two-window trace and its infinity-output variant lift
+to this native encoding. Regressions also reject incorrect square witnesses,
+curve membership and addition outputs, reject a broken trace link, and expose
+why native no-wrap and prime-modulus bitness conditions matter.
+
+The requested follow-up steps 1–4 are complete: the audit/regression was
+committed and pushed as a5e2004; the native identities, trace connection and
+small curve instance are checked. Subgroup-specific statistics, paper edits,
+CI, production instances, implementation wiring and cost claims remain deferred.
 
 ## Execution plan
 
@@ -844,10 +930,10 @@ obligations. A generic conditional theorem must be labelled as such.
 
 ### Scope boundary and review discipline
 
-The native-field encodings of the four custom EC identities in Section 4.1
-remain a separate scope decision. Record this gap even after proving the EC
-and MSM mathematics. Those equations' coordinate-level meaning is distinct
-from their implementation with limbs and auxiliary moduli.
+The subsequent native EC milestone above covers Section 4.1 identities with
+limbs, auxiliary moduli and explicit parameter conditions, and connects them
+to the full trace. Keep that arithmetic contract distinct from implementation
+wiring and the unproved performance/application claims.
 
 At each milestone, review statements against the paper before polishing proof
 scripts, run the local build, inspect theorem axioms, and update the coverage

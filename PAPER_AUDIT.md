@@ -1,7 +1,18 @@
 # Paper-to-Lean correspondence audit
 
 Date: 2026-10-27. Reviewed library commit: b05a742ded781490ef2a29528bc9061bb39000ed.
-The audit adds a regression in Tests/PaperAudit.lean; it does not change library definitions or proofs.
+The original audit added a regression in Tests/PaperAudit.lean without changing
+library definitions or proofs. It was committed and pushed as a5e2004.
+
+**Follow-up status (2026-10-27):** the subsequently authorized steps 1–4 are
+complete. Native/ now proves the EC limb encodings, activation and representation
+bridges, full native-trace soundness and statistical completeness.
+Instances/Curve17.lean discharges all arithmetic and statistical parameters for
+a small actual curve. All 281 library theorem reports use only the standard
+Lean axioms (or none), and lake build passes with warnings as errors.
+The findings and coverage table below describe the reviewed b05a742 baseline;
+resolution notes identify changes since that audit. The printed-algorithm
+mismatches and deferred implementation boundaries remain.
 
 ## Verdict
 
@@ -54,9 +65,18 @@ mathlib artifacts; it is not a fresh rebuild or audit of all mathlib internals.
 
 ## Findings that qualify correspondence
 
-### F1. The native EC identity bridge is still missing
+### F1. The native EC identity bridge was missing at the audit baseline
 
-**Type: substantial coverage gap; already outside the agreed milestone.**
+**Baseline type: substantial coverage gap; outside the then-agreed milestone.**
+
+**Resolved at arithmetic-constraint level:** Native/EllipticCurve.lean encodes
+(6)–(9), checks z=x^2, and proves equivalence with the coordinate predicates.
+Native/Activation.lean covers native bitness and activation; Native/Trace.lean
+and Native/Statistics.lean compose the gates with the entire audited trace.
+Gate-port representation relations, branch selection, lookups and range
+predicates remain explicit mathematical contracts, not PLONK wiring proofs.
+See README.md, “Native EC identities and the full MSM trace,” for exact scope.
+The following paragraphs retain the original finding.
 
 Sections 4.1-4.2, equations (6)-(9), describe limb-level curve-membership,
 slope, tangent and squared-slope identities. They require coefficient reduction,
@@ -179,10 +199,11 @@ in the bound. The theorem is about witness existence, not runtime of a witness
 search, nor success of an arbitrary witness generator. It is not automatically
 a theorem for a sampler conditioned to exclude infinity or for a biased sampler.
 
-Small prime-group probability regressions and concrete accepted curve traces
-exist. A single concrete curve instance discharging all cardinality and
-statistical-wrapper premises has not been packaged; production instantiations
-remain intentionally skipped. Do not describe the generic bound as a checked
+At the audit baseline, the small prime-group and coordinate regressions were
+separate. **Follow-up:** Instances/Curve17.lean now enumerates the actual
+19-point curve group over F_17, discharges all EC gate bounds and statistical
+conditions, and proves the native-trace 8/19 bound and correct-trace existence.
+Production instances remain intentionally skipped; this is not a checked
 SECP256k1/BLS12-381 parameter result.
 
 ### F6. Division over the paper's composite moduli needs units, not only nonzero divisors
@@ -202,8 +223,10 @@ The paper already qualifies the inverse-of-difference comparison in Section
 3.2.3 by primality; that qualification is correct. The repository proves its
 algebraic criterion and the subtraction/normalization/multiplication components,
 but does not expose a single combined native disequality-gadget endpoint.
-This last item is a composition/package gap, not a counterexample to the
-existing component theorems.
+This was a composition/package gap, not a counterexample to the existing
+component theorems. **Follow-up:** Native.ECEncoding.distinct_iff now supplies
+a bounded-limb native polynomial endpoint for (x-y)*inverse-1 under prime q.
+It does not certify a separate comparison circuit implementation.
 
 **Action:** qualify division by invertibility, or explicitly restrict it to
 prime q. Keep algebraic disequality and a complete native gadget distinct.
@@ -342,19 +365,19 @@ for constraint-system soundness and statistical completeness. They should not
 be advertised as a verified implementation or a proof of a random generator's
 runtime behavior.
 
-## Recommended follow-up, respecting the agreed scope
+## Original recommended follow-up and current disposition
 
 1. Use this audit to qualify the artifact/paper coverage statement immediately;
    retain the distinction between native arithmetic and coordinate-level MSM.
 2. When paper edits resume, resolve F2-F3 first, then state F4-F6 assumptions,
    simplify F8 and correct F9-F10. The audit itself does not edit the paper.
-3. If more formal coverage is requested, the highest-value missing composition
-   is F1. A subgroup wrapper and a single native disequality endpoint are separate,
-   smaller scope decisions. None requires adding per-step table guards.
+3. F1 and the native disequality endpoint have now been implemented and
+   composed with the whole trace. A subgroup wrapper remains a separate scope
+   decision. No per-step table guards were added.
 4. Keep CI, production parameter instances, circuit wiring and benchmarks out of
-   the current completion claim unless explicitly brought into scope. An
-   optional small curve cardinality/parameter instance can strengthen validation
-   without implying a production instantiation.
+   the current completion claim unless explicitly brought into scope. A
+   small curve cardinality/parameter instance has now been checked; it does
+   not imply a production instantiation.
 
 The known V=2P example remains an offset-rejection example, accounted for by
 parameter selection and the failure budget. It is not a fresh flaw and is not

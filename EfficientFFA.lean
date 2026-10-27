@@ -4,3 +4,5 @@ import EfficientFFA.Division
 import EfficientFFA.ShiftedEncoding
 import EfficientFFA.EllipticCurve
 import EfficientFFA.MSM
+import EfficientFFA.Native
+import EfficientFFA.Instances.Curve17

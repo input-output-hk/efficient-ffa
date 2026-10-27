@@ -161,6 +161,17 @@ example : ∃ hv : C.Valid zeroTrace.output, C.decode zeroTrace.output hv = 0 :=
     (windows := fun _ _ => 0) accepted_zero
   simpa using h
 
+-- The same complete supplied traces also admit all native limb/quotient witnesses.
+example : Instances.Curve17.encoding.Trace 1 1 2 bases (descending digits 2) tr :=
+  (Instances.Curve17.encoding.trace_iff _ _ _ _ _ _).mpr accepted
+example : Instances.Curve17.encoding.Trace 1 1 1 bases (fun _ _ => 0) zeroTrace :=
+  (Instances.Curve17.encoding.trace_iff _ _ _ _ _ _).mpr accepted_zero
+example : ¬ Instances.Curve17.encoding.Trace 1 1 2 bases (descending digits 2)
+    {tr with boundary := fun _ => P} := by
+  intro hbad
+  have he := ((Instances.Curve17.encoding.trace_iff _ _ _ _ _ _).mp hbad).initial_end
+  exact (by decide : chain 1 ≠ finiteEncoding P) he
+
 end EfficientFFA.Tests.Trace
 
 #print axioms EfficientFFA.EllipticCurve.Curve.scale_sound
