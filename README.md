@@ -3,7 +3,8 @@
 A fresh development from the mathematical statements in
 [Efficient Foreign-Field Arithmetic in PLONK](https://eprint.iacr.org/2025/695).
 This project is separate from the existing EasyCrypt checkout and the supplied
-Lean artifact. The multiplication milestone is complete; the remaining migration is planned below.
+Lean artifact. The multiplication and lazy-arithmetic/normalization milestones are complete;
+the remaining migration is planned below.
 
 ## Source policy
 
@@ -14,7 +15,7 @@ Lean artifact. The multiplication milestone is complete; the remaining migration
   was copied from a pristine standard-library cache, not from the supplied
   formalization. No other project's proof sources were copied.
 - The supplied Lean repository and archive are not consulted when authoring
-  this development. They were not opened during the foundation or multiplication implementations.
+  this development. They were not opened during the foundation, multiplication, or normalization implementations.
 - Earlier artifact reviews are background context. Independence here means
   fresh definitions and proof development, not a claim that prior reviews
   never happened. The EasyCrypt coverage inventory can guide priorities;
@@ -45,7 +46,7 @@ checkout. The local development already has that cache. The default build
 checks both the library and Tests; warnings are treated as errors. This is
 local build setup. CI and larger/production instances remain skipped.
 
-All 24 library theorems compile, and their axiom reports contain
+All 65 library theorems compile, and their axiom reports contain
 only Lean's standard propext, Classical.choice and Quot.sound. There are no
 project axioms, admissions or native_decide proofs. The build uses supplied
 mathlib artifacts; it is not a fresh rebuild of the entire standard library.
@@ -62,6 +63,11 @@ mathlib artifacts; it is not a fresh rebuild of the entire standard library.
 | [Multiplication/Completeness.lean](EfficientFFA/Multiplication/Completeness.lean) | Explicit quotient witnesses, their ranges, and completeness |
 | [Multiplication.lean](EfficientFFA/Multiplication.lean) | Acceptance iff modular multiplication, and canonical-output corollary |
 | [Multiplication regressions](Tests/Multiplication.lean) | Full small parameter instances, explicit witnesses, rounding, noncanonical outputs, and incomplete-check counterexample |
+| [LazyArithmetic.lean](EfficientFFA/LazyArithmetic.lean) | All five Table 1 bound rules, preservation of native-residue representation, and uniqueness of lifts in short intervals |
+| [Representation.lean](EfficientFFA/Representation.lean) | Bounded limb representations for integers below radix capacity, including canonical residues |
+| [Normalization.lean](EfficientFFA/Normalization.lean) and its submodules | Linear residual bounds, actual auxiliary checks, soundness, explicit witnesses, canonical output existence, and stored-residue transport |
+| [Division.lean](EfficientFFA/Division.lean) | Invertibility criterion, encoded division/inversion, and prime-modulus inverse-of-difference criterion |
+| [Lazy/normalization regressions](Tests/LazyNormalization.lean) | Signed native wraparound, full parameters and witnesses, interval endpoints, wrong-output rejection, capacity failure, and composite-modulus counterexamples |
 | [Foundations.lean](Tests/Foundations.lean) | Noncoprime/signed/zero moduli, strict-bound boundary, a radix-10 multiplication example, signed limbs, and theorem-axiom reports |
 
 Limbs are finite vectors of integers, with well-formedness expressed as a
@@ -133,14 +139,89 @@ its native check alone, while the full system rejects every possible bounded
 witness for that triple. These are small arithmetic regressions, not production
 parameter recommendations.
 
+## Lazy arithmetic and normalization correspondence
+
+This milestone follows Section 3.2, Table 1 and equation (5), directly from
+the same PDF. The supplied Lean artifact and EasyCrypt proofs were not opened.
+The normalization proof reuses the structure and reusable lemmas of our own
+independent multiplication development. The paper explicitly omits the
+auxiliary details for normalization; the checked definitions provide those
+details, rather than claiming to transcribe an algorithm fully printed there.
+
+| Paper claim | Checked result |
+|---|---|
+| Table 1 bound propagation | LazyArithmetic.bounded_add/sub/neg/add_constant/scale, with inclusive per-limb endpoints and swapped endpoints for negative constants |
+| Native limb operations preserve their tracked meaning | LazyArithmetic.represents_add/sub/neg/add_constant/scale; existing integer evaluation linearity and eval_neg give the foreign arithmetic meaning |
+| Equation (5) preserves the foreign value | Normalization.Parameters.normalization_sound and accepts_iff_normalization |
+| Normalization witnesses exist | canonical_witnesses_accept and normalization_complete for supplied equivalent outputs; normalization_exists also constructs an output under q <= B^n |
+| Signed native wraparound is compatible with normalization | accepts_of_rep, stored_normalization_sound, stored_normalization_exists, and subtraction_normalization_sound |
+| Division and inversion through multiplication | Division.division_iff, encoded_division_iff, encoded_inverse_iff, and inverse_exists_iff_coprime |
+| Inverse-of-difference witnesses test disequality over a prime modulus | Division.prime_inverse_iff and prime_disequality_iff |
+
+Normalization endpoint names in the table are in namespace
+EfficientFFA.Normalization.Parameters. The representation relation is
+pointwise congruence between stored native values and tracked signed integers.
+All five operations preserve that relation using just their native equations;
+there are no new per-operation range-check premises. Bounds propagate from
+known input bounds. To apply normalization, the resulting tracked bounds
+must fit [-limit, limit], and the normalization parameters must satisfy their
+explicit width and no-wrap conditions.
+
+This distinction matters: -1 can be stored as p-1, but evaluating p-1 as an
+ordinary foreign integer generally gives the wrong answer. The bridge theorem
+transports the actual normalization checks to the tracked signed input before
+using integer residual bounds. It does not require stored representatives to
+lie in the signed input interval. A separate lift_unique theorem proves
+uniqueness when every inclusive interval has width strictly less than p;
+representation and normalization do not silently assume that uniqueness.
+
+For normalization, write S = sum_i (B^i mod q). The checked residual bounds
+are exactly the paper's conservative linear bounds:
+
+~~~text
+D = sum_i (B^i mod q) * x_i - sum_i (B^i mod q) * z_i
+-(limit+B)*S <= D <= limit*S
+~~~
+
+For each auxiliary modulus m, put Sm = sum_i (B^i mod q mod m). The auxiliary
+coefficient expression has lower bound -Am and upper bound Cm, with:
+
+~~~text
+Am = (limit+B)*Sm + 2^t*(q mod m) + (kmin*q mod m)
+Cm = limit*Sm - (kmin*q mod m)
+~~~
+
+The quotient shifts, width conditions, auxiliary no-wrap checks and LCM
+reconstruction have the same form as multiplication, using these linear
+bounds. They are derived from signed input bounds and bounded output limbs,
+not by applying a multiplication theorem to out-of-range inputs. As before,
+soundness needs NoWrap, completeness needs WidthBounds, and the combined
+Valid predicate packages both. The canonical-output existence theorem also
+requires q <= B^n. No-wrap is unnecessary to construct the witnesses.
+
+The division results distinguish invertibility from nonzeroness. For arbitrary
+integer q, the criterion is IsCoprime a q; for positive prime q, it is precisely
+a nonzero residue. The regression at q = 8 proves that 2 is nonzero but has no
+inverse, and that the naive division equation has distinct solutions.
+The disequality result is the mathematical inverse-of-difference criterion;
+it is not a standalone circuit implementation of comparison. Its subtraction
+and normalization stages are covered separately by the checked composition
+and representation lemmas above. No order-comparison claim is made.
+
+The full signed regression uses radix 3, limit 5, q = 8, p = 131, auxiliary
+moduli 2 and 4, and different witness widths. It checks stored input [130,0]
+representing tracked [-1,0], normalization to [1,2] (value 7), and actual
+quotient witnesses. Further examples exercise both signed endpoints and
+prove rejection of output zero for that input, irrespective of witnesses.
+
 ## Execution plan
 
-Baseline and milestone update: 2026-10-27. Steps 1-4 are **complete**: the
+Baseline and milestone update: 2026-10-27. Steps 1-5 are **complete**: the
 library and regressions build with warnings as errors, all library theorem
 axiom reports use only the standard Lean axioms, and the paper correspondence
 is recorded above. Their original implementation checklist is retained below.
-Steps 5-7 remain planned work. The next milestone is lazy arithmetic and
-normalization in Section 3.2; integer linearity alone does not cover it.
+Steps 6-7 remain planned work. The next milestone is the unique-zero
+representation in Section 3.2.4; EC and MSM follow it.
 
 ### 1. Fix the multiplication specification (complete)
 
@@ -303,7 +384,7 @@ the README maps each endpoint theorem to the paper and lists every deliberate
 difference. This closes milestone 1. A small regression instance does not
 reopen the skipped work on larger or production parameter sets.
 
-### 5. Formalize lazy arithmetic and normalization
+### 5. Formalize lazy arithmetic and normalization (complete)
 
 This starts only after the multiplication milestone is complete.
 Proposed modules: LazyArithmetic.lean and Normalization.lean.

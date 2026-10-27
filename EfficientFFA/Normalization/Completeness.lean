@@ -1,0 +1,62 @@
+import EfficientFFA.Normalization.Soundness
+
+namespace EfficientFFA.Normalization.Parameters
+open EfficientFFA.Multiplication (quotient_interval)
+variable {n r : ℕ} (P : Parameters n r)
+
+/-- The native quotient shifted into its nonnegative witness interval. -/
+def witnessU (x z : Limbs n) : ℤ :=
+  residual P.B P.q x z / P.q - P.kmin
+
+/-- Each auxiliary quotient, shifted independently by its lower bound. -/
+def witnessV (x z : Limbs n) (a : Fin r) : ℤ :=
+  P.auxCore x z (P.witnessU x z) a / P.M a - P.lmin a
+
+/-- Equivalent signed input and bounded output have explicitly constructed accepting witnesses.
+No reconstruction or no-wrap hypotheses are needed in this direction. -/
+theorem canonical_witnesses_accept (hP : P.Positive) (hw : P.WidthBounds)
+    {x z : Limbs n}
+    (hx : P.InputBounded x) (hz : WellFormed P.B z)
+    (heq : eval P.B x ≡ eval P.B z [ZMOD P.q]) :
+    P.Accepts x z (P.witnessU x z) (P.witnessV x z) := by
+  have hd := (residual_dvd_iff P.B P.q x z).mpr heq
+  have hk := Int.ediv_mul_cancel hd
+  have hb := P.residual_bounds hP hx hz
+  have hki := quotient_interval hP.foreign
+    (show -P.A ≤ (residual P.B P.q x z / P.q) * P.q by omega)
+    (show (residual P.B P.q x z / P.q) * P.q ≤ P.C by omega)
+  have hu : 0 ≤ P.witnessU x z ∧ P.witnessU x z < P.Umax := by
+    have hwidth := hw.native
+    dsimp [witnessU, kmin, kmax] at *
+    omega
+  have hn : P.nativeResidual x z (P.witnessU x z) = 0 := by
+    dsimp [nativeResidual, witnessU]
+    rw [sub_add_cancel, hk, sub_self]
+  have ha : ∀ a, (0 ≤ P.witnessV x z a ∧ P.witnessV x z a < P.Vmax a) ∧
+      P.auxResidual x z (P.witnessU x z) (P.witnessV x z a) a = 0 := by
+    intro a
+    have hc : P.auxCore x z (P.witnessU x z) a ≡ 0 [ZMOD P.M a] := by
+      simpa only [hn] using P.auxCore_congr x z (P.witnessU x z) a
+    have hl := Int.ediv_mul_cancel (Int.modEq_zero_iff_dvd.mp hc)
+    have hab := P.auxCore_bounds hP hx hz hu a
+    have hli := quotient_interval (hP.auxiliary a)
+      (show -P.Am a ≤ (P.auxCore x z (P.witnessU x z) a / P.M a) * P.M a by omega)
+      (show (P.auxCore x z (P.witnessU x z) a / P.M a) * P.M a ≤ P.Cm a by omega)
+    constructor
+    · have hwidth := hw.auxiliary a
+      dsimp [witnessV, lmin, lmax] at *
+      omega
+    · dsimp [auxResidual, witnessV]
+      rw [sub_add_cancel, hl, sub_self]
+  exact ⟨hu, fun a => (ha a).1, by simp [hn], fun a => by simp [(ha a).2]⟩
+
+/-- Existential completeness, with the witnesses supplied by the explicit constructors. -/
+theorem normalization_complete (hP : P.Positive) (hw : P.WidthBounds)
+    {x z : Limbs n}
+    (hx : P.InputBounded x) (hz : WellFormed P.B z)
+    (heq : eval P.B x ≡ eval P.B z [ZMOD P.q]) :
+    ∃ u v, P.Accepts x z u v :=
+  ⟨P.witnessU x z, P.witnessV x z,
+    P.canonical_witnesses_accept hP hw hx hz heq⟩
+
+end EfficientFFA.Normalization.Parameters

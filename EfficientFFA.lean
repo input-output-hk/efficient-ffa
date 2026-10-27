@@ -1,1 +1,3 @@
 import EfficientFFA.Multiplication
+import EfficientFFA.Normalization
+import EfficientFFA.Division
