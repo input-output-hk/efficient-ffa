@@ -7,3 +7,4 @@ import Tests.Tables
 import Tests.Parameters
 import Tests.MSM
 import Tests.Trace
+import Tests.PaperAudit

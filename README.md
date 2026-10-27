@@ -10,6 +10,10 @@ MSM group loop, normalized rejection bound, and full coordinate-trace
 soundness and statistical completeness are also checked, under the explicit
 parameter conditions and documented algorithm refinements below.
 
+The [paper-to-Lean audit](PAPER_AUDIT.md) records the claim-by-claim coverage,
+remaining representation gaps, and confirmed differences from the printed
+algorithms, including an additional Figure 3 infinity-branch overlap.
+
 ## Source policy
 
 - The downloaded paper is the primary specification. Record ambiguities and
@@ -356,6 +360,13 @@ two necessary conditions. identity_copies_iff proves that, when both tags are
 true, such an output exists exactly when the two encodings are identical.
 The regression uses valid encodings (0,0,true) and (1,1,true), proves that both
 decode to the same group identity, and proves that no literal copy output exists.
+
+The later [audit](PAPER_AUDIT.md#f3-figure-3s-overlapping-implications-are-not-complete-for-all-allowed-infinity-encodings)
+also confirms a conflict with only one infinity input if the inverse predicate
+is implemented by the coordinate-only test stated in Section 4.4.2. The ignored
+coordinates of infinity can equal the negative of a finite input. The identity
+copy then requires a finite output while Step 5 requires infinity.
+Tests/PaperAudit.lean checks this case and the existing ordered refinement.
 
 The new CompleteAccepts contract is deliberately labelled a refinement:
 choose the left-identity branch first, then the right-identity branch; for
