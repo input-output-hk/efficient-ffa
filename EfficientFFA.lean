@@ -1,3 +1,4 @@
 import EfficientFFA.Multiplication
 import EfficientFFA.Normalization
 import EfficientFFA.Division
+import EfficientFFA.ShiftedEncoding

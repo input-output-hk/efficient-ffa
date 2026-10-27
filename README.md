@@ -3,8 +3,8 @@
 A fresh development from the mathematical statements in
 [Efficient Foreign-Field Arithmetic in PLONK](https://eprint.iacr.org/2025/695).
 This project is separate from the existing EasyCrypt checkout and the supplied
-Lean artifact. The multiplication and lazy-arithmetic/normalization milestones are complete;
-the remaining migration is planned below.
+Lean artifact. The multiplication, lazy-arithmetic/normalization, and unique-zero milestones
+are complete. Elliptic-curve and MSM proofs remain planned below.
 
 ## Source policy
 
@@ -15,7 +15,7 @@ the remaining migration is planned below.
   was copied from a pristine standard-library cache, not from the supplied
   formalization. No other project's proof sources were copied.
 - The supplied Lean repository and archive are not consulted when authoring
-  this development. They were not opened during the foundation, multiplication, or normalization implementations.
+  this development. They were not opened during the foundation, multiplication, normalization, or shifted-encoding implementations.
 - Earlier artifact reviews are background context. Independence here means
   fresh definitions and proof development, not a claim that prior reviews
   never happened. The EasyCrypt coverage inventory can guide priorities;
@@ -46,7 +46,7 @@ checkout. The local development already has that cache. The default build
 checks both the library and Tests; warnings are treated as errors. This is
 local build setup. CI and larger/production instances remain skipped.
 
-All 65 library theorems compile, and their axiom reports contain
+All 107 library theorems compile, and their axiom reports contain
 only Lean's standard propext, Classical.choice and Quot.sound. There are no
 project axioms, admissions or native_decide proofs. The build uses supplied
 mathlib artifacts; it is not a fresh rebuild of the entire standard library.
@@ -64,10 +64,14 @@ mathlib artifacts; it is not a fresh rebuild of the entire standard library.
 | [Multiplication.lean](EfficientFFA/Multiplication.lean) | Acceptance iff modular multiplication, and canonical-output corollary |
 | [Multiplication regressions](Tests/Multiplication.lean) | Full small parameter instances, explicit witnesses, rounding, noncanonical outputs, and incomplete-check counterexample |
 | [LazyArithmetic.lean](EfficientFFA/LazyArithmetic.lean) | All five Table 1 bound rules, preservation of native-residue representation, and uniqueness of lifts in short intervals |
-| [Representation.lean](EfficientFFA/Representation.lean) | Bounded limb representations for integers below radix capacity, including canonical residues |
+| [Representation.lean](EfficientFFA/Representation.lean) | Bounded limb representations, capacity bounds, and injectivity of integer evaluation |
 | [Normalization.lean](EfficientFFA/Normalization.lean) and its submodules | Linear residual bounds, actual auxiliary checks, soundness, explicit witnesses, canonical output existence, and stored-residue transport |
 | [Division.lean](EfficientFFA/Division.lean) | Invertibility criterion, encoded division/inversion, and prime-modulus inverse-of-difference criterion |
 | [Lazy/normalization regressions](Tests/LazyNormalization.lean) | Signed native wraparound, full parameters and witnesses, interval endpoints, wrong-output rejection, capacity failure, and composite-modulus counterexamples |
+| [ShiftedEncoding/Representation.lean](EfficientFFA/ShiftedEncoding/Representation.lean) | Unique zero, shifted representability, and integer/native limb zero tests |
+| [ShiftedEncoding/Arithmetic.lean](EfficientFFA/ShiftedEncoding/Arithmetic.lean) | Corrected operations, signed bounds, native representation, and reuse of normalization |
+| [ShiftedEncoding/Multiplication.lean](EfficientFFA/ShiftedEncoding/Multiplication.lean) and its submodules | Revised residual bounds, encoded soundness/completeness, and output/witness existence |
+| [Shifted regressions](Tests/ShiftedEncoding.lean) | Uniqueness boundaries, native aliasing, corrected operations, and full shifted multiplication instances |
 | [Foundations.lean](Tests/Foundations.lean) | Noncoprime/signed/zero moduli, strict-bound boundary, a radix-10 multiplication example, signed limbs, and theorem-axiom reports |
 
 Limbs are finite vectors of integers, with well-formedness expressed as a
@@ -214,14 +218,86 @@ representing tracked [-1,0], normalization to [1,2] (value 7), and actual
 quotient witnesses. Further examples exercise both signed endpoints and
 prove rejection of output zero for that input, irrespective of witnesses.
 
+## Unique-zero and shifted-arithmetic correspondence
+
+This milestone follows Section 3.2.4 of the same downloaded paper. No supplied
+Lean sources or EasyCrypt proof scripts were consulted. Its shifted value is
+value B x = 1 + eval B x, reduced modulo q when interpreted as a foreign value.
+
+| Paper claim | Checked result in EfficientFFA.ShiftedEncoding |
+|---|---|
+| Zero has exactly one bounded representation | exists_unique_zero under B > 0, q > 0 and q <= B^n < 2*q |
+| Zero corresponds to the unshifted integer q-1 | zero_iff_eval, with eval_bounds and eval_injective supplying the representation facts |
+| A limb-wise zero comparison is sufficient | zero_iff_limbs; zero_iff_native_checks also covers comparisons modulo p under B <= p |
+| Every foreign value has a shifted representation | exists_representation under q <= B^n |
+| Shifted operations need low-limb corrections | value_add/sub/neg/add_constant/scale, bounded operation lemmas, and represents operation lemmas |
+| Normalization is unchanged | value_congr_iff, normalization_iff, stored_normalization_sound and stored_normalization_exists |
+| Modified multiplication with extra linear terms | Multiplication.shifted_product_identity and Multiplication.Parameters.accepts_iff_multiplication, with full soundness and explicit witness construction |
+
+The native zero-test theorem keeps limb ranges explicit. B <= p ensures that
+congruence modulo p distinguishes bounded limb values. It is a numerical
+parameter condition, not an additional per-operation check. No primality is
+needed for zero uniqueness, shifted arithmetic or these constraint proofs.
+Zero uniqueness does not imply uniqueness for other residues: the regressions
+include two different bounded representations of one.
+
+For vectors with at least one limb, only the least significant limb receives
+the following corrections to the ordinary limb-wise operation:
+
+| Operation | Low-limb correction |
+|---|---|
+| Addition of two shifted operands | +1 |
+| Subtraction of two shifted operands | -1 |
+| Negation | -2 |
+| Multiplication by an integer constant c | c-1 |
+| Addition of a plain integer constant c | c (directly to the existing low limb) |
+
+Addition of a constant supplied in shifted limb form uses the ordinary shifted
+addition operation. The arithmetic lemmas prove exact integer identities;
+bounds may grow and become negative, so normalization remains necessary before
+operations requiring well-formed inputs. The stored-residue lemmas carry the
+same interpretation through native-field arithmetic. The selected normalized
+shifted representative has integer value 1 + ((value B x - 1) mod q), lying
+in [1,q]; q represents zero. It is not a canonical integer in [0,q).
+
+The shifted multiplication residual adds both reduced linear terms to the
+unshifted residual. If A = (B-1)*sum_i(B^i mod q), its lower bound stays -A,
+while its upper bound becomes:
+
+~~~text
+C_shifted = (B-1)^2 * sum_i sum_j(B^(i+j) mod q) + 2*A
+~~~
+
+For each auxiliary modulus m, its upper bound similarly gains
+2*(B-1)*sum_i(B^i mod q mod m). The lower bound has the same algebraic form,
+but uses the actual selected native witness width. All quotient endpoints,
+width checks, native no-wrap inequalities, and LCM conditions use these shifted
+bounds. They are proved independently from limb ranges; no old upper-bound
+claim is reused. The paper prints the modified identity but not this full
+parameter derivation; these checked bounds supply that missing detail.
+
+The multiplication proof itself does not need the unique-zero capacity upper
+bound B^n < 2*q. That condition belongs to zero uniqueness. The optional
+multiplication_exists theorem requires q <= B^n to construct an output,
+whereas completeness for a supplied correct triple does not. A full small
+instance uses radix 3, q = 8, p = 131, noncoprime auxiliary moduli 2 and 4,
+and different auxiliary widths. A maximal input attains shifted residual 48,
+strictly exceeding the unshifted bound 32. Tests also reject the answer obtained
+by forgetting the shift, for all possible bounded quotient witnesses.
+
+Boundary regressions exhibit two zero representations when B^n = 2*q,
+nonunique expansions without limb bounds, and false native zero comparisons
+when the radix is larger than the native modulus. Circuit wiring and concrete
+range-check gadget implementations remain outside scope.
+
 ## Execution plan
 
-Baseline and milestone update: 2026-10-27. Steps 1-5 are **complete**: the
+Baseline and milestone update: 2026-10-27. Steps 1-6 are **complete**: the
 library and regressions build with warnings as errors, all library theorem
 axiom reports use only the standard Lean axioms, and the paper correspondence
 is recorded above. Their original implementation checklist is retained below.
-Steps 6-7 remain planned work. The next milestone is the unique-zero
-representation in Section 3.2.4; EC and MSM follow it.
+Step 7 remains planned work. The next milestone is affine elliptic-curve
+operations and their exceptional cases, followed by the table and MSM proofs.
 
 ### 1. Fix the multiplication specification (complete)
 
@@ -412,7 +488,7 @@ Acceptance: checked bounds and native-residue correspondence for the lazy
 operations, followed by normalization soundness/completeness and their
 composition. Integer linearity alone does not meet this completion gate.
 
-### 6. Prove the unique-zero representation
+### 6. Prove the unique-zero representation (complete)
 
 Proposed module: ShiftedEncoding.lean, after the unshifted arithmetic is stable.
 Define 1 + eval B x modulo q. Under well-formedness and q <= B^n < 2*q,
