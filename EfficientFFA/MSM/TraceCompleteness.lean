@@ -65,12 +65,28 @@ def TraceWitnesses (w l n : ℕ) (bases : ℕ → Coordinates K)
   ∃ tr : CoordinateTrace K, C.TraceAccepts w l n bases windows tr ∧
     ∃ hu : C.OnCurve tr.seed, C.point tr.seed hu = u
 
+/-- Local finiteness suffices for tangent witnesses; no ambient-group torsion
+restriction is required. This also applies to points in an odd-order subgroup. -/
+theorem coordinates_double_witnesses {a : C.Point} (ha : a ≠ 0) (haa : a+a ≠ 0) :
+    ∃ slope, DoubleChecks C (C.coordinates a) (C.coordinates (a+a)) slope := by
+  have hden : 2*(C.coordinates a).y ≠ 0 := by
+    intro h
+    have he := (C.double_eq_zero_iff (C.coordinates_on_curve ha)).mpr h
+    rw [C.point_coordinates ha] at he
+    exact haa he
+  obtain ⟨R, slope, hc, hR, he⟩ := C.doubling_complete (C.coordinates_on_curve ha) hden
+  have hr : R = C.coordinates (a+a) := by
+    apply C.point_injective (hP := hR) (hQ := C.coordinates_on_curve haa)
+    simpa only [C.point_coordinates ha, C.point_coordinates haa] using he
+  exact ⟨slope, by simpa only [hr] using hc⟩
+
 /-- A successful group execution supplies the entire linked coordinate trace. -/
-theorem trace_complete {w l n : ℕ} (hw : 0 < w) (hl : 0 < l)
+theorem trace_complete_of_finite {w l n : ℕ} (hw : 0 < w) (hl : 0 < l)
     (bases : ℕ → Coordinates K) (hbases : ∀ j, C.OnCurve (bases j))
     (windows : ℕ → ℕ → ℕ) (u : C.Point)
     (haccept : GroupAccepts (2^w) l n (fun j => C.point (bases j) (hbases j)) windows u)
-    (hbmap : Function.Injective (fun u : C.Point => 2^w • u))
+    (hfinite : ∀ i, i ≤ n → ∀ k, k ≤ w →
+      2^k • loop (2^w) l (fun j => C.point (bases j) (hbases j)) windows u i ≠ 0)
     (hrange : ∀ i, i < n → ∀ j, j < l → windows i j < 2^w) :
     C.TraceWitnesses w l n bases windows u := by
   let P := fun j => C.point (bases j) (hbases j)
@@ -88,7 +104,7 @@ theorem trace_complete {w l n : ℕ} (hw : 0 < w) (hl : 0 < l)
     simpa only [entry, zero_nsmul, zero_sub, neg_ne_zero] using h
   have h0 : C.OnCurve (boundary 0) := C.coordinates_on_curve haccept.1
   have hn : C.OnCurve (boundary n) :=
-    C.coordinates_on_curve (loop_ne_zero (2^w) l n P windows u haccept hbmap n (by omega))
+    C.coordinates_on_curve (by simpa using hfinite n (by omega) 0 (by omega))
   obtain ⟨offsetChain, hoc, hoe⟩ := C.scale_exists_to (C.coordinates_on_curve hu)
     (C.coordinates_on_curve hV) (2^w-1) (by rw [C.point_coordinates hV, C.point_coordinates hu])
   obtain ⟨initialChain, hic, hie⟩ := C.scale_exists_to (C.coordinates_on_curve hu)
@@ -117,14 +133,40 @@ theorem trace_complete {w l n : ℕ} (hw : 0 < w) (hl : 0 < l)
   · intro i _
     simp [tr, doubles, boundary]
   · intro i hi k hk
-    exact C.msm_double_witnesses w l n P windows u haccept hbmap hi hk
+    have ha := hfinite i (by omega) k (by omega)
+    have hb := hfinite i (by omega) (k+1) (by omega)
+    have hsum : 2^k • loop (2^w) l P windows u i + 2^k • loop (2^w) l P windows u i =
+        2^(k+1) • loop (2^w) l P windows u i := by
+      rw [pow_succ, mul_comm, mul_smul, two_smul]
+    dsimp [P] at hsum
+    have hh := C.coordinates_double_witnesses ha (by simpa only [hsum] using hb)
+    simpa only [tr, doubles, P, hsum] using hh
   · intro i _
     rfl
   · intro i hi j hj
+    have ha : addRows P (windows i) V (2^w • loop (2^w) l P windows u i) j ≠ 0 := by
+      apply addRows_ne_zero
+      · exact hfinite i (by omega) w (by omega)
+      · intro k hk he
+        exact haccept.2.2 i hi k (by omega) (Or.inr he)
+    have hb := (haccept.2.1 j hj).1 (windows i j) (by have := hrange i hi j hj; omega)
+    have hn := haccept.2.2 i hi j hj
     simpa only [tr, rows, table, addRows] using
-      C.msm_row_witnesses (2^w) l n P windows u haccept hbmap hrange hi hj
+      C.coordinates_add_witnesses ha hb (fun he => hn (Or.inl he)) (fun he => hn (Or.inr he))
   · intro i _
     rfl
   · exact hfinal
+
+/-- Ambient radix injectivity is one sufficient way to discharge local finiteness.
+The subgroup wrapper instead derives it inside the subgroup. -/
+theorem trace_complete {w l n : ℕ} (hw : 0 < w) (hl : 0 < l)
+    (bases : ℕ → Coordinates K) (hbases : ∀ j, C.OnCurve (bases j))
+    (windows : ℕ → ℕ → ℕ) (u : C.Point)
+    (haccept : GroupAccepts (2^w) l n (fun j => C.point (bases j) (hbases j)) windows u)
+    (hbmap : Function.Injective (fun u : C.Point => 2^w • u))
+    (hrange : ∀ i, i < n → ∀ j, j < l → windows i j < 2^w) :
+    C.TraceWitnesses w l n bases windows u :=
+  C.trace_complete_of_finite hw hl bases hbases windows u haccept
+    (fun _ hi _ hk => doubling_ready w l n _ windows u haccept hbmap hi hk) hrange
 
 end EfficientFFA.EllipticCurve.Curve

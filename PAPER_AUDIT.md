@@ -8,8 +8,10 @@ library definitions or proofs. It was committed and pushed as a5e2004.
 complete. Native/ now proves the EC limb encodings, activation and representation
 bridges, full native-trace soundness and statistical completeness.
 Instances/Curve17.lean discharges all arithmetic and statistical parameters for
-a small actual curve. All 281 library theorem reports use only the standard
+a small actual curve. All 319 library theorem reports use only the standard
 Lean axioms (or none), and lake build passes with warnings as errors.
+A further authorized subgroup extension now resolves F4 through coordinate and
+native subgroup wrappers, checked membership and a cofactor-two regression.
 The findings and coverage table below describe the reviewed b05a742 baseline;
 resolution notes identify changes since that audit. The printed-algorithm
 mismatches and deferred implementation boundaries remain.
@@ -157,7 +159,19 @@ valid inputs, not an exhibited accepted incorrect sum.
 
 ## Assumptions and narrower coverage
 
-### F4. The full coordinate probability theorem uses the full curve group, not an arbitrary prime subgroup
+### F4. The original coordinate probability theorem used only the full curve group
+
+**Resolved for explicit subgroups:** MSM/Subgroup.lean and Native/Subgroup.lean
+now sample uniformly from a finite prime-order AddSubgroup H, use card(H) in
+the parameter rules and denominator, and construct coordinate/native witnesses
+without ambient radix injectivity. Public-base membership is explicit and
+output membership is proved. Native membership checks through [card(H)]P=0
+are characterized under a separately stated coprime-quotient-order condition.
+Instances/Subgroup17.lean verifies an order-11 subgroup in a 22-point curve,
+rejects its two-torsion point, and proves the 8/11 bound and witness existence.
+The sampler is the mathematical uniform PMF on H; implementation sampling,
+cofactor-clearing distributions and optimized membership circuits are not
+certified. The following paragraphs retain the original finding.
 
 Sections 4 and 4.2 allow discussion of a relevant cryptographic subgroup and
 mention additional subgroup-membership checks. The public statistical theorem
@@ -372,8 +386,9 @@ runtime behavior.
 2. When paper edits resume, resolve F2-F3 first, then state F4-F6 assumptions,
    simplify F8 and correct F9-F10. The audit itself does not edit the paper.
 3. F1 and the native disequality endpoint have now been implemented and
-   composed with the whole trace. A subgroup wrapper remains a separate scope
-   decision. No per-step table guards were added.
+   composed with the whole trace. The subsequently authorized subgroup wrapper
+   and native membership checks now resolve F4 within their explicit scope.
+   No per-step table guards were added.
 4. Keep CI, production parameter instances, circuit wiring and benchmarks out of
    the current completion claim unless explicitly brought into scope. A
    small curve cardinality/parameter instance has now been checked; it does

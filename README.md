@@ -58,7 +58,7 @@ checkout. The local development already has that cache. The default build
 checks both the library and Tests; warnings are treated as errors. This is
 local build setup. CI and larger/production instances remain skipped.
 
-All 281 library theorems compile, and their axiom reports contain
+All 319 library theorems compile, and their axiom reports contain
 only Lean's standard propext, Classical.choice and Quot.sound. There are no
 project axioms, admissions or native_decide proofs. The build uses supplied
 mathlib artifacts; it is not a fresh rebuild of the entire standard library.
@@ -104,6 +104,9 @@ mathlib artifacts; it is not a fresh rebuild of the entire standard library.
 | [Native/EllipticCurve.lean](EfficientFFA/Native/EllipticCurve.lean) | Encodings of (6)–(9), checked square linkage, copies, and inverse-of-difference certificates |
 | [Native/Trace.lean](EfficientFFA/Native/Trace.lean) and [Native/Statistics.lean](EfficientFFA/Native/Statistics.lean) | Native arithmetic trace equivalence, MSM soundness, and native-witness statistical completeness |
 | [EllipticCurve/Cardinality.lean](EfficientFFA/EllipticCurve/Cardinality.lean) and [Instances/Curve17.lean](EfficientFFA/Instances/Curve17.lean) | Actual curve-group enumeration, 19-point cardinality, valid EC encoding and instantiated 8/19 bound |
+| [MSM/Embedding.lean](EfficientFFA/MSM/Embedding.lean) and [MSM/Subgroup.lean](EfficientFFA/MSM/Subgroup.lean) | Group embedding correspondence, subgroup-only radix injectivity, coordinate witness existence, uniform subgroup failure bound and output membership |
+| [EllipticCurve/Subgroup.lean](EfficientFFA/EllipticCurve/Subgroup.lean) and [Native/Subgroup.lean](EfficientFFA/Native/Subgroup.lean) | Coprime-cofactor membership criterion, native loading checks, native trace statistical completeness on subgroups |
+| [Instances/Subgroup17.lean](EfficientFFA/Instances/Subgroup17.lean) and [Tests/Subgroup.lean](Tests/Subgroup.lean) | A 22-point curve, an order-11 subgroup, 8/11 native bound, ambient two-torsion rejection and a counterexample without coprime cofactor |
 | [Native regressions](Tests/Native.lean) | Square linkage, wrong outputs, active/inactive branches, native wraparound, explicit quotient witnesses and all new theorem-axiom reports |
 | [Trace regressions](Tests/Trace.lean) | Accepted concrete curve traces, wrong output, broken initial linkage, and a nonempty execution returning infinity |
 | [MSM regressions](Tests/MSM.lean) | Unequal windows, accepted execution, exact excluded-seed counts, instantiated probability theorem, and noninvertible coefficient |
@@ -599,7 +602,9 @@ q, exists_correct_trace_prime produces an accepted trace and proves its
 output equals the intended little-endian MSM. These are conditional theorems
 with concrete mathematical premises, not project axioms or a claim about
 all curves. In particular, the prime-cardinality wrapper refers to the full
-curve group, not an implicitly assumed prime-order subgroup.
+curve group, not an implicitly assumed prime-order subgroup. The separate
+subgroup wrappers below now cover the latter case with explicit membership
+and sampling contracts.
 
 The fixed-scalar chains use repeated complete addition as an explicit way to
 enforce the constant links. Figure 4 leaves the precise implementation of
@@ -693,8 +698,78 @@ why native no-wrap and prime-modulus bitness conditions matter.
 
 The requested follow-up steps 1–4 are complete: the audit/regression was
 committed and pushed as a5e2004; the native identities, trace connection and
-small curve instance are checked. Subgroup-specific statistics, paper edits,
-CI, production instances, implementation wiring and cost claims remain deferred.
+small curve instance are checked. The subgroup extension below was subsequently
+authorized and completed. Paper edits, CI, production instances, implementation
+wiring and cost claims remain deferred.
+
+## Prime-order subgroups
+
+The subgroup extension follows Sections 4 and 4.2 using this library and
+mathlib. No supplied Lean sources or further EasyCrypt scripts were consulted.
+It leaves the full-curve statistical theorem available with its original
+statement and adds separate subgroup endpoints.
+
+Let H be an AddSubgroup of the actual curve group and N=card(H). Public bases
+must be finite on-curve points belonging to H; the sampled seed has type H.
+The coordinate uniform_subgroup_trace_failure_bound_prime and native
+uniform_subgroup_failure_bound prove:
+
+~~~text
+Pr[no accepted trace for U], U uniform in H
+  <= (1+l*(2^w+1)+2*T*l)/N
+~~~
+
+They assume finite prime N, positive w and l, in-range fixed windows, and
+(2^w)*l+2^w-1 < N. The corresponding exists_correct_subgroup_trace theorems
+also require the failure budget below N. They produce a seed in H, a full
+accepted trace, its correct little-endian MSM result, and output membership
+in H. The ambient curve group need not be finite or have prime order. No
+coprime-cofactor premise is needed when input membership is already established.
+
+The trace constructor now has a reusable trace_complete_of_finite boundary:
+its mathematical requirement is that the relevant doubled accumulators are
+nonidentity. Group embeddings preserve the recurrence, table safety and loop
+collisions. The subgroup proof derives those nonidentity conditions using
+radix injectivity in H, then constructs witnesses on the ambient curve.
+Consequently ambient two-torsion does not obstruct completeness. The existing
+trace_complete theorem still discharges the same requirement from ambient
+radix injectivity. No table or MSM acceptance guards were added.
+
+Subgroup membership can be checked in the native arithmetic model as well.
+For a finite input point P, ECEncoding.Member checks curve membership and a
+complete-add chain for [N]P with an infinity endpoint. member_iff proves that
+these checks characterize membership in the chosen H when:
+
+~~~text
+gcd(card(C.Point / H), card(H)) = 1
+~~~
+
+This is a separate sufficient condition for that particular membership test.
+Prime order of H alone is insufficient: in the additive group F_5 × F_5,
+[5](0,1)=0, but (0,1) does not belong to the first coordinate axis subgroup.
+The regression checks both subgroup and quotient orders are five.
+The uniform_subgroup_failure_bound_checked endpoint accepts the native
+membership checks directly and derives its public-base membership premises.
+This loading contract uses finite coordinates; it does not expand the MSM's
+public-base interface to permit infinity. The repeated complete-add chain
+certifies mathematics, not an optimized membership-check cost.
+
+The normalized PMF samples H itself, including zero, whose rejection is counted
+in the existing budget. We do not infer this distribution from an implementation
+that clears cofactors or conditions an ambient sampler. Correctness and
+uniformity of such a sampler require their own proof. No production curve
+parameters or subgroup-order assumptions are silently supplied.
+
+The small regression curve is y^2=x^3+2*x+3 over F_17, with 22 total points.
+The checked point (14,15)=2*(2,7) generates a subgroup of order 11; its quotient
+has order two. The on-curve point (16,0) has order two, so ambient doubling
+is provably non-injective, and the native membership checks reject that point.
+Using two radix-5 limbs, native modulus 65537, auxiliary modulus 101 and 7-bit
+quotient ranges, all native gate bounds hold for this curve. With w=l=1 and
+T=2, failure_bound proves 8/11 under subgroup sampling, and exists_correct
+produces a correct native trace for every in-range input. As with the earlier
+small instance, this validates the assumptions together; it is not a negligible
+failure probability or a production-parameter claim.
 
 ## Execution plan
 

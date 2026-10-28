@@ -6,3 +6,4 @@ import EfficientFFA.EllipticCurve
 import EfficientFFA.MSM
 import EfficientFFA.Native
 import EfficientFFA.Instances.Curve17
+import EfficientFFA.Instances.Subgroup17
