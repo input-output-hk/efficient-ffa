@@ -22,6 +22,13 @@ native EC and subgroup results. Its referenced declarations are checked by
 Tests/PaperCorrespondence.lean. The historical verdict below is retained;
 its first qualification was resolved by the native-encoding work described above.
 
+**Review follow-up (2026-10-30):** CompleteCircuit now proves native selector
+dispatch and shared limb copies for ordered complete addition, with explicit
+native-prime and B≤p conditions. The full MSM Trace predicate still uses
+per-gate limb witnesses linked by field values. The current results map also
+covers the newer LaTeX MSM theorem (T17); proposed corrections to the source
+mismatches are recorded in `ffa-paper/PAPER_REVISION_PROPOSALS.txt`, not applied. The older counts and findings below are historical.
+
 ## Verdict
 
 The independent Lean library covers the agreed arithmetic and coordinate-level

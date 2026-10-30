@@ -1,6 +1,6 @@
 # Paper results mapped to independent Lean statements
 
-Reviewed: 2026-10-28. Library baseline: `d5e4ddc2ca4620f6aee3e566498473ba5d114645`.
+Updated: 2026-10-30. Pre-review combined-library baseline: `f0782a505dc39cc72bfed3ce18ae3ffb44589eb8`.
 This is the current correspondence map, including native EC encodings and
 prime-order subgroup support. [PAPER_AUDIT.md](PAPER_AUDIT.md) preserves the
 earlier audit and its findings; its original coverage table describes an older baseline.
@@ -9,7 +9,13 @@ earlier audit and its findings; its original coverage table describes an older b
 
 The local 13-page paper, *Efficient Foreign-Field Arithmetic in PLONK*
 (ePrint 2025/695), has **two numbered result statements: Theorems 3.1 and 3.2**.
-There are no other numbered lemmas, propositions, corollaries or claims.
+That PDF has no other numbered lemmas, propositions, corollaries or claims.
+The current LaTeX source at `input-output-hk/ffa-paper`, baseline `39ae3d0`,
+adds a third theorem in `ff-ecc.tex`: MSM soundness and completeness. Row
+T17 maps it explicitly. Proposed corrections are recorded in
+`ffa-paper/PAPER_REVISION_PROPOSALS.txt` on `review/formalization-alignment`,
+including statistical completeness and Figures 3–4. These proposals are not
+applied: the LaTeX source and historical PDF remain unchanged.
 Most of the work is stated through equations, figure contracts and prose.
 This inventory assigns stable IDs to those mathematical claim families and
 also records the implementation, performance and application claims that have
@@ -23,9 +29,8 @@ c075bb9c3db566eb579495e64eb074c2783cdba34dcd1417132eb5756e7b36dd
 ~~~
 
 Page numbers are PDF page positions. The inventory uses extracted text and
-visual review of mathematical pages 4–10. Only this paper, the independent
-library and its existing documentation/regressions were consulted for this
-mapping. No supplied Lean repository/archive was opened, and no new EasyCrypt
+visual review of mathematical pages 4–10. The original mapping used that PDF and the independent library. The
+2026-10-30 follow-up also consulted the current LaTeX source and LEAN_REVIEW. No supplied Lean repository/archive was opened, and no new EasyCrypt
 comparison was performed.
 
 A link below identifies an **existing declaration**, not a proposed proof.
@@ -46,9 +51,9 @@ completeness of this inventory are manual review judgments.
 | Unmapped | No corresponding formal statement/proof was identified in this library. |
 | Background | A cited foundation or contextual assertion outside the library's subject. |
 
-The 89 rows are inventory units, not a theorem count or a percentage of
+The 90 rows are inventory units, not a theorem count or a percentage of
 verification. Several rows can share a theorem and one row can require many
-lemmas. The library's 319-theorem count is a separate implementation metric.
+lemmas. The library's 364-theorem count is a separate implementation metric.
 
 ## Headline theorem contracts
 
@@ -75,7 +80,8 @@ finite bases, every accepted full native trace has a valid output equal to
 `Σ j, (Σ i, (2^w)^i * windows i j) • base j`.
 The endpoint is [E.trace_sound_littleEndian](EfficientFFA/Native/Trace.lean#L157).
 It uses the ordered complete-add contract and descending traversal of
-little-endian windows. It does not prove Figures 3 and 4 literally as printed.
+little-endian windows. It does not prove Figures 3 and 4 literally as printed in the original PDF;
+the recorded paper proposals would align their traversal and branch order.
 No additional per-entry table guard is introduced: accepted table equations
 imply the internal guards (T02). Table witness existence is a separate
 parameter/seed-selection result (T03–T04).
@@ -130,7 +136,8 @@ contract, not a claim that every numerical choice supplies such an encoding.
 
 | Paper object | Inventory rows |
 |---|---|
-| Theorems 3.1, 3.2 | M10, M11 |
+| Theorems 3.1, 3.2 (PDF and LaTeX) | M10, M11 |
+| MSM theorem (current LaTeX, `thm:msm`) | T17 |
 | Equations (1), (2), (3), (4) | M02; M05–M06; M07; M08 |
 | Equation (5) | L07–L10 |
 | Equations (6), (7), (8), (9) | E02; E03; E04; E05 |
@@ -217,7 +224,7 @@ contract, not a claim that every numerical choice supplies such an encoding.
 | **E05** — §4.1.4, p.8, (9), plus (7) with Q=R | The slope fixes x(R), and the linear relation fixes y(R). | Covered | [EC.result](EfficientFFA/EllipticCurve/Affine.lean#L58), [EC.output_determined](EfficientFFA/EllipticCurve/Affine.lean#L77), [C.result_group](EfficientFFA/EllipticCurve/GroupLaw.lean#L42), [C.addition_sound](EfficientFFA/EllipticCurve/GroupLaw.lean#L58), [C.doubling_sound](EfficientFFA/EllipticCurve/GroupLaw.lean#L87). No division by x(R)−x(P) is needed to determine y(R). The coordinate checks are connected to actual group addition. |
 | **E06** — §4.1, pp.7–8 | Encode the foreign identities over the native modulus using coefficient reduction and bounds. | Covered | [P.reduce_congr](EfficientFFA/Native/Polynomial.lean#L76), [P.eval_bounds](EfficientFFA/Native/Polynomial.lean#L103), [G.residual_congr](EfficientFFA/Native/Gate.lean#L69), [G.residual_bounds](EfficientFFA/Native/Gate.lean#L72), [G.auxCore_bounds](EfficientFFA/Native/Gate.lean#L76), [G.auxCore_congr](EfficientFFA/Native/Gate.lean#L86), [G.sound](EfficientFFA/Native/Gate.lean#L95), [G.accepts_iff](EfficientFFA/Native/Gate.lean#L177), [X.compile_eval](EfficientFFA/Native/Expression.lean#L57), [X.checks_iff](EfficientFFA/Native/Expression.lean#L107), [E.check_iff](EfficientFFA/Native/EllipticCurve.lean#L54). The sparse-polynomial/limb compiler is proved correct. Each gate kind requires valid arithmetic parameters, foreign modulus agreement, capacity and well-formed represented inputs. |
 | **E07** — §4.1, p.7 | Replacing x³ by x*z reduces limb-product complexity from cubic to quadratic. | Partial | [Native.GateKind.expression](EfficientFFA/Native/EllipticCurve.lean#L15), [X.compile_eval](EfficientFFA/Native/Expression.lean#L57). The linked quadratic templates are formalized. There is no separate asymptotic degree, monomial-count, row-count or cost theorem. |
-| **E08** — §4.1, p.8 | Boolean activation disables an identity at zero and enforces it at one. | Covered | [Native.bit_cases](EfficientFFA/Native/Activation.lean#L7), [G.Activated](EfficientFFA/Native/Activation.lean#L26), [G.activated_sound](EfficientFFA/Native/Activation.lean#L34), [G.activated_one](EfficientFFA/Native/Activation.lean#L46), [G.activated_zero](EfficientFFA/Native/Activation.lean#L51). The bit-root argument needs the native prime/field assumption; composite native rings can have extra idempotents. Activated gate arithmetic is proved, but E.Check selects activation one and branch dispatch remains a logical predicate. |
+| **E08** — §4.1, p.8 | Boolean activation disables an identity at zero and enforces it at one. | Covered | [Native.bit_cases](EfficientFFA/Native/Activation.lean#L7), [G.Activated](EfficientFFA/Native/Activation.lean#L26), [G.activated_sound](EfficientFFA/Native/Activation.lean#L34), [G.activated_one](EfficientFFA/Native/Activation.lean#L46), [G.activated_zero](EfficientFFA/Native/Activation.lean#L51). The bit-root argument needs the native prime/field assumption; composite native rings can have extra idempotents. E.Check selects activation one. The new [E.CompleteConstraints](EfficientFFA/Native/CompleteCircuit.lean) instead constrains raw selector bits and equality tests, and derives branch activation polynomials; [E.completeConstraints_sound](EfficientFFA/Native/CompleteCircuit.lean) proves dispatch correctness. The existing whole-trace relation still uses logical dispatch. |
 | **E09** — §4.1, p.7 | The same EC-identity approach can be adapted to the unique-zero representation. | Unmapped | **No direct counterpart.** Shifted arithmetic is proved separately. Native EC gates and traces currently use ordinary, unshifted limbs; no shifted EC encoding/trace bridge is present. |
 | **E10** — §4.2, p.8 | An infinity flag permits arbitrary coordinates for infinity; finite coordinates must be on the curve. | Covered | [EC.Encoded](EfficientFFA/EllipticCurve/Flagged.lean#L6), [C.Valid](EfficientFFA/EllipticCurve/Flagged.lean#L14), [C.decode](EfficientFFA/EllipticCurve/Flagged.lean#L16), [C.decode_finite](EfficientFFA/EllipticCurve/Flagged.lean#L19), [C.decode_infinity](EfficientFFA/EllipticCurve/Flagged.lean#L22), [E.flag_iff](EfficientFFA/Native/Trace.lean#L15). Lean Boolean tags have a native bit check. There is no standalone compiled implementation of the paper’s unified Valid gate or proof of its 2n+1-cell cost. Finite membership and tagged semantics are connected in the operation/trace contracts. |
 | **E11** — §4.2, p.8 | Check loaded points for subgroup membership, then preserve subgroup membership under operations. | Conditional | [SG.mem_iff_card_nsmul_eq_zero](EfficientFFA/EllipticCurve/Subgroup.lean#L8), [E.member_iff](EfficientFFA/Native/Subgroup.lean#L24), [C.trace_output_mem_subgroup](EfficientFFA/MSM/Subgroup.lean#L36), [E.trace_output_mem_subgroup](EfficientFFA/Native/Subgroup.lean#L12). The native membership predicate checks on-curve and [card H]P=0 via a complete-addition chain. Equivalence to membership in the chosen H requires coprimality of card H with the quotient order. Output closure needs subgroup inputs; prime subgroup order alone does not identify a subgroup when the cofactor shares that prime. |
@@ -230,10 +237,10 @@ contract, not a claim that every numerical choice supplies such an encoding.
 | **O01** — §4.3, p.8, Figure 1 | Doubling preserves the infinity flag and uses tangent/addition equations in the finite branch. | Conditional | [C.DoubleAccepts](EfficientFFA/EllipticCurve/Flagged.lean#L26), [C.flagged_double_sound](EfficientFFA/EllipticCurve/Flagged.lean#L35), [C.flagged_double_complete](EfficientFFA/EllipticCurve/Flagged.lean#L46), [C.flagged_double_witnesses_iff](EfficientFFA/EllipticCurve/Flagged.lean#L55), [C.flagged_double_complete_of_no_two_torsion](EfficientFFA/EllipticCurve/Flagged.lean#L91). Sound for accepted checks. Complete when the finite tangent denominator is nonzero; no nontrivial two-torsion is a sufficient group-level condition, consistent with the paper’s restriction. |
 | **O02** — §4.3, p.8, explanation of x(2P) ≠ x(P) | Excluding order three is used to justify the displayed doubling method. | Refined | [EC.output_determined](EfficientFFA/EllipticCurve/Affine.lean#L77), [C.flagged_double_witnesses_iff](EfficientFFA/EllipticCurve/Flagged.lean#L55). Lean does not need x(2P) ≠ x(P) or an order-three exclusion. The y-output is determined without dividing by that difference. The order-three regression in Tests/EllipticCurve.lean demonstrates this stronger coverage. |
 | **O03** — §4.4.1, p.9, Figure 2 | Incomplete addition is sound and complete for valid finite inputs with distinct x. | Covered | [C.IncompleteAccepts](EfficientFFA/EllipticCurve/Flagged.lean#L30), [C.incomplete_sound](EfficientFFA/EllipticCurve/Flagged.lean#L62), [C.incomplete_complete](EfficientFFA/EllipticCurve/Flagged.lean#L70), [C.addition_sound](EfficientFFA/EllipticCurve/GroupLaw.lean#L58), [C.addition_complete](EfficientFFA/EllipticCurve/GroupLaw.lean#L65). The finite result and its curve membership are derived. Whether input validity/distinctness is separately checked or inherited is a surrounding-contract question. |
-| **O04** — §4.4.2, p.9, Figure 3 | Complete addition handles identities, inverses, doubling and distinct inputs. | Refined | [C.CompleteAccepts](EfficientFFA/EllipticCurve/Complete.lean#L9), [C.complete_sound](EfficientFFA/EllipticCurve/Complete.lean#L21), [C.complete_exists](EfficientFFA/EllipticCurve/Complete.lean#L48), [C.complete_correct](EfficientFFA/EllipticCurve/Complete.lean#L76), [E.complete_iff](EfficientFFA/Native/Trace.lean#L47). Lean uses ordered branches. It proves complete addition, but not the literal conjunction of overlapping implications printed in Figure 3. It also handles order-two inputs by the inverse branch. |
-| **O05** — §4.2; Figure 3 Steps 3–4, p.9 | Copy the other input for an infinity input. | Refined | [EC.IdentityCopies](EfficientFFA/EllipticCurve/Flagged.lean#L104), [EC.identity_copies_iff](EfficientFFA/EllipticCurve/Flagged.lean#L108), [E.copy_iff](EfficientFFA/Native/EllipticCurve.lean#L82), [E.encodedCopy_iff](EfficientFFA/Native/Trace.lean#L22). The two literal copy implications require identical encodings when both inputs are infinity, which conflicts with arbitrary infinity coordinates. Ordered dispatch resolves this. Native copy predicates express equality of represented field values; literal equality of every limb of noncanonical encodings is a stronger contract. |
+| **O04** — §4.4.2, p.9, Figure 3 | Complete addition handles identities, inverses, doubling and distinct inputs. | Refined | [C.CompleteAccepts](EfficientFFA/EllipticCurve/Complete.lean#L9), [C.complete_sound](EfficientFFA/EllipticCurve/Complete.lean#L21), [C.complete_exists](EfficientFFA/EllipticCurve/Complete.lean#L48), [C.complete_correct](EfficientFFA/EllipticCurve/Complete.lean#L76), [E.complete_iff](EfficientFFA/Native/Trace.lean#L47). Lean uses ordered branches. It proves complete addition, but not the literal conjunction of overlapping implications printed in Figure 3. It also handles order-two inputs by the inverse branch. [E.completeCircuit_iff](EfficientFFA/Native/CompleteCircuit.lean), [E.completeCircuit_sound](EfficientFFA/Native/CompleteCircuit.lean) and [E.completeCircuit_complete](EfficientFFA/Native/CompleteCircuit.lean) now establish a shared-limb, native-selector constraint realization. This needs native primality and, for exact copy soundness, B≤p, in addition to ECEncoding validity and valid inputs. The proposed Figure 3 correction uses the ordered branches; it is not applied. |
+| **O05** — §4.2; Figure 3 Steps 3–4, p.9 | Copy the other input for an infinity input. | Refined | [EC.IdentityCopies](EfficientFFA/EllipticCurve/Flagged.lean#L104), [EC.identity_copies_iff](EfficientFFA/EllipticCurve/Flagged.lean#L108), [E.copy_iff](EfficientFFA/Native/EllipticCurve.lean#L82), [E.encodedCopy_iff](EfficientFFA/Native/Trace.lean#L22). The two literal copy implications require identical encodings when both inputs are infinity, which conflicts with arbitrary infinity coordinates. Ordered dispatch resolves this. Native copy predicates express equality of represented field values; literal equality of every limb of noncanonical encodings is a stronger contract. [E.copyLimbs_one_iff](EfficientFFA/Native/SharedGate.lean) proves that stronger native-copy contract when B≤p. CompleteCircuit uses it; completeness constructs canonical shared encodings. It does not promise to preserve arbitrary preassigned public limb encodings. |
 | **O06** — §4.4.2; Figure 3 Steps 3 and 5, p.9 | Coordinate-only inverse detection coexists with infinity-copy branches. | Refined | [Audit.single_infinity_literal_conflict](Tests/PaperAudit.lean#L10), [C.CompleteAccepts](EfficientFFA/EllipticCurve/Complete.lean#L9). The audit theorem refutes the literal simultaneous obligations when one input is infinity with coordinates −Q. Lean’s ordered branches resolve the overlap. Figure 3’s “incomplete” caption is also inconsistent with its surrounding complete-addition discussion. |
-| **O07** — §4.4, p.9; Figure 3 | Copying is free and unique-zero comparison makes complete addition cheap. | Unmapped | **No direct counterpart.** No row/copy/lookup cost model or full selector/copy-constraint compiler is present. Semantic equalities do not establish these resource claims. |
+| **O07** — §4.4, p.9; Figure 3 | Copying is free and unique-zero comparison makes complete addition cheap. | Unmapped | **No direct counterpart.** The shared-wire complete-add gadget has a selector/copy proof, but no row/copy/lookup cost model or PLONK layout compiler is present. Semantic equalities do not establish these resource claims. |
 
 ### MSM tables, loop and probability: §4.5
 
@@ -241,12 +248,12 @@ contract, not a claim that every numerical choice supplies such an encoding.
 |---|---|---|---|
 | **T01** — §4.5, pp.9–10; Figure 4 Steps 3–4, p.10 | Initialize offset tables so entry k represents kP−V, V=(b−1)U. | Covered | [MSM.entry](EfficientFFA/MSM/Tables.lean#L6), [MSM.entry_succ](EfficientFFA/MSM/Tables.lean#L8), [C.table_sound](EfficientFFA/MSM/Tables.lean#L68), [C.table_lookup_sound](EfficientFFA/MSM/Tables.lean#L185). Accepted raw table equations, on-curve base/start and the initial x-distinctness premise establish the group meaning of every table entry. |
 | **T02** — §4.5, p.10, table-construction paragraph | The table recurrence implies internal validity/distinctness without extra per-entry guards. | Covered | [EC.x_ne_of_add_checks](EfficientFFA/MSM/Tables.lean#L28), [C.repeated_step](EfficientFFA/MSM/Tables.lean#L49), [C.table_guards](EfficientFFA/MSM/Tables.lean#L89), [C.table_sound](EfficientFFA/MSM/Tables.lean#L68), [C.table_safe](EfficientFFA/MSM/Tables.lean#L119). This is a soundness theorem about accepted table equations. Lean does not add per-entry guard constraints. |
-| **T03** — §4.5, p.10, table-construction paragraph | Suitable offsets admit witnesses for all table equations. | Conditional | [MSM.TableSafe](EfficientFFA/MSM/Tables.lean#L14), [C.table_complete](EfficientFFA/MSM/Tables.lean#L142), [MSM.table_safe_iff_avoids](EfficientFFA/MSM/TableOffsets.lean#L24), [MSM.badOffsets_card_le](EfficientFFA/MSM/TableOffsets.lean#L61). The first x-distinctness check alone does not guarantee table witness existence (e.g. V=2P can fail later). This is handled by offset selection and rejection bounds, not by adding a new MSM guard. |
+| **T03** — §4.5, p.10, table-construction paragraph | Suitable offsets admit witnesses for all table equations. | Conditional | [MSM.TableSafe](EfficientFFA/MSM/Tables.lean#L14), [C.table_complete](EfficientFFA/MSM/Tables.lean#L142), [MSM.table_safe_iff_avoids](EfficientFFA/MSM/TableOffsets.lean#L24), [MSM.badOffsets_card_le](EfficientFFA/MSM/TableOffsets.lean#L61). The first x-distinctness check alone does not guarantee table witness existence (e.g. V=2P can fail later). This is handled by offset selection and rejection bounds, not by adding a new MSM guard. The recorded proposal restricts the paper’s guard implication to accepted table equations. |
 | **T04** — §4.5, pp.9–10, choosing U and constants | Select parameters giving safe table setup with few excluded seeds. | Conditional | [MSM.badSeeds_card_le](EfficientFFA/MSM/Parameters.lean#L25), [MSM.exists_safe_setup_prime](EfficientFFA/MSM/Parameters.lean#L79), [C.tables_exist_of_parameters](EfficientFFA/MSM/Parameters.lean#L101). Lean makes the paper’s qualitative claim quantitative: setup excludes at most 1+l*(b+1) seeds when steps=b−1 and the required scalar maps are injective. Existence requires this budget below group size. |
 | **T05** — Figure 4 Steps 1–5, p.10; footnote 6, p.9 | Tie supplied constants and table origins to a single random seed U. | Covered | [C.scale_sound](EfficientFFA/MSM/Chains.lean#L16), [C.scale_exists](EfficientFFA/MSM/Chains.lean#L47), [C.trace_setup](EfficientFFA/MSM/Trace.lean#L48), [E.scale_iff](EfficientFFA/Native/Trace.lean#L88), [E.trace_iff](EfficientFFA/Native/Trace.lean#L116). The trace verifies the scalar-multiplication links for V and the initial accumulator, rather than merely assuming unlinked constants. Complete-addition chains implement these links semantically; the particular cheap chain/circuit layout is not verified. |
 | **T06** — Figure 4 Step 10, p.10; footnote 7, p.9 | A bounded window selects its corresponding table entry. | Covered | [C.table_lookup_sound](EfficientFFA/MSM/Tables.lean#L185), [C.trace_lookup](EfficientFFA/MSM/Trace.lean#L58), [MSM.descending_range](EfficientFFA/MSM/TraceStatistics.lean#L6). Lookup selection is a mathematical relation with bounded indices, not a verification of the PLONK lookup argument or table layout. |
 | **T07** — §4.5, p.9; Figure 4 Steps 6–13, p.10 | Each window cancels its introduced offsets while retaining lU. | Covered | [MSM.addRows_eq](EfficientFFA/MSM/Loop.lean#L15), [MSM.loop_invariant](EfficientFFA/MSM/Loop.lean#L34), [MSM.row_invariant](EfficientFFA/MSM/Loop.lean#L89), [MSM.rowValue](EfficientFFA/MSM/Loop.lean#L82), [MSM.offsetCoeff](EfficientFFA/MSM/Loop.lean#L86), [C.trace_rows](EfficientFFA/MSM/Trace.lean#L96), [C.trace_boundaries](EfficientFFA/MSM/Trace.lean#L114). The row coefficient is b*l−(b−1)*j. The proof uses actual table identities and repeated doubling/addition relations. |
-| **T08** — Figure 4 scalar expansion and Step 6, p.10 | The final accumulator represents the intended window expansion. | Refined | [MSM.horner_eq_sum](EfficientFFA/MSM/Loop.lean#L48), [MSM.descending](EfficientFFA/MSM/Loop.lean#L64), [MSM.loop_correct](EfficientFFA/MSM/Loop.lean#L68), [C.trace_sound_littleEndian](EfficientFFA/MSM/Trace.lean#L151), [E.trace_sound_littleEndian](EfficientFFA/Native/Trace.lean#L157). The printed expansion is little-endian but the printed Horner loop traverses forward. Lean traverses windows in descending order, producing Σ_i b^i*window(i,j). It does not verify the literal forward loop against that expansion. |
+| **T08** — Figure 4 scalar expansion and Step 6, p.10 | The final accumulator represents the intended window expansion. | Refined | [MSM.horner_eq_sum](EfficientFFA/MSM/Loop.lean#L48), [MSM.descending](EfficientFFA/MSM/Loop.lean#L64), [MSM.loop_correct](EfficientFFA/MSM/Loop.lean#L68), [C.trace_sound_littleEndian](EfficientFFA/MSM/Trace.lean#L151), [E.trace_sound_littleEndian](EfficientFFA/Native/Trace.lean#L157). The printed expansion is little-endian but the printed Horner loop traverses forward. Lean traverses windows in descending order, producing Σ_i b^i*window(i,j). It does not verify the literal forward loop against that expansion. The recorded Figure 4 proposal changes traversal to T down to 1. |
 | **T09** — Figure 4 Steps 8, 11–13, p.10 | Intermediate additions and doublings can use finite/incomplete operations. | Conditional | [MSM.addRows_ne_zero](EfficientFFA/MSM/Safety.lean#L7), [MSM.loop_ne_zero](EfficientFFA/MSM/Safety.lean#L19), [MSM.row_ready](EfficientFFA/MSM/Safety.lean#L37), [MSM.doubling_ready](EfficientFFA/MSM/Safety.lean#L57), [C.trace_complete](EfficientFFA/MSM/TraceCompleteness.lean#L162). Required nonidentity states follow from the accepted group execution and invertible radix map. The loop retains its printed x-distinctness check; table-internal guards remain derived. |
 | **T10** — Figure 4 Steps 14–15, p.10 | Subtract lU and return the correct MSM, including a possible infinity output. | Covered | [C.trace_sound](EfficientFFA/MSM/Trace.lean#L134), [C.trace_sound_littleEndian](EfficientFFA/MSM/Trace.lean#L151), [E.trace_sound_littleEndian](EfficientFFA/Native/Trace.lean#L157). Applies to every accepted full trace with valid finite bases. The final subtraction uses complete addition. This includes native limb constraints under the ECEncoding contract. |
 | **T11** — §4.5, p.10, statistical-completeness argument | Each potential loop collision excludes only a small number of seeds. | Conditional | [MSM.collision_iff](EfficientFFA/MSM/Collisions.lean#L29), [MSM.collision_coeff_bounds](EfficientFFA/MSM/Collisions.lean#L45), [MSM.collisionSeeds_card_le](EfficientFFA/MSM/Collisions.lean#L93), [MSM.loopBadSeeds_card_le_prime](EfficientFFA/MSM/Collisions.lean#L132). The two affine collision equations each exclude at most one seed when their scalar coefficients are injective. A sufficient prime-order condition is b*l+b−1 < N. |
@@ -255,6 +262,7 @@ contract, not a claim that every numerical choice supplies such an encoding.
 | **T14** — §4 opening, p.7; §4.2, p.8; §4.5 | The MSM argument can operate inside a prime-order subgroup of a larger curve group. | Conditional | [MSM.groupAccepts_map_iff](EfficientFFA/MSM/Embedding.lean#L31), [C.trace_complete_subgroup](EfficientFFA/MSM/Subgroup.lean#L16), [E.uniform_subgroup_failure_bound](EfficientFFA/Native/Subgroup.lean#L38), [E.uniform_subgroup_failure_bound_checked](EfficientFFA/Native/Subgroup.lean#L67), [E.exists_correct_subgroup_trace](EfficientFFA/Native/Subgroup.lean#L50). Sample uniformly in H and use N=card H. The ambient group need not have prime order. Known subgroup membership suffices for the bound; using the native annihilation-based membership test additionally needs coprime cofactor. The sample includes zero, which is counted among excluded seeds. |
 | **T15** — §4.5, p.10, GLV paragraph | GLV can further optimize the MSM and is used in the implementation. | Unmapped | **No direct counterpart.** No GLV endomorphism, scalar decomposition, correctness theorem or cost comparison is present. |
 | **T16** — §4.5, p.10, negation of V | Negating y and preserving x/flag represents group negation. | Covered | [C.point_opposite](EfficientFFA/MSM/Tables.lean#L204), [C.coordinates_neg](EfficientFFA/MSM/TraceCompleteness.lean#L33), [E.opposite_iff](EfficientFFA/Native/Trace.lean#L28). The native opposite relation links the encoded constants used for table starts and the final correction. |
+| **T17** — current LaTeX, §4.5, `thm:msm` (absent from pinned PDF) | MSM soundness and statistical completeness. | Conditional | [E.trace_sound_littleEndian](EfficientFFA/Native/Trace.lean#L157), [E.uniform_littleEndian_failure_bound](EfficientFFA/Native/Statistics.lean#L21), [E.exists_correct_trace](EfficientFFA/Native/Statistics.lean), [E.uniform_subgroup_failure_bound](EfficientFFA/Native/Subgroup.lean#L38). Soundness is for fully linked accepted traces with valid fixed bases. Completeness needs bounded fixed windows, w,l>0, a prime-order group/subgroup and b*l+b−1<N; failure ≤(1+l*(b+1)+2*T*l)/N. Budget<N yields existence. This replaces the source baseline’s unconditional “sound and complete”; it does not prove a deployed circuit or asymptotic negligibility without a parameter family. |
 
 ### Background, implementation and applications
 
@@ -282,17 +290,18 @@ contract, not a claim that every numerical choice supplies such an encoding.
 ## What this map leaves open
 
 The main arithmetic results and the corrected EC/MSM semantics have formal
-counterparts. An exact match to the paper still requires its presentation to
-record the quotient-rounding convention, unit condition for general-modulus
-division, ordered complete-add branches, window traversal, and explicit
-statistical parameter conditions. No paper edits are made by this inventory.
+counterparts. The unapplied paper proposals record the quotient-rounding
+convention, unit condition for general-modulus division, ordered complete-add
+branches, window traversal and explicit statistical parameter conditions.
+The LaTeX source and original PDF remain unchanged; implementation boundaries still apply.
 
 The genuine scope gaps are shifted EC/native-trace integration (E09), GLV
 (T15), production parameter instances (P01–P04, P10), and implementation,
 resource, application and cryptographic-protocol claims (I01–I03, P05–P12).
 Some are appropriate future formalization tasks; measurements and historical
 claims need reproducible evidence rather than an invented Lean theorem.
-Production instances and circuit work remain deferred under the existing plan.
+Production instances, whole-MSM shared-wire refinement and PLONK implementation
+remain deferred; complete-add selector and shared-limb constraints are now proved.
 
 Additional Lean results support the paper without being separately stated
 there: exact finite rejection budgets; arbitrary accepted-trace soundness;
@@ -305,12 +314,30 @@ anonymous test examples are supporting evidence rather than named paper theorems
 ## Validation and maintenance
 
 The default `lake build` includes Tests.PaperCorrespondence and checks all
-236 distinct referenced declarations, together with the existing library
+242 distinct referenced declarations, together with the existing library
 and regression suite. No library proof or acceptance definition was changed
-for this mapping. The existing 319 library theorem axiom reports continue to
+for the original mapping. The updated 364 library theorem axiom reports continue to
 use only the standard Lean axioms (or none); the reference index adds no theorems.
 
 When a statement changes, review its row's assumptions and status as well as
 updating the source link and checked reference. A successful build detects
 missing/renamed declarations; it cannot detect a subtly changed mathematical
 contract or prove that a paper sentence was interpreted correctly.
+
+## Review follow-up: selector constraints and shared limbs
+
+The new complete-add gadget uses one `Fin 10 → Limbs n` assignment for input
+coordinates, output coordinates, slope and comparison witnesses. Quotient
+witnesses remain local to each polynomial gate. `ZeroTest` checks both the
+zero and nonzero cases; branch activations are polynomial expressions in
+checked bits. No branch choice is assumed by `completeConstraints_sound`.
+Input curve validity remains an explicit premise. Range checks remain bounded
+integer predicates; no lookup implementation or complete MSM shared-wire
+assignment is claimed. The old `Trace` predicate is unchanged.
+
+The recorded, unapplied LaTeX proposals also address the multiplication indices, signed
+quotient rounding, constant-scale bound row, division condition and doubling
+explanation. Rows M04, L05, D01 and O03 retain the original PDF comparison.
+The historical release has not been replaced or recertified. Production
+parameter instantiations, shifted EC composition, GLV and implementation/cost
+claims remain open or outside scope.

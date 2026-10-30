@@ -19,4 +19,5 @@ proof foundation. The source policy and milestone status are in README.md.
   and warnings are errors. Regenerate the manifest through Lake if dependency
   versions change; do not depend on absolute paths to another project.
 - Preserve the sibling easycrypt/ formalization and separate paper repository.
-  CI, larger instances and circuit implementation are outside the current scope.
+  CI, larger instances, whole-MSM wire layout and PLONK implementation remain
+  outside scope. The native complete-add selector/shared-limb gadget is checked.

@@ -14,5 +14,5 @@
   easycrypt/scripts/check-local.sh and the recorded prover toolchain. Both checks
   are required after layout changes; a proof edit requires its relevant check.
 - Preserve historical release tags and source provenance. The paper is maintained
-  in the separate ffa-paper repository. CI, larger instances and circuit work
-  remain outside the current scope.
+  in the separate ffa-paper repository. CI, larger instances, whole-MSM wire layout and PLONK implementation
+  remain outside the current scope; the shared-limb complete-add gadget is checked.

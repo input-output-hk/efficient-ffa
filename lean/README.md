@@ -11,7 +11,9 @@ MSM group loop, normalized rejection bound, and full coordinate-trace
 soundness and statistical completeness are also checked, under the explicit
 parameter conditions and documented algorithm refinements below. Native limb
 encodings of the EC identities now compose with that full trace, with a small
-curve instance discharging both arithmetic and statistical parameters.
+curve instance discharging both arithmetic and statistical parameters. A separate
+complete-add constraint system now checks native selectors and shares limb wires
+across its gates. Whole-MSM wire sharing and a PLONK layout remain unverified.
 
 The [paper results map](PAPER_RESULTS_MAP.md) links both numbered theorems and
 the paper’s equations, algorithm claims and application results to exact Lean
@@ -66,7 +68,7 @@ checkout. The local development already has that cache. The default build
 checks both the library and Tests; warnings are treated as errors. This is
 local build setup. CI and larger/production instances remain skipped.
 
-All 319 library theorems compile, and their axiom reports contain
+All 364 library theorems compile, and their axiom reports contain
 only Lean's standard propext, Classical.choice and Quot.sound. There are no
 project axioms, admissions or native_decide proofs. The build uses supplied
 mathlib artifacts; it is not a fresh rebuild of the entire standard library.
@@ -115,6 +117,7 @@ mathlib artifacts; it is not a fresh rebuild of the entire standard library.
 | [MSM/Embedding.lean](EfficientFFA/MSM/Embedding.lean) and [MSM/Subgroup.lean](EfficientFFA/MSM/Subgroup.lean) | Group embedding correspondence, subgroup-only radix injectivity, coordinate witness existence, uniform subgroup failure bound and output membership |
 | [EllipticCurve/Subgroup.lean](EfficientFFA/EllipticCurve/Subgroup.lean) and [Native/Subgroup.lean](EfficientFFA/Native/Subgroup.lean) | Coprime-cofactor membership criterion, native loading checks, native trace statistical completeness on subgroups |
 | [Instances/Subgroup17.lean](EfficientFFA/Instances/Subgroup17.lean) and [Tests/Subgroup.lean](Tests/Subgroup.lean) | A 22-point curve, an order-11 subgroup, 8/11 native bound, ambient two-torsion rejection and a counterexample without coprime cofactor |
+| [Shared complete-add constraints](EfficientFFA/Native/CompleteCircuit.lean) | Native selector soundness, shared limb copies, equivalence to ordered complete addition and witness existence |
 | [Native regressions](Tests/Native.lean) | Square linkage, wrong outputs, active/inactive branches, native wraparound, explicit quotient witnesses and all new theorem-axiom reports |
 | [Trace regressions](Tests/Trace.lean) | Accepted concrete curve traces, wrong output, broken initial linkage, and a nonempty execution returning infinity |
 | [MSM regressions](Tests/MSM.lean) | Unequal windows, accepted execution, exact excluded-seed counts, instantiated probability theorem, and noninvertible coefficient |
@@ -400,8 +403,8 @@ assumed here. The paper itself has not been edited.
 
 Infinity flags are Bool values at the coordinate layer. The native extension
 below proves bitness and activation checks and encodes the four EC identities.
-Boolean branch-selection wiring and range-check gadget implementations remain
-outside scope. The repeated-base table and setup parameter results are
+The complete-add extension below now proves native branch selection with
+shared limbs. Range-check gadget implementations remain outside scope. The repeated-base table and setup parameter results are
 described next, followed by the full trace composition.
 
 ## Precomputed tables and parameter selection
@@ -670,8 +673,8 @@ one when the native modulus is prime. activated_sound distinguishes disabled
 from enabled checks; activated_zero and activated_one provide witnesses.
 ECEncoding.Check contains the enabled form with selector one, and inactive
 branches can use activated_zero. Flag checks enforce the supplied Boolean
-tag natively. This is arithmetic semantics for selected ordered branches,
-not a compiled flat selector circuit or a proof of branch-selection wiring.
+tag natively. This older Trace interface uses logical branch dispatch; the
+separate CompleteCircuit interface below now checks selector wiring directly.
 
 ECEncoding.Trace replaces coordinate arithmetic premises throughout the seed,
 constant chains, tables, loop, copies, and final complete addition by these
@@ -707,7 +710,8 @@ why native no-wrap and prime-modulus bitness conditions matter.
 The requested follow-up steps 1–4 are complete: the audit/regression was
 committed and pushed as a5e2004; the native identities, trace connection and
 small curve instance are checked. The subgroup extension below was subsequently
-authorized and completed. Paper edits, CI, production instances, implementation
+authorized and completed. Paper corrections are recorded as unapplied proposals. CI,
+production instances, implementation
 wiring and cost claims remain deferred.
 
 ## Prime-order subgroups
@@ -779,6 +783,38 @@ produces a correct native trace for every in-range input. As with the earlier
 small instance, this validates the assumptions together; it is not a negligible
 failure probability or a production-parameter claim.
 
+## Checked complete-add selectors and shared limbs (2026-10-30)
+
+[Native/SharedGate.lean](EfficientFFA/Native/SharedGate.lean) fixes each gate's
+input limbs and leaves only quotient witnesses existential. Native copy
+constraints imply exact limb equality when B≤p. [Native/CompleteGates.lean](EfficientFFA/Native/CompleteGates.lean)
+provides equality/inverse zero tests and affine gates on a common ten-slot
+limb assignment. [Native/CompleteCircuit.lean](EfficientFFA/Native/CompleteCircuit.lean)
+combines those gates with raw native flags and checked equality selectors.
+The five branch activations are polynomial expressions in the checked bits.
+
+- completeConstraints_sound proves correctness for arbitrary supplied wires
+  and selectors, assuming valid input points, native primality and B≤p.
+- completeConstraints_complete constructs shared canonical encodings and
+  quotient witnesses from an accepted ordered coordinate addition.
+- completeCircuit_iff, completeCircuit_sound and completeCircuit_complete
+  expose equivalence to CompleteAccepts, group-law correctness and existence.
+
+ECEncoding still supplies capacity, foreign primality and per-gate width and
+no-wrap conditions. CompleteCircuit's public interface is over decoded points:
+its completeness theorem does not preserve arbitrary preassigned public limb
+vectors. Input curve validity remains a premise; the gadget does not itself
+check membership. Only complete addition uses this shared assignment; Trace
+continues to connect its gates through decoded field values. Range-check
+predicates are not lookup implementations, and no row/degree/cost claim is made.
+
+[Tests/CompleteCircuit.lean](Tests/CompleteCircuit.lean) checks all branches,
+wrong-output rejection, dishonest zero selectors, attempts to disable every
+branch, and distinct limb representations of the same foreign value. All new
+theorem dependency reports are part of the default build. This work was authored
+from this independent library and the paper/review; the supplied Lean artifact
+and archive were not consulted.
+
 ## Execution plan
 
 Baseline and milestone update: 2026-10-27. Steps 1-7 are **complete** within
@@ -789,7 +825,9 @@ is recorded above. Their original implementation checklist is retained below.
 Step 7 includes full supplied-coordinate-trace soundness and statistical
 completeness for the corrected traversal, with the Figure 3 refinement and
 constant-chain choice distinguished above. Remaining scope boundaries are
-listed at the end; circuit implementation and paper edits remain deferred.
+listed at the end. The 2026-10-30 review follow-up adds native complete-add
+selectors/shared limbs. Proposed paper corrections are recorded, not applied,
+in `ffa-paper/PAPER_REVISION_PROPOSALS.txt`.
 
 ### 1. Fix the multiplication specification (complete)
 
@@ -1024,5 +1062,7 @@ record. An artifact comparison with the supplied Lean project remains a
 separate, explicitly requested review after an independent milestone is checked.
 
 PLONK wiring, Halo2 correspondence, gate counts, benchmarks, CI and larger
-parameter instances remain outside the current work. Paper edits are deferred.
+parameter instances remain outside the current work. The separate paper proposal
+record covers branch order, traversal, arithmetic qualifications and the MSM
+theorem. The LaTeX source remains unchanged.
 The existing EasyCrypt repository and historical release are preserved.

@@ -718,3 +718,11 @@ introduced here.
 -- I03
 #check EfficientFFA.Native.ECEncoding
 
+
+-- E08, O04, O05: native selectors and shared coordinate limbs
+#check EfficientFFA.Native.ECEncoding.CompleteConstraints
+#check EfficientFFA.Native.ECEncoding.completeConstraints_sound
+#check EfficientFFA.Native.ECEncoding.completeCircuit_iff
+#check EfficientFFA.Native.ECEncoding.completeCircuit_sound
+#check EfficientFFA.Native.ECEncoding.completeCircuit_complete
+#check EfficientFFA.Native.ECEncoding.copyLimbs_one_iff
