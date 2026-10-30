@@ -16,6 +16,12 @@ The findings and coverage table below describe the reviewed b05a742 baseline;
 resolution notes identify changes since that audit. The printed-algorithm
 mismatches and deferred implementation boundaries remain.
 
+**Current claim inventory (2026-10-28):** see [PAPER_RESULTS_MAP.md](PAPER_RESULTS_MAP.md)
+for the complete result-family mapping at the d5e4ddc baseline, including
+native EC and subgroup results. Its referenced declarations are checked by
+Tests/PaperCorrespondence.lean. The historical verdict below is retained;
+its first qualification was resolved by the native-encoding work described above.
+
 ## Verdict
 
 The independent Lean library covers the agreed arithmetic and coordinate-level

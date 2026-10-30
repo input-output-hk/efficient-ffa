@@ -12,9 +12,12 @@ parameter conditions and documented algorithm refinements below. Native limb
 encodings of the EC identities now compose with that full trace, with a small
 curve instance discharging both arithmetic and statistical parameters.
 
-The [paper-to-Lean audit](PAPER_AUDIT.md) records the claim-by-claim coverage,
-representation boundaries, and confirmed differences from the printed
-algorithms, including an additional Figure 3 infinity-branch overlap.
+The [paper results map](PAPER_RESULTS_MAP.md) links both numbered theorems and
+the paper’s equations, algorithm claims and application results to exact Lean
+declarations, with explicit assumptions, refinements and gaps. Its declaration
+references are checked by the default build. The earlier
+[paper-to-Lean audit](PAPER_AUDIT.md) records the original findings, including
+the Figure 3 infinity-branch overlaps.
 
 ## Source policy
 

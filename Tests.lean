@@ -10,3 +10,4 @@ import Tests.Trace
 import Tests.PaperAudit
 import Tests.Native
 import Tests.Subgroup
+import Tests.PaperCorrespondence
