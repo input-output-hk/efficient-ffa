@@ -18,5 +18,5 @@ proof foundation. The source policy and milestone status are in README.md.
 - Build the library and regressions with lake build. Both are default targets
   and warnings are errors. Regenerate the manifest through Lake if dependency
   versions change; do not depend on absolute paths to another project.
-- Preserve the existing EasyCrypt checkout and paper. CI, larger instances
-  and circuit implementation are outside the current scope.
+- Preserve the sibling easycrypt/ formalization and separate paper repository.
+  CI, larger instances and circuit implementation are outside the current scope.

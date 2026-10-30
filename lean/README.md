@@ -2,7 +2,8 @@
 
 A fresh development from the mathematical statements in
 [Efficient Foreign-Field Arithmetic in PLONK](https://eprint.iacr.org/2025/695).
-This project is separate from the existing EasyCrypt checkout and the supplied
+This is an independent development, now maintained alongside the EasyCrypt
+formalization in this repository. It is separate from the supplied external
 Lean artifact. The multiplication, lazy-arithmetic/normalization, and unique-zero milestones
 are complete. Coordinate-level elliptic-curve operations, precomputed tables,
 and parameter-dependent table witness existence are checked. The corrected
@@ -18,6 +19,10 @@ declarations, with explicit assumptions, refinements and gaps. Its declaration
 references are checked by the default build. The earlier
 [paper-to-Lean audit](PAPER_AUDIT.md) records the original findings, including
 the Figure 3 infinity-branch overlaps.
+
+See the [repository overview](../README.md) and
+[shared EasyCrypt/Lean coverage guide](../docs/coverage.md) for both developments.
+Run the commands below from the lean/ directory.
 
 ## Source policy
 
@@ -749,7 +754,7 @@ gcd(card(C.Point / H), card(H)) = 1
 
 This is a separate sufficient condition for that particular membership test.
 Prime order of H alone is insufficient: in the additive group F_5 × F_5,
-[5](0,1)=0, but (0,1) does not belong to the first coordinate axis subgroup.
+`[5](0,1)=0`, but `(0,1)` does not belong to the first coordinate axis subgroup.
 The regression checks both subgroup and quotient orders are five.
 The uniform_subgroup_failure_bound_checked endpoint accepts the native
 membership checks directly and derives its public-base membership premises.

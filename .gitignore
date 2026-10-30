@@ -1,0 +1,4 @@
+# Local EasyCrypt compilation and Python cache artifacts.
+easycrypt/**/*.eco
+**/__pycache__/
+*.pyc

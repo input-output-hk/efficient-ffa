@@ -1,7 +1,12 @@
-# Efficient Foreign-Field Arithmetic in PLONK
+# EasyCrypt formalization of efficient foreign-field arithmetic
 Formalization of proofs for efficient foreign field arithmetic (FFA) and multi-scalar multiplication (MSM) algorithms developed at IOG/Midnight.
 
 See more in the associated [paper](https://eprint.iacr.org/2025/695).
+
+This directory contains the EasyCrypt development. See the
+[repository overview](../README.md) and [shared coverage guide](../docs/coverage.md)
+for the independent Lean development. Run the commands below from easycrypt/.
+The files under paper/ are historical patch proposals, not the paper source tree.
 
 ## Current status
 
