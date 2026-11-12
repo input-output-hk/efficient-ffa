@@ -57,15 +57,16 @@ multiplication theorems and the principal EC/MSM results in both languages.
 The [detailed Lean inventory](lean/PAPER_RESULTS_MAP.md) also records prose,
 algorithm and application claims with no formal counterpart.
 
-The formalizations use documented corrections to the printed complete-addition
-branches and MSM window traversal. Corresponding theorem names do not establish
+The corrected paper at dddacd0 adopts the ordered complete-addition branches
+and descending MSM window traversal reviewed against Lean at 91aa985.
+Corresponding theorem names do not establish
 cross-language equivalence. Generic parameter assumptions and representation
 boundaries remain part of the results; consult the linked statements.
 
 The current Lean-only theoretical inventory covers all reported arithmetic
 parameter settings, normalization modulus reuse and shifted EC identities.
-Its [final correspondence audit](lean/PAPER_RESULTS_MAP.md) records the
-explicit hypotheses and paper corrections needed for that coverage claim.
+Its [current paper review](lean/PAPER_RESULTS_MAP.md#current-paper-review)
+records the current theorem correspondence and explicit hypotheses.
 CI, circuit implementation correspondence and benchmark/application
 verification remain outside this scope. Historical
 release tags keep their original contents; they are not labels for the current
