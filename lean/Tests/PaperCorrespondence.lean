@@ -726,3 +726,376 @@ introduced here.
 #check EfficientFFA.Native.ECEncoding.completeCircuit_sound
 #check EfficientFFA.Native.ECEncoding.completeCircuit_complete
 #check EfficientFFA.Native.ECEncoding.copyLimbs_one_iff
+
+-- Current paper-facing contracts (miguel-ambrona/ffa-paper@a811ec7).
+#check EfficientFFA.Paper.multiplication_iff
+#print axioms EfficientFFA.Paper.multiplication_iff
+
+#check EfficientFFA.Paper.multiplication_sound
+#print axioms EfficientFFA.Paper.multiplication_sound
+
+#check EfficientFFA.Paper.multiplication_complete
+#print axioms EfficientFFA.Paper.multiplication_complete
+
+#check EfficientFFA.Paper.normalization_iff
+#print axioms EfficientFFA.Paper.normalization_iff
+
+#check EfficientFFA.Paper.normalization_exists
+#print axioms EfficientFFA.Paper.normalization_exists
+
+#check EfficientFFA.Paper.stored_normalization_sound
+#print axioms EfficientFFA.Paper.stored_normalization_sound
+
+#check EfficientFFA.Paper.complete_add_sound
+#print axioms EfficientFFA.Paper.complete_add_sound
+
+#check EfficientFFA.Paper.complete_add_complete
+#print axioms EfficientFFA.Paper.complete_add_complete
+
+#check EfficientFFA.Paper.native_complete_add_iff
+#print axioms EfficientFFA.Paper.native_complete_add_iff
+
+#check EfficientFFA.Paper.msm_sound
+#print axioms EfficientFFA.Paper.msm_sound
+
+#check EfficientFFA.Paper.msm_failure_bound
+#print axioms EfficientFFA.Paper.msm_failure_bound
+
+#check EfficientFFA.Paper.msm_exists_correct
+#print axioms EfficientFFA.Paper.msm_exists_correct
+
+#check EfficientFFA.Paper.msm_subgroup_failure_bound
+#print axioms EfficientFFA.Paper.msm_subgroup_failure_bound
+
+#check EfficientFFA.Paper.msm_exists_correct_subgroup
+#print axioms EfficientFFA.Paper.msm_exists_correct_subgroup
+
+-- Corrected mathematical specification evidence
+#check EfficientFFA.EllipticCurve.Curve.offset_table_witnesses_iff
+
+-- Corrected mathematical specification evidence
+#check EfficientFFA.EllipticCurve.Curve.table_witnesses_iff
+
+-- Step 4: rounding, arithmetic bounds and production parameter certificates.
+#check EfficientFFA.Paper.residue_injective
+#print axioms EfficientFFA.Paper.residue_injective
+
+#check EfficientFFA.Paper.duplicate_residues_iff
+#print axioms EfficientFFA.Paper.duplicate_residues_iff
+
+#check EfficientFFA.Paper.normalization_input_mono
+#print axioms EfficientFFA.Paper.normalization_input_mono
+
+#check EfficientFFA.Paper.normalization_exists_below_limit
+#print axioms EfficientFFA.Paper.normalization_exists_below_limit
+
+#check EfficientFFA.Paper.accumulated_additions
+#print axioms EfficientFFA.Paper.accumulated_additions
+
+#check EfficientFFA.Paper.scale_within_limit
+#print axioms EfficientFFA.Paper.scale_within_limit
+
+#check EfficientFFA.Paper.tight_single_le_loose
+#print axioms EfficientFFA.Paper.tight_single_le_loose
+
+#check EfficientFFA.Paper.tight_double_le_loose
+#print axioms EfficientFFA.Paper.tight_double_le_loose
+
+#check EfficientFFA.Paper.scale_within_limit_of_div
+#print axioms EfficientFFA.Paper.scale_within_limit_of_div
+
+#check EfficientFFA.Paper.accumulated_within_limit
+#print axioms EfficientFFA.Paper.accumulated_within_limit
+
+#check EfficientFFA.Paper.floor_le_trunc
+#print axioms EfficientFFA.Paper.floor_le_trunc
+
+#check EfficientFFA.Paper.lower_trunc_eq
+#print axioms EfficientFFA.Paper.lower_trunc_eq
+
+#check EfficientFFA.Paper.floor_width_of_trunc
+#print axioms EfficientFFA.Paper.floor_width_of_trunc
+
+#check EfficientFFA.Paper.multiplication_widths_of_trunc
+#print axioms EfficientFFA.Paper.multiplication_widths_of_trunc
+
+#check EfficientFFA.Paper.normalization_widths_of_trunc
+#print axioms EfficientFFA.Paper.normalization_widths_of_trunc
+
+#check EfficientFFA.Paper.native_widths_of_trunc
+#print axioms EfficientFFA.Paper.native_widths_of_trunc
+
+#check EfficientFFA.Paper.multiplication_valid_of_trunc
+#print axioms EfficientFFA.Paper.multiplication_valid_of_trunc
+
+#check EfficientFFA.Paper.normalization_valid_of_trunc
+#print axioms EfficientFFA.Paper.normalization_valid_of_trunc
+
+#check EfficientFFA.Paper.native_valid_of_trunc
+#print axioms EfficientFFA.Paper.native_valid_of_trunc
+
+#check EfficientFFA.Instances.PaperParameters.secp3.multiplication_valid
+#print axioms EfficientFFA.Instances.PaperParameters.secp3.multiplication_valid
+
+#check EfficientFFA.Instances.PaperParameters.secp3.ec_valid
+#print axioms EfficientFFA.Instances.PaperParameters.secp3.ec_valid
+
+#check EfficientFFA.Instances.PaperParameters.secp3.capacity
+#print axioms EfficientFFA.Instances.PaperParameters.secp3.capacity
+
+#check EfficientFFA.Instances.PaperParameters.secp3.normalization_valid
+#print axioms EfficientFFA.Instances.PaperParameters.secp3.normalization_valid
+
+#check EfficientFFA.Instances.PaperParameters.secp3.same_moduli
+#print axioms EfficientFFA.Instances.PaperParameters.secp3.same_moduli
+
+#check EfficientFFA.Instances.PaperParameters.secp3.ec_same_moduli
+#print axioms EfficientFFA.Instances.PaperParameters.secp3.ec_same_moduli
+
+#check EfficientFFA.Instances.PaperParameters.secp3.radix_headroom
+#print axioms EfficientFFA.Instances.PaperParameters.secp3.radix_headroom
+
+#check EfficientFFA.Instances.PaperParameters.secp3.normalize
+#print axioms EfficientFFA.Instances.PaperParameters.secp3.normalize
+
+#check EfficientFFA.Instances.PaperParameters.secp4.multiplication_valid
+#print axioms EfficientFFA.Instances.PaperParameters.secp4.multiplication_valid
+
+#check EfficientFFA.Instances.PaperParameters.secp4.ec_valid
+#print axioms EfficientFFA.Instances.PaperParameters.secp4.ec_valid
+
+#check EfficientFFA.Instances.PaperParameters.secp4.capacity
+#print axioms EfficientFFA.Instances.PaperParameters.secp4.capacity
+
+#check EfficientFFA.Instances.PaperParameters.secp4.normalization_valid
+#print axioms EfficientFFA.Instances.PaperParameters.secp4.normalization_valid
+
+#check EfficientFFA.Instances.PaperParameters.secp4.same_moduli
+#print axioms EfficientFFA.Instances.PaperParameters.secp4.same_moduli
+
+#check EfficientFFA.Instances.PaperParameters.secp4.ec_same_moduli
+#print axioms EfficientFFA.Instances.PaperParameters.secp4.ec_same_moduli
+
+#check EfficientFFA.Instances.PaperParameters.secp4.radix_headroom
+#print axioms EfficientFFA.Instances.PaperParameters.secp4.radix_headroom
+
+#check EfficientFFA.Instances.PaperParameters.secp4.normalize
+#print axioms EfficientFFA.Instances.PaperParameters.secp4.normalize
+
+#check EfficientFFA.Instances.PaperParameters.secp5.multiplication_valid
+#print axioms EfficientFFA.Instances.PaperParameters.secp5.multiplication_valid
+
+#check EfficientFFA.Instances.PaperParameters.secp5.ec_valid
+#print axioms EfficientFFA.Instances.PaperParameters.secp5.ec_valid
+
+#check EfficientFFA.Instances.PaperParameters.secp5.capacity
+#print axioms EfficientFFA.Instances.PaperParameters.secp5.capacity
+
+#check EfficientFFA.Instances.PaperParameters.secp5.normalization_valid
+#print axioms EfficientFFA.Instances.PaperParameters.secp5.normalization_valid
+
+#check EfficientFFA.Instances.PaperParameters.secp5.same_moduli
+#print axioms EfficientFFA.Instances.PaperParameters.secp5.same_moduli
+
+#check EfficientFFA.Instances.PaperParameters.secp5.ec_same_moduli
+#print axioms EfficientFFA.Instances.PaperParameters.secp5.ec_same_moduli
+
+#check EfficientFFA.Instances.PaperParameters.secp5.radix_headroom
+#print axioms EfficientFFA.Instances.PaperParameters.secp5.radix_headroom
+
+#check EfficientFFA.Instances.PaperParameters.secp5.normalize
+#print axioms EfficientFFA.Instances.PaperParameters.secp5.normalize
+
+#check EfficientFFA.Instances.PaperParameters.secp6.multiplication_valid
+#print axioms EfficientFFA.Instances.PaperParameters.secp6.multiplication_valid
+
+#check EfficientFFA.Instances.PaperParameters.secp6.ec_valid
+#print axioms EfficientFFA.Instances.PaperParameters.secp6.ec_valid
+
+#check EfficientFFA.Instances.PaperParameters.secp6.capacity
+#print axioms EfficientFFA.Instances.PaperParameters.secp6.capacity
+
+#check EfficientFFA.Instances.PaperParameters.secp6.normalization_valid
+#print axioms EfficientFFA.Instances.PaperParameters.secp6.normalization_valid
+
+#check EfficientFFA.Instances.PaperParameters.secp6.same_moduli
+#print axioms EfficientFFA.Instances.PaperParameters.secp6.same_moduli
+
+#check EfficientFFA.Instances.PaperParameters.secp6.ec_same_moduli
+#print axioms EfficientFFA.Instances.PaperParameters.secp6.ec_same_moduli
+
+#check EfficientFFA.Instances.PaperParameters.secp6.radix_headroom
+#print axioms EfficientFFA.Instances.PaperParameters.secp6.radix_headroom
+
+#check EfficientFFA.Instances.PaperParameters.secp6.normalize
+#print axioms EfficientFFA.Instances.PaperParameters.secp6.normalize
+
+#check EfficientFFA.Instances.PaperParameters.blsSelf.multiplication_valid
+#print axioms EfficientFFA.Instances.PaperParameters.blsSelf.multiplication_valid
+
+#check EfficientFFA.Instances.PaperParameters.blsSelf.ec_valid
+#print axioms EfficientFFA.Instances.PaperParameters.blsSelf.ec_valid
+
+#check EfficientFFA.Instances.PaperParameters.blsSelf.capacity
+#print axioms EfficientFFA.Instances.PaperParameters.blsSelf.capacity
+
+#check EfficientFFA.Instances.PaperParameters.blsSelf.normalization_valid
+#print axioms EfficientFFA.Instances.PaperParameters.blsSelf.normalization_valid
+
+#check EfficientFFA.Instances.PaperParameters.blsSelf.same_moduli
+#print axioms EfficientFFA.Instances.PaperParameters.blsSelf.same_moduli
+
+#check EfficientFFA.Instances.PaperParameters.blsSelf.ec_same_moduli
+#print axioms EfficientFFA.Instances.PaperParameters.blsSelf.ec_same_moduli
+
+#check EfficientFFA.Instances.PaperParameters.blsSelf.radix_headroom
+#print axioms EfficientFFA.Instances.PaperParameters.blsSelf.radix_headroom
+
+#check EfficientFFA.Instances.PaperParameters.blsSelf.normalize
+#print axioms EfficientFFA.Instances.PaperParameters.blsSelf.normalize
+
+#check EfficientFFA.Instances.PaperParameters.bnSelf.multiplication_valid
+#print axioms EfficientFFA.Instances.PaperParameters.bnSelf.multiplication_valid
+
+#check EfficientFFA.Instances.PaperParameters.bnSelf.ec_valid
+#print axioms EfficientFFA.Instances.PaperParameters.bnSelf.ec_valid
+
+#check EfficientFFA.Instances.PaperParameters.bnSelf.capacity
+#print axioms EfficientFFA.Instances.PaperParameters.bnSelf.capacity
+
+#check EfficientFFA.Instances.PaperParameters.bnSelf.normalization_valid
+#print axioms EfficientFFA.Instances.PaperParameters.bnSelf.normalization_valid
+
+#check EfficientFFA.Instances.PaperParameters.bnSelf.same_moduli
+#print axioms EfficientFFA.Instances.PaperParameters.bnSelf.same_moduli
+
+#check EfficientFFA.Instances.PaperParameters.bnSelf.ec_same_moduli
+#print axioms EfficientFFA.Instances.PaperParameters.bnSelf.ec_same_moduli
+
+#check EfficientFFA.Instances.PaperParameters.bnSelf.radix_headroom
+#print axioms EfficientFFA.Instances.PaperParameters.bnSelf.radix_headroom
+
+#check EfficientFFA.Instances.PaperParameters.bnSelf.normalize
+#print axioms EfficientFFA.Instances.PaperParameters.bnSelf.normalize
+#check EfficientFFA.Instances.PaperParameters.secp3.encoding
+#print axioms EfficientFFA.Instances.PaperParameters.secp3.encoding
+
+#check EfficientFFA.Instances.PaperParameters.secp4.encoding
+#print axioms EfficientFFA.Instances.PaperParameters.secp4.encoding
+
+#check EfficientFFA.Instances.PaperParameters.secp5.encoding
+#print axioms EfficientFFA.Instances.PaperParameters.secp5.encoding
+
+#check EfficientFFA.Instances.PaperParameters.secp6.encoding
+#print axioms EfficientFFA.Instances.PaperParameters.secp6.encoding
+
+#check EfficientFFA.Instances.PaperParameters.blsSelf.encoding
+#print axioms EfficientFFA.Instances.PaperParameters.blsSelf.encoding
+
+#check EfficientFFA.Instances.PaperParameters.bnSelf.encoding
+#print axioms EfficientFFA.Instances.PaperParameters.bnSelf.encoding
+
+-- F05: explicit radix headroom and minimum limb count.
+#check EfficientFFA.Paper.limb_product_lt_native
+#print axioms EfficientFFA.Paper.limb_product_lt_native
+
+#check EfficientFFA.Paper.two_limbs_of_headroom
+#print axioms EfficientFFA.Paper.two_limbs_of_headroom
+
+-- Steps 5–6: shifted identities and consolidated MSM contracts.
+#check EfficientFFA.Native.Expression.value_shift
+#print axioms EfficientFFA.Native.Expression.value_shift
+
+#check EfficientFFA.Native.Expression.compileShifted_eval
+#print axioms EfficientFFA.Native.Expression.compileShifted_eval
+
+#check EfficientFFA.Native.Expression.shifted_residual_bounds
+#print axioms EfficientFFA.Native.Expression.shifted_residual_bounds
+
+#check EfficientFFA.Native.Expression.shifted_auxCore_bounds
+#print axioms EfficientFFA.Native.Expression.shifted_auxCore_bounds
+
+#check EfficientFFA.Native.Expression.shifted_witnesses_accept
+#print axioms EfficientFFA.Native.Expression.shifted_witnesses_accept
+
+#check EfficientFFA.Native.Expression.shifted_accepts_iff
+#print axioms EfficientFFA.Native.Expression.shifted_accepts_iff
+
+#check EfficientFFA.Native.Expression.shifted_checks_sound
+#print axioms EfficientFFA.Native.Expression.shifted_checks_sound
+
+#check EfficientFFA.Native.Expression.shifted_checks_complete
+#print axioms EfficientFFA.Native.Expression.shifted_checks_complete
+
+#check EfficientFFA.Native.Expression.shifted_checks_iff
+#print axioms EfficientFFA.Native.Expression.shifted_checks_iff
+
+#check EfficientFFA.Native.ShiftedECEncoding.check_iff
+#print axioms EfficientFFA.Native.ShiftedECEncoding.check_iff
+
+#check EfficientFFA.Native.ShiftedECEncoding.check_iff_ordinary
+#print axioms EfficientFFA.Native.ShiftedECEncoding.check_iff_ordinary
+
+#check EfficientFFA.Native.ShiftedECEncoding.unique_zero
+#print axioms EfficientFFA.Native.ShiftedECEncoding.unique_zero
+
+#check EfficientFFA.Native.ShiftedECEncoding.equal_iff
+#print axioms EfficientFFA.Native.ShiftedECEncoding.equal_iff
+
+#check EfficientFFA.Native.ShiftedECEncoding.negative_iff
+#print axioms EfficientFFA.Native.ShiftedECEncoding.negative_iff
+
+#check EfficientFFA.Native.ShiftedECEncoding.distinct_iff
+#print axioms EfficientFFA.Native.ShiftedECEncoding.distinct_iff
+
+#check EfficientFFA.Native.ShiftedECEncoding.copy_iff
+#print axioms EfficientFFA.Native.ShiftedECEncoding.copy_iff
+
+#check EfficientFFA.Native.ShiftedECEncoding.onCurve_iff
+#print axioms EfficientFFA.Native.ShiftedECEncoding.onCurve_iff
+
+#check EfficientFFA.Native.ShiftedECEncoding.add_iff
+#print axioms EfficientFFA.Native.ShiftedECEncoding.add_iff
+
+#check EfficientFFA.Native.ShiftedECEncoding.double_iff
+#print axioms EfficientFFA.Native.ShiftedECEncoding.double_iff
+
+#check EfficientFFA.Native.ShiftedECEncoding.addition_sound
+#print axioms EfficientFFA.Native.ShiftedECEncoding.addition_sound
+
+#check EfficientFFA.Native.ShiftedECEncoding.addition_complete
+#print axioms EfficientFFA.Native.ShiftedECEncoding.addition_complete
+
+#check EfficientFFA.Native.ShiftedECEncoding.doubling_sound
+#print axioms EfficientFFA.Native.ShiftedECEncoding.doubling_sound
+
+#check EfficientFFA.Native.ShiftedECEncoding.doubling_complete
+#print axioms EfficientFFA.Native.ShiftedECEncoding.doubling_complete
+
+#check EfficientFFA.Native.ShiftedECEncoding.doubling_witnesses_iff
+#print axioms EfficientFFA.Native.ShiftedECEncoding.doubling_witnesses_iff
+
+#check EfficientFFA.Instances.ShiftedCurve17.valid
+#print axioms EfficientFFA.Instances.ShiftedCurve17.valid
+
+#check EfficientFFA.Instances.ShiftedCurve17.unique_zero
+#print axioms EfficientFFA.Instances.ShiftedCurve17.unique_zero
+
+#check EfficientFFA.Instances.PaperParameters.secp4.shifted_valid
+#print axioms EfficientFFA.Instances.PaperParameters.secp4.shifted_valid
+
+#check EfficientFFA.Instances.PaperParameters.secp4.unique_zero_capacity
+#print axioms EfficientFFA.Instances.PaperParameters.secp4.unique_zero_capacity
+
+#check EfficientFFA.Paper.msm_contract
+#print axioms EfficientFFA.Paper.msm_contract
+
+#check EfficientFFA.Paper.msm_subgroup_contract
+#print axioms EfficientFFA.Paper.msm_subgroup_contract
+#check EfficientFFA.Native.Expression.compileShifted
+#check EfficientFFA.Native.Expression.ShiftedChecks
+#check EfficientFFA.Native.ShiftedECEncoding
+#check EfficientFFA.Instances.ShiftedCurve17.encoding
+#check EfficientFFA.Instances.PaperParameters.secp4.shiftedEncoding
+#print axioms EfficientFFA.Instances.ShiftedCurve17.encoding
+#print axioms EfficientFFA.Instances.PaperParameters.secp4.shiftedEncoding

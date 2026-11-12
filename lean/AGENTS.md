@@ -19,5 +19,7 @@ proof foundation. The source policy and milestone status are in README.md.
   and warnings are errors. Regenerate the manifest through Lake if dependency
   versions change; do not depend on absolute paths to another project.
 - Preserve the sibling easycrypt/ formalization and separate paper repository.
-  CI, larger instances, whole-MSM wire layout and PLONK implementation remain
-  outside scope. The native complete-add selector/shared-limb gadget is checked.
+  The current paper source is miguel-ambrona/ffa-paper; do not edit it without
+  an explicit request. Use only Lean as evidence for the theoretical inventory.
+  Concrete arithmetic parameter proofs and shifted EC identities are now in scope.
+  CI, whole-MSM wire layout and PLONK implementation remain outside scope.

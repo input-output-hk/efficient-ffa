@@ -1,12 +1,26 @@
 # Paper coverage across the two formalizations
 
+The active theoretical-coverage task is **Lean-only**, against
+`miguel-ambrona/ffa-paper@a811ec7`. Its current inventory and corrected contracts
+are in [lean/PAPER_RESULTS_MAP.md](../lean/PAPER_RESULTS_MAP.md), with a
+[paper-facing theorem interface](../lean/EfficientFFA/Paper.lean). Concrete
+arithmetic validity is now checked for all ten paper settings, including
+normalization modulus reuse and explicit supported limits. Rounding, duplicate
+representations and lazy accumulation bounds are also checked. Shifted EC
+identities and consolidated MSM contracts now close the agreed theoretical
+queue, subject to the claim map’s explicit corrections and hypotheses. The
+final audit records 56 Covered, 9 Refined, 11 Conditional and 16 Excluded rows.
+Circuit implementation remains excluded.
+The comparison below is historical cross-language context and is not evidence
+for the active Lean coverage verdict.
+
 This guide links corresponding mathematical endpoints in the two independently
 developed formalizations. It is a navigation and assumption comparison, not a
 proof that the developments are equivalent or have identical coverage. No
 mathematical statement was changed during the repository migration.
 
 The detailed [paper-to-Lean inventory](../lean/PAPER_RESULTS_MAP.md) contains
-90 claim-family entries; IDs below refer to that inventory. The
+92 claim-family entries; IDs below refer to that inventory. The
 [EasyCrypt repair/status record](../easycrypt/FORMALIZATION_REPAIR_PLAN.md)
 provides its historical context and validation boundaries. Short Lean prefixes
 (A, M, L, N, D, S, SM, C, E, X, MSM) are expanded in the detailed inventory;

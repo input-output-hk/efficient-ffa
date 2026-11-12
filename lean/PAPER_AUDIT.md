@@ -1,5 +1,14 @@
 # Paper-to-Lean correspondence audit
 
+**Current target (2026-11-12):** this file is historical. The authoritative
+Lean-only inventory, corrected contracts and remaining theoretical gaps for
+`miguel-ambrona/ffa-paper@a811ec7` are in [PAPER_RESULTS_MAP.md](PAPER_RESULTS_MAP.md).
+[EfficientFFA/Paper.lean](EfficientFFA/Paper.lean) exposes the headline contracts.
+The paper is unchanged; implementation/cost claims are excluded from this milestone.
+The final 2026-11-12 audit is recorded in that map: the agreed theoretical
+proof queue is closed, with 477 checked library theorems. Refined and
+Conditional rows still require the recorded paper corrections/hypotheses.
+
 Date: 2026-10-27. Reviewed library commit: b05a742ded781490ef2a29528bc9061bb39000ed.
 The original audit added a regression in Tests/PaperAudit.lean without changing
 library definitions or proofs. It was committed and pushed as a5e2004.

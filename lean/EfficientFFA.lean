@@ -7,3 +7,10 @@ import EfficientFFA.MSM
 import EfficientFFA.Native
 import EfficientFFA.Instances.Curve17
 import EfficientFFA.Instances.Subgroup17
+import EfficientFFA.Paper
+import EfficientFFA.Paper.Rounding
+import EfficientFFA.Paper.Arithmetic
+import EfficientFFA.Instances.PaperParameters
+import EfficientFFA.Instances.ShiftedCurve17
+import EfficientFFA.Instances.PaperParameters.ShiftedSecp4
+import EfficientFFA.Paper.MSMContract

@@ -15,6 +15,23 @@ curve instance discharging both arithmetic and statistical parameters. A separat
 complete-add constraint system now checks native selectors and shares limb wires
 across its gates. Whole-MSM wire sharing and a PLONK layout remain unverified.
 
+The current target is the mathematical theory in Miguel’s paper at
+`a811ec79ffd29008ee72c1b0c927ba1414599758`. Only Lean establishes coverage
+for this work. [EfficientFFA/Paper.lean](EfficientFFA/Paper.lean) exposes 14
+headline contracts, and [Paper/MSMContract.lean](EfficientFFA/Paper/MSMContract.lean)
+consolidates the whole-group and subgroup MSM outcomes. The
+[corrected specification and final audit](PAPER_RESULTS_MAP.md)
+distinguish proven claims, paper corrections and explicit hypotheses.
+All ten reported arithmetic parameter settings now have kernel-checked
+multiplication/EC certificates and normalization limits. Rounding compatibility,
+residue-encoding uniqueness and lazy accumulation bounds are also proved.
+Shifted EC identities and their coordinate/group correspondence are now proved,
+with checked small-curve and four-limb SECP256k1 certificates. The agreed
+theoretical proof queue is closed, subject to the documented paper corrections
+and explicit hypotheses. Circuit implementation, whole-MSM shared wiring
+and performance remain outside scope.
+The paper source remains unchanged.
+
 The [paper results map](PAPER_RESULTS_MAP.md) links both numbered theorems and
 the paper’s equations, algorithm claims and application results to exact Lean
 declarations, with explicit assumptions, refinements and gaps. Its declaration
@@ -34,6 +51,9 @@ Run the commands below from the lean/ directory.
 - Lean and mathlib are permitted foundations. The initial dependency checkout
   was copied from a pristine standard-library cache, not from the supplied
   formalization. No other project's proof sources were copied.
+- The production integer constants were cross-checked against arkworks field
+  definitions; exact links are recorded in Instances/PaperParameters/Constants.lean.
+  No proof sources from another FFA development were used.
 - The supplied Lean repository and archive are not consulted when authoring
   this development. They were not opened during the foundation, multiplication, normalization, shifted-encoding, EC, or initial table implementations.
 - Earlier artifact reviews are background context. Independence here means
@@ -66,17 +86,31 @@ lake build
 The cache command downloads the standard mathlib build artifacts on a fresh
 checkout. The local development already has that cache. The default build
 checks both the library and Tests; warnings are treated as errors. This is
-local build setup. CI and larger/production instances remain skipped.
+local build setup. CI remains skipped. Concrete arithmetic certificates for
+all ten reported settings are included in the default build; they do not
+assert large-field primality or group orders.
 
-All 364 library theorems compile, and their axiom reports contain
-only Lean's standard propext, Classical.choice and Quot.sound. There are no
+All 477 library theorems compile. Eight additional axiom reports cover
+encoding constructors, including the production and shifted instances. Their
+axiom reports contain only Lean's standard propext, Classical.choice and Quot.sound. There are no
 project axioms, admissions or native_decide proofs. The build uses supplied
 mathlib artifacts; it is not a fresh rebuild of the entire standard library.
 
 ## Current checked results
 
+The detailed milestone narratives below preserve the earlier development
+history. The 2026-11-12 claim map and proof queue supersede their older
+production-instance deferrals and paper-repository references.
+
 | File | Result |
 |---|---|
+| [ShiftedEncoding/Expression.lean](EfficientFFA/ShiftedEncoding/Expression.lean) | Shifted polynomial compilation, evaluation, residual bounds and explicit quotient witnesses |
+| [ShiftedEncoding/EllipticCurve.lean](EfficientFFA/ShiftedEncoding/EllipticCurve.lean) | Shifted native EC identities and group-level addition/doubling correctness; unique zero under its separate capacity condition |
+| [Paper/MSMContract.lean](EfficientFFA/Paper/MSMContract.lean) | Consolidated soundness, statistical failure bound and conditional trace-existence contracts |
+| [Paper/Rounding.lean](EfficientFFA/Paper/Rounding.lean) | Truncation-to-floor width compatibility at unchanged widths and actual no-wrap conditions |
+| [Paper/Arithmetic.lean](EfficientFFA/Paper/Arithmetic.lean) | Duplicate residue classification, precise radix headroom, accumulation/scaling bounds, weighted-bound comparison and normalization interval transport |
+| [Instances/PaperParameters.lean](EfficientFFA/Instances/PaperParameters.lean) | Ten production arithmetic settings: capacity, multiplication, nine EC identities and normalization with the same moduli; exact limits in the claim map |
+| [Paper.lean](EfficientFFA/Paper.lean) | Paper-facing multiplication, normalization, ordered complete addition and MSM soundness/statistical-completeness contracts |
 | [Arithmetic.lean](EfficientFFA/Arithmetic.lean) | A concrete finite LCM, equivalence with simultaneous congruences, and bounded reconstruction |
 | [Limbs.lean](EfficientFFA/Limbs.lean) | Integer limb evaluation, product expansion, modular coefficient reduction, quotient characterization, reconstruction corollary, and integer linearity |
 | [Multiplication/Definitions.lean](EfficientFFA/Multiplication/Definitions.lean) | Concrete parameters, coefficient reductions, quotient shifts, ranges, and native-modulus checks |

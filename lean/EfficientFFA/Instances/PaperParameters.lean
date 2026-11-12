@@ -1,0 +1,6 @@
+import EfficientFFA.Instances.PaperParameters.Secp3
+import EfficientFFA.Instances.PaperParameters.Secp4
+import EfficientFFA.Instances.PaperParameters.Secp5
+import EfficientFFA.Instances.PaperParameters.Secp6
+import EfficientFFA.Instances.PaperParameters.BlsSelf
+import EfficientFFA.Instances.PaperParameters.BnSelf

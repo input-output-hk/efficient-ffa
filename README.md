@@ -14,7 +14,7 @@ each has its own definitions, assumptions, toolchain and proof checks.
 
 Both directories contain their sources directly. A normal clone obtains both
 formalizations; no Git submodules or sibling checkout is required. The paper
-sources remain in the separate [ffa-paper repository](https://github.com/input-output-hk/ffa-paper).
+sources remain in the separate [ffa-paper repository](https://github.com/miguel-ambrona/ffa-paper).
 
 ## Checking the formalizations
 
@@ -62,7 +62,11 @@ branches and MSM window traversal. Corresponding theorem names do not establish
 cross-language equivalence. Generic parameter assumptions and representation
 boundaries remain part of the results; consult the linked statements.
 
-CI, production parameter instances, circuit implementation correspondence and
-benchmark/application verification remain outside the agreed scope. Historical
+The current Lean-only theoretical inventory covers all reported arithmetic
+parameter settings, normalization modulus reuse and shifted EC identities.
+Its [final correspondence audit](lean/PAPER_RESULTS_MAP.md) records the
+explicit hypotheses and paper corrections needed for that coverage claim.
+CI, circuit implementation correspondence and benchmark/application
+verification remain outside this scope. Historical
 release tags keep their original contents; they are not labels for the current
 combined tree.

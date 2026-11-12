@@ -1,2 +1,3 @@
 import EfficientFFA.ShiftedEncoding.Arithmetic
 import EfficientFFA.ShiftedEncoding.Multiplication
+import EfficientFFA.ShiftedEncoding.EllipticCurve
