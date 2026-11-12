@@ -4,7 +4,9 @@ import EfficientFFA.EllipticCurve.Complete
 namespace EfficientFFA.Native
 open EllipticCurve
 
-/-- Equations (6)--(9), plus square linkage, copies and a nonzero certificate. -/
+/-- eq:curve-mem, eq:lambda-slope, eq:lambda-tangent and eq:assert-lambda2, plus
+square linkage, copies and a nonzero certificate. The paper's sign variable of
+eq:lambda-slope is modelled by the two fixed templates slopePlus and slopeMinus. -/
 inductive GateKind where
   | curve | square | slopePlus | slopeMinus | tangent | xout | equal | negative | inverse
   deriving DecidableEq, Fintype

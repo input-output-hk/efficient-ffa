@@ -5,7 +5,7 @@ import EfficientFFA.Arithmetic
 
 The representation is a finite vector of integers. Bounds are separate
 predicates, so the same representation can later express the signed and
-unreduced limbs of Section 3.2. No word or array axioms are introduced.
+unreduced limbs of sec:other-ops. No word or array axioms are introduced.
 -/
 
 namespace EfficientFFA
@@ -20,7 +20,7 @@ def eval {n : ℕ} (B : ℤ) (x : Limbs n) : ℤ :=
 def WellFormed {n : ℕ} (B : ℤ) (x : Limbs n) : Prop :=
   ∀ i, 0 ≤ x i ∧ x i < B
 
-/-- Reduced coefficients in equation (1) of the paper. -/
+/-- Reduced coefficients in eq:mul-over-z of the paper. -/
 def mulResidual {n : ℕ} (B q : ℤ) (x y z : Limbs n) : ℤ :=
   (∑ i, ∑ j, (B ^ (i.val + j.val) % q) * x i * y j) -
     ∑ i, (B ^ i.val % q) * z i
@@ -44,7 +44,7 @@ theorem mulResidual_mod {n : ℕ} (B q : ℤ) (x y z : Limbs n) :
   rw [eval_mul]
   simp [mulResidual, eval, Int.sub_emod, Int.mul_emod, Finset.sum_int_mod]
 
-/-- Algebraic content of equation (1): a quotient witness is exactly what
+/-- Algebraic content of eq:mul-over-z: a quotient witness is exactly what
 is needed to express a correct multiplication modulo q. -/
 theorem mulResidual_dvd_iff {n : ℕ} (B q : ℤ) (x y z : Limbs n) :
     q ∣ mulResidual B q x y z ↔ eval B x * eval B y ≡ eval B z [ZMOD q] := by

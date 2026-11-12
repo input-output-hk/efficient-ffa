@@ -37,7 +37,7 @@ theorem uniform_trace_failure_bound_prime (w l n : ℕ) (hw : 0 < w) (hl : 0 < l
   intro u hu hg
   exact hu (C.trace_complete hw hl bases hbases windows u hg hbmap hrange)
 
-/-- The probability theorem for the corrected little-endian traversal. -/
+/-- The probability theorem for the descending traversal of little-endian windows. -/
 theorem uniform_littleEndian_trace_failure_bound_prime (w l n : ℕ) (hw : 0 < w) (hl : 0 < l)
     (bases : ℕ → Coordinates K) (hbases : ∀ j, C.OnCurve (bases j))
     (windows : ℕ → ℕ → ℕ)

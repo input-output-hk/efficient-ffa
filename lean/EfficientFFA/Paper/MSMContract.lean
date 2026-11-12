@@ -6,7 +6,7 @@ open scoped ENNReal
 
 variable {q n r : ℕ} [Fact q.Prime] {C : Curve (ZMod q)} (E : ECEncoding C n r)
 
-/-- The corrected thm:msm in one statement: universal soundness, a finite
+/-- thm:msm in one statement: universal soundness, a finite
 uniform failure bound, and existence when that bound's numerator is below N.
 Arithmetic validity is carried by E; group size and sampling assumptions are
 separate. There are no added table-internal guard hypotheses. -/

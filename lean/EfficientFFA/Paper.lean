@@ -5,17 +5,16 @@ import EfficientFFA.Native
 /-!
 # Paper-facing mathematical contracts
 
-Source: miguel-ambrona/ffa-paper at a811ec79ffd29008ee72c1b0c927ba1414599758.
+Source: miguel-ambrona/ffa-paper at dddacd019ef180c1c6f1bfa06359bd59bf8c6733.
 Names correspond to source labels, not unstable theorem or figure numbers.
-These wrappers expose existing results; they do not identify the printed
-algorithms with their corrections. See PAPER_RESULTS_MAP.md for claim IDs,
-parameter definitions, corrected contracts and outstanding proof obligations.
+These wrappers expose existing results. See PAPER_RESULTS_MAP.md for claim
+IDs, parameter definitions and the correspondence boundary of each claim.
 
-Multiplication uses Lean's explicit quotient rounding (M04). Complete addition
+Multiplication uses floor/ceiling quotient rounding (M04). Complete addition
 uses ordered branches (O04-O06), and MSM uses descending little-endian windows
-(T08). Valid parameter bundles are mathematical hypotheses, not assertions
-that the paper's production choices have already been instantiated. Concrete
-certificates are in Instances/PaperParameters; combined MSM contracts are in
+(T08), as in the paper. Valid parameter bundles are mathematical hypotheses;
+the paper's production choices are instantiated by the concrete certificates
+in Instances/PaperParameters. Combined MSM contracts are in
 Paper/MSMContract.lean.
 -/
 
@@ -50,13 +49,14 @@ theorem multiplication_complete (P : Multiplication.Parameters n r)
     ∃ u v, P.Accepts x y z u v :=
   P.multiplication_complete hP hw hx hy hz hmul
 
-/-- L09, eq:normalization and its theorem TODO: equality of foreign residues. -/
+/-- L09, thm:normalization (first part): equality of foreign residues. -/
 theorem normalization_iff (P : Normalization.Parameters n r) (hP : P.Valid)
     {x z : Limbs n} (hx : P.InputBounded x) (hz : WellFormed P.B z) :
     (∃ u v, P.Accepts x z u v) ↔ eval P.B x ≡ eval P.B z [ZMOD P.q] :=
   P.accepts_iff_normalization hP hx hz
 
-/-- L10: capacity and adequate widths construct a canonical output. -/
+/-- L10, thm:normalization (second part): capacity and adequate widths
+construct a canonical output. -/
 theorem normalization_exists (P : Normalization.Parameters n r)
     (hP : P.Positive) (hw : P.WidthBounds) (hcap : P.q ≤ P.B^n)
     {x : Limbs n} (hx : P.InputBounded x) :
@@ -75,7 +75,7 @@ end Arithmetic
 section CompleteAddition
 variable {K : Type*} [Field K] [DecidableEq K] (C : Curve K)
 
-/-- O04: soundness of the corrected, ordered fig:complete-add contract. -/
+/-- O04: soundness of the ordered fig:complete-add contract. -/
 theorem complete_add_sound {P Q R : Encoded K} (hP : C.Valid P) (hQ : C.Valid Q)
     (ha : C.CompleteAccepts P Q R) :
     ∃ hR : C.Valid R, C.decode R hR = C.decode P hP + C.decode Q hQ :=

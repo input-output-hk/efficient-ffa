@@ -9,7 +9,8 @@ theorem floor_le_trunc (a : ℤ) {b : ℤ} (hb : 0 < b) : a / b ≤ a.tdiv b := 
   rw [Int.tdiv_eq_ediv, Int.sign_eq_one_of_pos hb]
   split <;> omega
 
-/-- The paper's truncated negative lower endpoint equals Lean's ceiling endpoint. -/
+/-- A truncated negative lower endpoint equals the ceiling endpoint used by
+the paper and Lean. -/
 theorem lower_trunc_eq {A : ℤ} (hA : 0 ≤ A) (q : ℤ) :
     (-A).tdiv q = -(A / q) := by
   rw [Int.neg_tdiv, Int.tdiv_eq_ediv_of_nonneg hA]

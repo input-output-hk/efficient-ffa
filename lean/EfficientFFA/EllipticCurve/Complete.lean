@@ -4,8 +4,8 @@ namespace EfficientFFA.EllipticCurve.Curve
 variable {K : Type*} [Field K] (C : Curve K)
 
 /-- A branch-ordered complete addition contract. Identity branches take precedence;
-inverse finite inputs precede doubling. This is an explicit refinement of Figure 3,
-not its conjunction of overlapping coordinate-copy implications. -/
+inverse finite inputs precede doubling. This is the ordered if/else of
+fig:complete-add, not a conjunction of overlapping coordinate-copy implications. -/
 inductive CompleteAccepts (P Q R : Encoded K) : Prop
   | left (hp : P.infinity = true) (hout : R = Q)
   | right (hp : P.infinity = false) (hq : Q.infinity = true) (hout : R = P)

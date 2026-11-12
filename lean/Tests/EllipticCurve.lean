@@ -46,7 +46,7 @@ theorem three_torsion : 3 • C.point P onP = 0 := by
       simp [succ_nsmul, add_assoc]
     _ = 0 := by rw [← he, hneg, neg_add_cancel]
 
--- The nonidentity order-two point doubles to infinity, but Figure 1 rejects it.
+-- The nonidentity order-two point doubles to infinity, but fig:double rejects it.
 example : C.point T onT + C.point T onT = 0 :=
   (C.double_eq_zero_iff onT).mpr (by decide)
 example : ¬ ∃ R slope, DoubleChecks C T R slope := by
@@ -74,7 +74,7 @@ theorem validT : C.Valid finiteT := fun _ => onT
 example : C.decode infA validA = C.decode infB validB := by
   rw [C.decode_infinity validA rfl, C.decode_infinity validB rfl]
 
--- The two literal Figure 3 identity-copy implications have no output for this pair.
+-- Unordered fig:complete-add identity-copy implications would have no output for this pair.
 example : ¬ ∃ R, IdentityCopies infA infB R := by
   rw [identity_copies_iff rfl rfl]
   decide
@@ -85,7 +85,7 @@ example : ∃ hR : C.Valid infB,
     C.decode infB hR = C.decode infA validA + C.decode infB validB :=
   C.complete_sound validA validB (.left rfl rfl)
 
--- The inverse branch also handles finite order-two inputs, without using Figure 1.
+-- The inverse branch also handles finite order-two inputs, without using fig:double.
 example : C.CompleteAccepts finiteT finiteT infA :=
   .inverse rfl rfl rfl (by decide) rfl
 example : ∃ hR : C.Valid infA,

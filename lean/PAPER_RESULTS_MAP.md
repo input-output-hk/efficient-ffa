@@ -5,7 +5,7 @@
 Reviewed on 2026-11-12:
 
 - Paper: [miguel-ambrona/ffa-paper at dddacd0](https://github.com/miguel-ambrona/ffa-paper/tree/dddacd019ef180c1c6f1bfa06359bd59bf8c6733), on corrections/lean-correspondence.
-- Lean proof artifact: [efficient-ffa at 91aa985](https://github.com/input-output-hk/efficient-ffa/tree/91aa985ffdbdfa604e9b75d9af07981ee416c3f1/lean). This is the revision cited by the paper; the documentation update does not change its proofs.
+- Lean proof artifact: [efficient-ffa at 91aa985](https://github.com/input-output-hk/efficient-ffa/tree/91aa985ffdbdfa604e9b75d9af07981ee416c3f1/lean). Later revisions change only documentation and source comments, not statements or proofs; the paper cites the revision that contains this map.
 
 The primary reviewer and an independent review agent checked the corrected
 paper against the actual Lean definitions, hypotheses and proofs. Neither

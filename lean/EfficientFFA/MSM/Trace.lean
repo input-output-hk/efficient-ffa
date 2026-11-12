@@ -147,7 +147,7 @@ theorem trace_sound {w l n : ℕ} {bases : ℕ → Coordinates K}
     C.decode_finite (P := finiteEncoding (opposite (tr.boundary 0))) _ rfl] at he
   simpa only [finiteEncoding, C.point_opposite h0, hen, he0, sub_eq_add_neg] using he
 
-/-- End-to-end soundness for the corrected traversal of little-endian windows. -/
+/-- End-to-end soundness for the descending traversal of little-endian windows. -/
 theorem trace_sound_littleEndian {w l n : ℕ} {bases : ℕ → Coordinates K}
     {windows : ℕ → ℕ → ℕ} {tr : CoordinateTrace K}
     (hbases : ∀ j, C.OnCurve (bases j))

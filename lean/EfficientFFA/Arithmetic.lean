@@ -3,7 +3,7 @@ import Mathlib
 /-!
 # Integer reconstruction from a finite family of congruences
 
-Developed from the LCM argument in Sections 1.2 and 3.1 of the paper.
+Developed from the LCM argument of the paper (sec:overview, sec:ffa-mul).
 The moduli need not be coprime. Zero and negative moduli are permitted in
 this arithmetic layer; concrete constraint parameters will require positivity.
 -/

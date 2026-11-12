@@ -1,9 +1,10 @@
 import EfficientFFA.Limbs
 
 /-!
-# Multiplication constraints from paper Section 3.1
+# Multiplication constraints from the paper (sec:ffa-mul, app:ffmul)
 
-The coefficients and quotient shifts below come from equations (1)-(4).
+The coefficients and quotient shifts below come from eq:mul-over-z,
+eq:mul-mod-m and the bound conditions of sec:sound-and-compl-of-mult.
 Bounds and positivity are explicit propositions about concrete parameters.
 Auxiliary moduli have individual witness widths and need not be coprime.
 -/

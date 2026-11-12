@@ -2,7 +2,7 @@ import EfficientFFA.ShiftedEncoding.Representation
 import EfficientFFA.Multiplication.Bounds
 
 /-! # Shifted multiplication constraints
-The extra linear terms in Section 3.2.4 require new upper bounds. Quotient
+The extra linear terms in sec:unique-zero require new upper bounds. Quotient
 witnesses and auxiliary checks use these bounds, not the unshifted ones. -/
 
 namespace EfficientFFA.ShiftedEncoding.Multiplication

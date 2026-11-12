@@ -22,11 +22,11 @@ theorem decode_finite {P : Encoded K} (hP : C.Valid P) (h : P.infinity = false) 
 theorem decode_infinity {P : Encoded K} (hP : C.Valid P) (h : P.infinity = true) :
     C.decode P hP = 0 := by simp [decode, h]
 
-/-- Figure 1: copy the infinity tag and enable the three equations only for finite inputs. -/
+/-- fig:double: copy the infinity tag and enable the three equations only for finite inputs. -/
 def DoubleAccepts (P R : Encoded K) (slope : K) : Prop :=
   R.infinity = P.infinity ∧ (P.infinity = false → DoubleChecks C P.coords R.coords slope)
 
-/-- Figure 2, with its input preconditions kept separate. -/
+/-- fig:incomplete-add, with its input preconditions kept separate. -/
 def IncompleteAccepts (P Q R : Encoded K) (slope : K) : Prop :=
   R.infinity = false ∧ AddChecks P.coords Q.coords R.coords slope
 
@@ -51,7 +51,7 @@ theorem flagged_double_complete {P : Encoded K} (hP : C.Valid P)
     exact ⟨⟨R, false⟩, slope, hp.symm, fun _ => hc⟩
   · exact ⟨P, 0, rfl, fun h => False.elim (hp h)⟩
 
-/-- Figure 1 is complete exactly when the finite input has nonzero tangent denominator. -/
+/-- fig:double is complete exactly when the finite input has nonzero tangent denominator. -/
 theorem flagged_double_witnesses_iff {P : Encoded K} (hP : C.Valid P) :
     (∃ R slope, C.DoubleAccepts P R slope) ↔ (P.infinity = false → 2*P.coords.y ≠ 0) := by
   constructor
@@ -86,7 +86,7 @@ theorem double_eq_zero_iff {P : Coordinates K} (hP : C.OnCurve P) :
     simp only [W, model, WeierstrassCurve.Affine.negY, zero_mul, sub_zero]
     linear_combination hd
 
-/-- A no-order-two condition on the relevant group/subgroup suffices for Figure 1.
+/-- A no-order-two condition on the relevant group/subgroup suffices for fig:double.
 It is local to the supplied point, so no global torsion axiom is needed. -/
 theorem flagged_double_complete_of_no_two_torsion {P : Encoded K} (hP : C.Valid P)
     (hno : C.decode P hP + C.decode P hP = 0 → C.decode P hP = 0) :
@@ -99,8 +99,10 @@ theorem flagged_double_complete_of_no_two_torsion {P : Encoded K} (hP : C.Valid 
 
 end Curve
 
-/-- The literal coordinate-copy implications in Figure 3, Steps 3 and 4.
-When both inputs are infinity, these copy constraints also copy ignored coordinates. -/
+/-- Unordered coordinate-copy implications: both identity branches of
+fig:complete-add enabled at once. The paper orders the branches; this
+definition records why (see identity_copies_iff). When both inputs are
+infinity, these copy constraints also copy ignored coordinates. -/
 def IdentityCopies {K : Type*} (P Q R : Encoded K) : Prop :=
   (P.infinity = true → R = Q) ∧ (Q.infinity = true → R = P)
 

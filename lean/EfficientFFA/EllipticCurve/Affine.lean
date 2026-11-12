@@ -54,7 +54,7 @@ theorem same_x_cases {P Q : Coordinates K} (hP : C.OnCurve P) (hQ : C.OnCurve Q)
 
 end Curve
 
-/-- Coordinates fixed by the last two equations in Figures 1 and 2. -/
+/-- Coordinates fixed by the last two equations in fig:double and fig:incomplete-add. -/
 def result {K : Type*} [Field K] (P Q : Coordinates K) (slope : K) : Coordinates K :=
   ⟨slope^2-P.x-Q.x, slope*(P.x-(slope^2-P.x-Q.x))-P.y⟩
 

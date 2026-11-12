@@ -1,13 +1,13 @@
 import EfficientFFA.LazyArithmetic
 import EfficientFFA.Multiplication.Bounds
 
-/-! # Normalization constraints for paper equation (5)
-The paper omits the auxiliary details. These definitions supply the linear
-specialization with the paper's uniform signed input bound. -/
+/-! # Normalization constraints for eq:normalization
+These definitions are the auxiliary equations, widths and no-wrap conditions
+of app:normalization, with the paper's uniform signed input bound. -/
 
 namespace EfficientFFA.Normalization
 
-/-- Coefficient-reduced linear residual from equation (5). -/
+/-- Coefficient-reduced linear residual from eq:normalization. -/
 def residual {n : ℕ} (B q : ℤ) (x z : Limbs n) : ℤ :=
   (∑ i, (B ^ i.val % q) * x i) - ∑ i, (B ^ i.val % q) * z i
 
